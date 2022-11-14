@@ -32,7 +32,17 @@ entity LimeSDR_XTRX_top is
       g_HOST2FPGA_S0_1_SIZE   : integer := 4096;   -- Stream, Host->FPGA, WFM FIFO size in bytes
       g_FPGA2HOST_S0_0_SIZE   : integer := 8192;   -- Stream, FPGA->Host, FIFO size in bytes
       g_HOST2FPGA_C0_0_SIZE   : integer := 1024;   -- Control, Host->FPGA, FIFO size in bytes
-      g_FPGA2HOST_C0_0_SIZE   : integer := 1024   -- Control, FPGA->Host, FIFO size in bytes
+      g_FPGA2HOST_C0_0_SIZE   : integer := 1024;   -- Control, FPGA->Host, FIFO size in bytes
+      
+      -- Internal configuration memory 
+      g_FPGACFG_START_ADDR    : integer := 0;
+      g_PLLCFG_START_ADDR     : integer := 32;
+      g_TSTCFG_START_ADDR     : integer := 96;
+      g_TXTSPCFG_START_ADDR   : integer := 128;
+      g_RXTSPCFG_START_ADDR   : integer := 160;
+      g_PERIPHCFG_START_ADDR  : integer := 192;
+      g_TAMERCFG_START_ADDR   : integer := 224;
+      g_GNSSCFG_START_ADDR    : integer := 256
    );
    port (
    --PCIe ports
@@ -203,6 +213,137 @@ begin
                 S0_rx_en         => '0',--S0_rx_en,
                 F2H_S0_open      => open--F2H_S0_open
    );
+   
+   
+   -- ----------------------------------------------------------------------------
+-- Microblaze CPU instance.
+-- CPU is responsible for communication interfaces and control logic
+-- ----------------------------------------------------------------------------   
+--   inst0_cpu : entity work.cpu_top
+--   generic map (
+--      FPGACFG_START_ADDR   => g_FPGACFG_START_ADDR,
+--      PLLCFG_START_ADDR    => g_PLLCFG_START_ADDR,
+--      TSTCFG_START_ADDR    => g_TSTCFG_START_ADDR,
+--      TXTSPCFG_START_ADDR  => g_TXTSPCFG_START_ADDR,
+--      RXTSPCFG_START_ADDR  => g_RXTSPCFG_START_ADDR,
+--      PERIPHCFG_START_ADDR => g_PERIPHCFG_START_ADDR,
+--      TAMERCFG_START_ADDR  => g_TAMERCFG_START_ADDR,
+--      GNSSCFG_START_ADDR   => g_GNSSCFG_START_ADDR,
+--      MEMCFG_START_ADDR    => g_MEMCFG_START_ADDR
+--   )
+--   port map(
+--      clk                        => CLK100_FPGA,
+--      reset_n                    => reset_n_clk100_fpga,
+--      -- Control data FIFO
+--      exfifo_if_d                => inst2_H2F_C0_rdata,
+--      exfifo_if_rd               => inst0_exfifo_if_rd, 
+--      exfifo_if_rdempty          => inst2_H2F_C0_rempty,
+--      exfifo_of_d                => inst0_exfifo_of_d, 
+--      exfifo_of_wr               => inst0_exfifo_of_wr, 
+--      exfifo_of_wrfull           => inst2_F2H_C0_wfull,
+--      exfifo_of_rst              => inst0_exfifo_of_rst, 
+--      -- SPI 0 
+--      spi_0_MISO                 => inst0_spi_0_MISO OR inst6_sdout OR inst12_sdout,
+--      spi_0_MOSI                 => inst0_spi_0_MOSI,
+--      spi_0_SCLK                 => inst0_spi_0_SCLK,
+--      spi_0_SS_n                 => inst0_spi_0_SS_n,
+--      -- SPI 1
+--      spi_1_MISO                 => FPGA_SPI1_MISO OR FPGA_SPI1_MISO_BB_ADC,
+--      spi_1_MOSI                 => inst0_spi_1_MOSI,
+--      spi_1_SCLK                 => inst0_spi_1_SCLK,
+--      spi_1_SS_n                 => inst0_spi_1_SS_n,
+--      -- SPI 1
+--      spi_2_MISO                 => '0',
+--      spi_2_MOSI                 => inst0_spi_2_MOSI,
+--      spi_2_SCLK                 => inst0_spi_2_SCLK,
+--      spi_2_SS_n                 => inst0_spi_2_SS_n,
+--      -- Config QSPI
+--      fpga_cfg_qspi_MOSI	     =>FPGA_CFG_MOSI,
+--      fpga_cfg_qspi_MISO	     =>FPGA_CFG_MISO,
+--      fpga_cfg_qspi_SS_n         =>FPGA_CFG_CS,
+--      -- I2C
+--      i2c_scl                    => FPGA_I2C_SCL,
+--      i2c_sda                    => FPGA_I2C_SDA,
+--      -- Genral purpose I/O
+--      gpi                        => "00000000",--"0000" & FPGA_SW,
+--      gpo                        => inst0_gpo, 
+--      -- LMS7002 control 
+--      lms_ctr_gpio               => inst0_lms_ctr_gpio,
+--      -- VCTCXO tamer control
+--      vctcxo_tune_en             => inst12_en,
+--      vctcxo_irq                 => inst12_mm_irq,
+--      -- PLL reconfiguration
+--      pll_rst                    => inst0_pll_rst,
+--      pll_axi_resetn_out         => inst0_pll_axi_resetn_out,
+--      pll_from_axim              => inst0_pll_from_axim,
+--      pll_to_axim                => inst1_rcnfg_to_axim, 
+--      pll_axi_sel                => inst0_pll_axi_sel,
+--      pll_rcfg_from_pll_0        => inst1_lms1_txpll_rcnfg_from_pll,
+--      pll_rcfg_to_pll_0          => inst0_pll_rcfg_to_pll_0,
+--      pll_rcfg_from_pll_1        => inst1_lms1_rxpll_rcnfg_from_pll,
+--      pll_rcfg_to_pll_1          => inst0_pll_rcfg_to_pll_1,
+--      pll_rcfg_from_pll_2        => inst1_lms2_txpll_rcnfg_from_pll,
+--      pll_rcfg_to_pll_2          => inst0_pll_rcfg_to_pll_2,
+--      pll_rcfg_from_pll_3        => inst1_lms2_rxpll_rcnfg_from_pll,
+--      pll_rcfg_to_pll_3          => inst0_pll_rcfg_to_pll_3,
+--      pll_rcfg_from_pll_4        => inst1_pll_0_rcnfg_from_pll,
+--      pll_rcfg_to_pll_4          => inst0_pll_rcfg_to_pll_4,
+--      pll_rcfg_from_pll_5        => (others=>'0'),
+--      pll_rcfg_to_pll_5          => inst0_pll_rcfg_to_pll_5,
+--      -- Avalon Slave port 0
+--      avmm_s0_address            => inst1_rcnfg_0_mgmt_address,
+--      avmm_s0_read               => inst1_rcnfg_0_mgmt_read,
+--      avmm_s0_readdata           => inst0_avmm_s0_readdata, 
+--      avmm_s0_write              => inst1_rcnfg_0_mgmt_write,
+--      avmm_s0_writedata          => inst1_rcnfg_0_mgmt_writedata, 
+--      avmm_s0_waitrequest        => inst0_avmm_s0_waitrequest,
+--      -- Avalon Slave port 1
+--      avmm_s1_address            => inst1_rcnfg_1_mgmt_address,
+--      avmm_s1_read               => inst1_rcnfg_1_mgmt_read,
+--      avmm_s1_readdata           => inst0_avmm_s1_readdata,
+--      avmm_s1_write              => inst1_rcnfg_1_mgmt_write,
+--      avmm_s1_writedata          => inst1_rcnfg_1_mgmt_writedata, 
+--      avmm_s1_waitrequest        => inst0_avmm_s1_waitrequest,
+--      -- Avalon master
+--      avmm_m0_address            => inst0_avmm_m0_address,
+--      avmm_m0_read               => inst0_avmm_m0_read,
+--      avmm_m0_waitrequest        => inst12_mm_wait_req,
+--      avmm_m0_readdata           => inst12_mm_rd_data,
+--      avmm_m0_readdatavalid      => inst12_mm_rd_datav,
+--      avmm_m0_write              => inst0_avmm_m0_write,
+--      avmm_m0_writedata          => inst0_avmm_m0_writedata,
+--      avmm_m0_clk_clk            => inst0_avmm_m0_clk_clk,
+--      avmm_m0_reset_reset        => inst0_avmm_m0_reset_reset,
+--      -- Configuration registers
+--      from_fpgacfg               => inst0_from_fpgacfg,
+--      to_fpgacfg                 => inst0_to_fpgacfg,
+--      from_pllcfg                => inst0_from_pllcfg,
+--      to_pllcfg                  => inst0_to_pllcfg,
+--      from_tstcfg                => inst0_from_tstcfg,
+--      to_tstcfg                  => inst0_to_tstcfg,
+--      to_tstcfg_from_rxtx        => inst7_to_tstcfg_from_rxtx,
+--      from_txtspcfg_0            => inst0_from_txtspcfg_0,
+--      to_txtspcfg_0              => inst0_to_txtspcfg_0, 
+--      from_txtspcfg_1            => inst0_from_txtspcfg_1,
+--      to_txtspcfg_1              => inst0_to_txtspcfg_1,      
+      
+--      from_periphcfg             => inst0_from_periphcfg,
+--      to_periphcfg               => inst0_to_periphcfg,
+--      from_tamercfg              => inst0_from_tamercfg,
+--      to_tamercfg                => inst0_to_tamercfg,
+--      from_gnsscfg               => inst0_from_gnsscfg,
+--      to_gnsscfg                 => inst0_to_gnsscfg,
+--      to_memcfg                  => inst0_to_memcfg,
+--      from_memcfg                => inst0_from_memcfg,
+--      pll_c0                     => inst0_pll_c0,
+--      pll_c1                     => inst0_pll_c1,
+--      pll_locked                 => inst0_pll_locked,
+--      smpl_cmp_sel               => inst0_smpl_cmp_sel,
+--      smpl_cmp_en                => inst0_smpl_cmp_en, 
+--      smpl_cmp_status            => inst0_smpl_cmp_status
+--   );
+   
+   
 
 
 

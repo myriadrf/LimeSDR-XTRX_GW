@@ -43,7 +43,7 @@ entity pcie_top is
       
    );
    port (
-      clk                  : in  std_logic;   -- Internal logic clock (125Mhz)
+      clk                  : out  std_logic;   -- Internal logic clock (125Mhz)
       reset_n              : in  std_logic;
       --PCIE external pins
       pcie_perstn          : in  std_logic;
@@ -133,39 +133,40 @@ architecture arch of pcie_top is
    signal inst1_cntrl_reader_data      : std_logic_vector(c_CNTRL_DATA_WIDTH-1 downto 0); 
    signal inst1_cntrl_reader_valid     : std_logic; 
 
-   signal inst1_to_dma_reader2_inst8: t_TO_DMA_READER; -- B.J.
+   signal clk125                       : std_logic;
    
 begin
+    clk <= clk125;
 -- ----------------------------------------------------------------------------
 -- Reset logic
 -- ----------------------------------------------------------------------------  
    -- Reset signal with synchronous removal to clk clock domain, 
    sync_reg0 : entity work.sync_reg 
-   port map(clk, H2F_S0_0_aclrn, '1', H2F_S0_0_sclrn);
+   port map(clk125, H2F_S0_0_aclrn, '1', H2F_S0_0_sclrn);
    
    sync_reg1 : entity work.sync_reg 
-   port map(clk, H2F_S0_1_aclrn, '1', H2F_S0_1_sclrn); 
+   port map(clk125, H2F_S0_1_aclrn, '1', H2F_S0_1_sclrn); 
      
 -- ----------------------------------------------------------------------------
 -- Sync registers
 -- ----------------------------------------------------------------------------   
    sync_reg6 : entity work.sync_reg 
-   port map(clk, reset_n, H2F_S0_sel, H2F_S0_sel_sync);
+   port map(clk125, reset_n, H2F_S0_sel, H2F_S0_sel_sync);
    
    sync_reg9 : entity work.sync_reg 
-   port map(clk, '1', S0_rx_en, S0_rx_en_sync);
+   port map(clk125, '1', S0_rx_en, S0_rx_en_sync);
    
 -- ----------------------------------------------------------------------------
 -- Input registers
 -- ----------------------------------------------------------------------------
 
-   process(clk, reset_n)
+   process(clk125, reset_n)
    begin 
       if reset_n = '0' then
          H2F_S0_sel_sync_r <= '0';
          
          S0_rx_en_sync_r   <= '0';
-      elsif rising_edge(clk) then 
+      elsif rising_edge(clk125) then 
          H2F_S0_sel_sync_r <= H2F_S0_sel_sync;
          
          S0_rx_en_sync_r   <= S0_rx_en_sync;
@@ -179,7 +180,7 @@ begin
    inst1_litepcie_top : entity work.litepcie_top
    port map (
       -- Internal clock
-      clk125               => clk,
+      clk125               => clk125,
       -- PCIe 
       pcie_rst_n           => pcie_perstn,
       pcie_refclk_p        => pcie_refclk_p,
@@ -209,11 +210,11 @@ begin
    -- Host to FPGA buffer swith is swithed only on rising edges of select signal
    -- and RX enable. 
    -- This is to ensure that buffer is not swithed while loading WFM data.
-   process(clk, reset_n)
+   process(clk125, reset_n)
    begin 
       if reset_n = '0' then
          H2F_S0_sel_int <= '0';
-      elsif rising_edge(clk) then
+      elsif rising_edge(clk125) then
       
          if H2F_S0_sel_sync_r = '0' AND H2F_S0_sel_sync = '1' then 
             H2F_S0_sel_int <= '1';
@@ -239,7 +240,7 @@ begin
       g_BUFF_1_RDUSEDW_WIDTH  => c_H2F_S0_1_RDUSEDW_WIDTH
    )
    port map(
-      clk               => clk,
+      clk               => clk125,
       reset_n           => inst1_from_dma_writer0.enable,
       --DMA 
       to_dma_writer     => inst1_to_dma_writer0,
@@ -272,7 +273,7 @@ begin
       g_BUFF_RDUSEDW_WIDTH => c_H2F_C0_RDUSEDW_WIDTH     
    )
    port map(
-      clk            => clk,
+      clk            => clk125,
       reset_n        => reset_n,
       -- Control endpoint
       cntrl_valid    => inst1_cntrl_writer_valid,
@@ -296,7 +297,7 @@ begin
       g_BUFF_WRUSEDW_WIDTH => c_F2H_S0_WRUSEDW_WIDTH  
    )
    port map(
-      clk               => clk,
+      clk               => clk125,
       reset_n           => inst1_from_dma_reader0.enable,
       --DMA 
       to_dma_reader     => inst1_to_dma_reader0,
@@ -320,7 +321,7 @@ begin
       g_BUFF_WRUSEDW_WIDTH => c_F2H_C0_WRUSEDW_WIDTH   
    )
    port map(
-      clk            => clk,
+      clk            => clk125,
       reset_n        => reset_n,
       -- Control endpoint
       cntrl_valid    => inst1_cntrl_reader_valid,

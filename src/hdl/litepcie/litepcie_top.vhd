@@ -24,7 +24,7 @@ use UNISIM.vcomponents.all;
 entity litepcie_top is
    port (
       -- Internal clock
-      clk125               : in std_logic;
+      clk125               : out std_logic;
       -- PCIe 
       pcie_rst_n           : in  std_logic;
       pcie_refclk_p        : in  std_logic;
@@ -61,7 +61,7 @@ signal refclk : std_logic;
    -- Verilog component declaration
    component litepcie_core
    port (
-      clk                  : in  std_logic;
+      clk                  : out std_logic;
       pcie_rst_n           : in  std_logic;
       pcie_clk_p           : in  std_logic;
       pcie_clk_n           : in  std_logic;
