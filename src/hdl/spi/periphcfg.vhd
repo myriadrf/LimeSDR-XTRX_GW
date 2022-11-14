@@ -135,8 +135,6 @@ begin
                when "00010" => dout_reg <= to_periphcfg.BOARD_GPIO_RD;
                when "01000" => dout_reg <= to_periphcfg.PERIPH_INPUT_RD_0;
                when "01001" => dout_reg <= to_periphcfg.PERIPH_INPUT_RD_1;
-               when 5d"17"  => dout_reg <= "00" & to_periphcfg.RF_SWITCHES;
-               when 5d"18"  => dout_reg <= "0000000000" & to_periphcfg.RF_AMP_CTRL;
                when others  => dout_reg <= mem(to_integer(unsigned(inst_reg(4 downto 0))));
             end case;
          end if;      
@@ -176,8 +174,8 @@ begin
          mem(14)	<= "0000000000000000"; --  0 free, PERIPH_OUTPUT_OVRD_1
          mem(15)	<= "0000000000000000"; --  0 free, PERIPH_OUTPUT_VAL_1
          mem(16)	<= "0000000000000000"; --  0 free, Reserved
-         mem(17)	<= "0000000000000000"; --  0 free, Reserved(15:14), RF switches (LMS1 : TX1,TX2,RX1,RX2 | LMS2 : TRX2T, TRX2, TRX1T, TRX1, RX2IN, RX2C, RX1IN, RX1C | LMS3 : RX2, RX1)
-         mem(18)	<= "0000000000111100"; --  0 free, Reserved(15:6), LMS1_TX1_PA_EN, LMS1_TX2_PA_EN, LMS2_TX1_PA_EN, LMS2_TX2_PA_EN, LMS2_RX1_LNA_SD, LMS2_RX2_LNA_SD
+         mem(17)	<= "0000000000000000"; --  0 free, Reserved
+         mem(18)	<= "0000000000111100"; --  0 free, Reserved
          mem(19)	<= "0000000000000000"; --  0 free, Reserved STORAGE FOR LMS1 PA LEVEL
          mem(20)	<= "0000000000000000"; --  0 free, Reserved STORAGE FOR LMS1 PA LEVEL
          mem(21)	<= "0000000000000000"; --  0 free, Reserved
@@ -217,11 +215,5 @@ begin
       from_periphcfg.PERIPH_OUTPUT_VAL_0  <= mem(13) (15 downto 0);
       from_periphcfg.PERIPH_OUTPUT_OVRD_1 <= mem(14) (15 downto 0);
       from_periphcfg.PERIPH_OUTPUT_VAL_1  <= mem(15) (15 downto 0);
-      from_periphcfg.RF_SWITCHES          <= mem(17) (13 downto 0); 
-      from_periphcfg.RF_AMP_CTRL          <= mem(18) (5  downto 0);
-      from_periphcfg.LMS1_RFSW_MODE_A     <= mem(21) (3 downto 0);
-      from_periphcfg.LMS1_RFSW_MODE_B     <= mem(21) (7 downto 4);
-      from_periphcfg.LMS2_RFSW_MODE_A     <= mem(22) (3 downto 0);
-      from_periphcfg.LMS2_RFSW_MODE_B     <= mem(22) (7 downto 4);
 
 end periphcfg_arch;

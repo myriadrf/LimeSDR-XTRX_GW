@@ -40,20 +40,11 @@ entity cpu_top is
       PERIPHCFG_START_ADDR : integer := 192;
       TAMERCFG_START_ADDR  : integer := 224;
       GNSSCFG_START_ADDR   : integer := 256;
-      FIRCFG_START_ADDRR   : integer := 288; -- B.J.
-      RXTSPCFG_START_ADDR_3  : integer := 352; -- B.J.
-      FIRCFG_TX    : integer := 704;  -- B.J. (for Transmitter equaliser)
-      FIRCFG_RX    : integer := 704+32; -- B.J. (for Receiver equaliser)
       MEMCFG_START_ADDR    : integer := 65504
       );
    port (
       clk                  : in     std_logic;
       reset_n              : in     std_logic;
-      --LMS1 clock
-      --lms1_txpll_inclk     : in     std_logic;
-      --lms1_txpll_c0        : out    std_logic;
-      --lms1_txpll_c1        : out    std_logic;
-      --lms1_txpll_locked    : out    std_logic;
       -- Control data FIFO
       exfifo_if_d          : in     std_logic_vector(31 downto 0);
       exfifo_if_rd         : out    std_logic;
@@ -66,20 +57,12 @@ entity cpu_top is
       spi_0_MISO           : in     std_logic;
       spi_0_MOSI           : out    std_logic;
       spi_0_SCLK           : out    std_logic;
-      spi_0_SS_n           : out    std_logic_vector(3 downto 0);
-      -- SPI 1
-      spi_1_MISO           : in     std_logic;
-      spi_1_MOSI           : out    std_logic;
-      spi_1_SCLK           : out    std_logic;
-      spi_1_SS_n           : out    std_logic_vector(5 downto 0);
-      -- SPI 2 
-      spi_2_MISO           : in     std_logic;
-      spi_2_MOSI           : out    std_logic;
-      spi_2_SCLK           : out    std_logic;
-      spi_2_SS_n           : out    std_logic_vector(3 downto 0); 
+      spi_0_SS_n           : out    std_logic;
       -- I2C
-      i2c_scl              : inout  std_logic;
-      i2c_sda              : inout  std_logic;
+      i2c_0_scl            : inout  std_logic;
+      i2c_0_sda            : inout  std_logic;
+      i2c_1_scl            : inout  std_logic;
+      i2c_1_sda            : inout  std_logic;
 	  -- Configuration Flash SPI
 	  fpga_cfg_qspi_MISO   : in     std_logic;
 	  fpga_cfg_qspi_MOSI   : out    std_logic;
@@ -87,8 +70,6 @@ entity cpu_top is
       -- Genral purpose I/O
       gpi                  : in     std_logic_vector(7 downto 0);
       gpo                  : out    std_logic_vector(7 downto 0);
-      -- LMS7002 control
-      lms_ctr_gpio         : out    std_logic_vector(3 downto 0);
       -- VCTCXO tamer control
       vctcxo_tune_en       : in     std_logic;
       vctcxo_irq           : in     std_logic;
@@ -135,29 +116,14 @@ entity cpu_top is
       avmm_m0_clk_clk      : out    std_logic;                                        -- avm_m0_clk.clk
       avmm_m0_reset_reset  : out    std_logic;
       -- Configuration registers
-      from_fpgacfg_0       : out    t_FROM_FPGACFG;
-      to_fpgacfg_0         : in     t_TO_FPGACFG;
-      from_fpgacfg_1       : out    t_FROM_FPGACFG;
-      to_fpgacfg_1         : in     t_TO_FPGACFG;
-      from_fpgacfg_2       : out    t_FROM_FPGACFG;
-      to_fpgacfg_2         : in     t_TO_FPGACFG;
+      from_fpgacfg         : out    t_FROM_FPGACFG;
+      to_fpgacfg           : in     t_TO_FPGACFG;
       from_pllcfg          : out    t_FROM_PLLCFG;
       to_pllcfg            : in     t_TO_PLLCFG;
       from_tstcfg          : out    t_FROM_TSTCFG;
       to_tstcfg            : in     t_TO_TSTCFG;
       to_tstcfg_from_rxtx  : in     t_TO_TSTCFG_FROM_RXTX;
-      to_txtspcfg_0        : in     t_TO_TXTSPCFG;
-      from_txtspcfg_0      : out    t_FROM_TXTSPCFG;
-      to_txtspcfg_1        : in     t_TO_TXTSPCFG;
-      from_txtspcfg_1      : out    t_FROM_TXTSPCFG;
 
-      --to_rxtspcfg          : in     t_TO_RXTSPCFG;
-      --from_rxtspcfg        : out    t_FROM_RXTSPCFG;
-
-      to_rxtspcfg_2a          : in     t_TO_RXTSPCFG;  -- B.J.
-      from_rxtspcfg_2a        : out    t_FROM_RXTSPCFG; -- B.J.
-      to_rxtspcfg_2b          : in     t_TO_RXTSPCFG; -- B.J.
-      from_rxtspcfg_2b        : out    t_FROM_RXTSPCFG; -- B.J.
 
       to_periphcfg         : in     t_TO_PERIPHCFG;
       from_periphcfg       : out    t_FROM_PERIPHCFG;
@@ -165,26 +131,10 @@ entity cpu_top is
       from_tamercfg        : out    t_FROM_TAMERCFG;
       to_gnsscfg           : in     t_TO_GNSSCFG;
       from_gnsscfg         : out    t_FROM_GNSSCFG;
-      to_memcfg            : in     t_TO_MEMCFG;
-      from_memcfg          : out    t_FROM_MEMCFG;
-      from_cdcmcfg         : out    t_FROM_CDCMCFG;     
-      -- testing
-      pll_c0               : out    std_logic;
-      pll_c1               : out    std_logic;
-      pll_locked           : out    std_logic;
+      
       smpl_cmp_en          : out    std_logic_vector ( 3 downto 0 );
       smpl_cmp_status      : in     std_logic_vector ( 1 downto 0 );
-      smpl_cmp_sel         : out    std_logic_vector (0 downto 0);
-
-      to_rxtspcfg_3a       : in  t_TO_RXTSPCFG;    -- B.J.
-      from_rxtspcfg_3a     : out t_FROM_RXTSPCFG;  -- B.J.
-      to_rxtspcfg_3b       : in  t_TO_RXTSPCFG;    -- B.J.
-      from_rxtspcfg_3b     : out t_FROM_RXTSPCFG;   -- B.J.
-
-      from_fircfg_tx_a     : out    t_FROM_FIRCFG; -- B.J.
-      from_fircfg_tx_b     : out    t_FROM_FIRCFG; -- B.J.
-      from_fircfg_rx_a     : out    t_FROM_FIRCFG; -- B.J.
-      from_fircfg_rx_b     : out    t_FROM_FIRCFG  -- B.J.
+      smpl_cmp_sel         : out    std_logic_vector (0 downto 0)
    );
 end cpu_top;
 
@@ -203,17 +153,7 @@ architecture arch of cpu_top is
    signal inst0_spi_0_MISO          : std_logic;
    signal inst0_spi_0_MOSI          : std_logic;
    signal inst0_spi_0_SCLK          : std_logic;
-   signal inst0_spi_0_SS_n          : std_logic_vector(3 downto 0);
-   
-   signal inst0_spi_1_MISO          : std_logic;
-   signal inst0_spi_1_MOSI          : std_logic;
-   signal inst0_spi_1_SCLK          : std_logic;
-   signal inst0_spi_1_SS_n          : std_logic_vector(5 downto 0);
-   
-   signal inst0_spi_2_MISO          : std_logic;
-   signal inst0_spi_2_MOSI          : std_logic;
-   signal inst0_spi_2_SCLK          : std_logic;
-   signal inst0_spi_2_SS_n          : std_logic_vector(3 downto 0);
+   signal inst0_spi_0_SS_n          : std_logic_vector(1 downto 0);
    
    signal inst0_fpga_cfg_qspi_io0_i : std_logic;
    signal inst0_fpga_cfg_qspi_io0_o : std_logic; 
@@ -246,7 +186,8 @@ architecture arch of cpu_top is
    signal inst0_avmm_m0_readdata    : std_logic_vector(31 downto 0);
    signal inst0_avmm_m0_writedata   : std_logic_vector(31 downto 0);
    
-   
+   signal i2c_scl              : std_logic;
+   signal i2c_sda              : std_logic;
    --inst1
    signal inst1_sdout            : std_logic;
    signal inst1_pllcfg_sdout     : std_logic;
@@ -260,7 +201,7 @@ architecture arch of cpu_top is
    signal vctcxo_tamer_0_irq_out_irq   : std_logic;
    signal vctcxo_tamer_0_ctrl_export   : std_logic_vector(3 downto 0);
        
-   component mb_subsystem is
+   component cpu_design is
    port (
       clk                        : in std_logic;
       avmm_m0_address            : out STD_LOGIC_VECTOR ( 31 downto 0 );
@@ -300,33 +241,9 @@ architecture arch of cpu_top is
       spi_0_sck_i                : in std_logic;
       spi_0_sck_o                : out std_logic;
       spi_0_sck_t                : out std_logic;
-      spi_0_ss_i                 : in std_logic_vector ( 3 downto 0 );
-      spi_0_ss_o                 : out std_logic_vector ( 3 downto 0 );
+      spi_0_ss_i                 : in std_logic_vector ( 1 downto 0 );
+      spi_0_ss_o                 : out std_logic_vector ( 1 downto 0 );
       spi_0_ss_t                 : out std_logic;
-      spi_1_io0_i                : in std_logic;
-      spi_1_io0_o                : out std_logic;
-      spi_1_io0_t                : out std_logic;
-      spi_1_io1_i                : in std_logic;
-      spi_1_io1_o                : out std_logic;
-      spi_1_io1_t                : out std_logic;
-      spi_1_sck_i                : in std_logic;
-      spi_1_sck_o                : out std_logic;
-      spi_1_sck_t                : out std_logic;
-      spi_1_ss_i                 : in std_logic_vector ( 5 downto 0 );
-      spi_1_ss_o                 : out std_logic_vector ( 5 downto 0 );
-      spi_1_ss_t                 : out std_logic;
-      spi_2_io0_i                : in std_logic;
-      spi_2_io0_o                : out std_logic;
-      spi_2_io0_t                : out std_logic;
-      spi_2_io1_i                : in std_logic;
-      spi_2_io1_o                : out std_logic;
-      spi_2_io1_t                : out std_logic;
-      spi_2_sck_i                : in std_logic;
-      spi_2_sck_o                : out std_logic;
-      spi_2_sck_t                : out std_logic;
-      spi_2_ss_i                 : in std_logic_vector ( 3 downto 0 );
-      spi_2_ss_o                 : out std_logic_vector ( 3 downto 0 );
-      spi_2_ss_t                 : out std_logic;
       fpga_cfg_qspi_io0_i        : in  std_logic;
       fpga_cfg_qspi_io0_o        : out std_logic; 
       fpga_cfg_qspi_io0_t        : out std_logic; 
@@ -362,14 +279,8 @@ architecture arch of cpu_top is
       smpl_cmp_en_tri_o          : out STD_LOGIC_VECTOR ( 3 downto 0 );
       smpl_cmp_status_tri_i      : in STD_LOGIC_VECTOR ( 1 downto 0 );
       smpl_cmp_sel_tri_o         : out STD_LOGIC_VECTOR ( 0 to 0 );
-      vctcxo_tamer_0_ctrl_tri_i  : in STD_LOGIC_VECTOR ( 3 downto 0 );
-      cdcm_read_start_tri_i      : in STD_LOGIC_VECTOR ( 0 downto 0 );
-      cdcm_cfg_start_tri_i       : in STD_LOGIC_VECTOR ( 0 downto 0 );
+      vctcxo_tamer_0_ctrl_tri_i  : in STD_LOGIC_VECTOR ( 3 downto 0 )
       
-      
-      pll_c0                     : out STD_LOGIC;
-      pll_c1                     : out STD_LOGIC;
-      pll_locked                 : out STD_LOGIC
    );
    end component;
    
@@ -404,7 +315,7 @@ begin
 -- ----------------------------------------------------------------------------
 -- MicroBlaze instance
 -- ----------------------------------------------------------------------------
-   inst0_mb_cpu : mb_subsystem
+   inst0_mb_cpu : cpu_design
    port map (
       clk                      => clk,
       avmm_m0_address          => inst0_avmm_m0_address,
@@ -448,31 +359,6 @@ begin
       spi_0_ss_o               => inst0_spi_0_SS_n,
       spi_0_ss_t               => open,
       
-      spi_1_io0_i              => '0',
-      spi_1_io0_o              => inst0_spi_1_MOSI,
-      spi_1_io0_t              => open,
-      spi_1_io1_i              => spi_1_MISO,
-      spi_1_io1_o              => open,
-      spi_1_io1_t              => open,
-      spi_1_sck_i              => '0',
-      spi_1_sck_o              => inst0_spi_1_SCLK,
-      spi_1_sck_t              => open,
-      spi_1_ss_i               => (others=>'0'),
-      spi_1_ss_o               => inst0_spi_1_SS_n,
-      spi_1_ss_t               => open,
-      
-      spi_2_io0_i              => '0',
-      spi_2_io0_o              => inst0_spi_2_MOSI,
-      spi_2_io0_t              => open,
-      spi_2_io1_i              => spi_2_MISO,
-      spi_2_io1_o              => open,
-      spi_2_io1_t              => open,
-      spi_2_sck_i              => '0',
-      spi_2_sck_o              => inst0_spi_2_SCLK,
-      spi_2_sck_t              => open,
-      spi_2_ss_i               => (others=>'0'),
-      spi_2_ss_o               => inst0_spi_2_SS_n,
-      spi_2_ss_t               => open,
       uart_0_rxd               => '0',
       uart_0_txd               => open,
       
@@ -510,15 +396,9 @@ begin
       vctcxo_tamer_0_ctrl_tri_i=> vctcxo_tamer_0_ctrl_export,
       
       -- tsting
-      pll_c0                   => pll_c0, 
-      pll_c1                   => pll_c1,
-      pll_locked               => pll_locked,
       smpl_cmp_en_tri_o        => smpl_cmp_en,
       smpl_cmp_status_tri_i    => smpl_cmp_status_sync,
-      smpl_cmp_sel_tri_o       => smpl_cmp_sel,
-      
-      cdcm_read_start_tri_i(0) => from_cdcmcfg.CDCM_READ_START,
-      cdcm_cfg_start_tri_i(0)  => from_cdcmcfg.CDCM_RECONFIG_START
+      smpl_cmp_sel_tri_o       => smpl_cmp_sel
    );
    
    avmm_m0_clk_clk                     <= clk;
@@ -558,11 +438,7 @@ begin
       RXTSPCFG_START_ADDR  => RXTSPCFG_START_ADDR,
       PERIPHCFG_START_ADDR => PERIPHCFG_START_ADDR,
       TAMERCFG_START_ADDR  => TAMERCFG_START_ADDR,
-      GNSSCFG_START_ADDR   => GNSSCFG_START_ADDR,
-
-      RXTSPCFG_START_ADDR_3  => RXTSPCFG_START_ADDR_3,  -- B.J.
-      FIRCFG_TX    =>  FIRCFG_TX,  -- B.J. (for Transmitter)
-      FIRCFG_RX    =>  FIRCFG_RX -- B.J. (for Receiver)
+      GNSSCFG_START_ADDR   => GNSSCFG_START_ADDR
       )
    port map(
       -- Serial port IOs
@@ -577,50 +453,16 @@ begin
       -- Signals coming from the pins or top level serial interface
       lreset               => reset_n,   -- Logic reset signal, resets logic cells only  (use only one reset)
       mreset               => reset_n,   -- Memory reset signal, resets configuration memory only (use only one reset)          
-      to_fpgacfg_0         => to_fpgacfg_0,
-      from_fpgacfg_0       => from_fpgacfg_0,
-      to_fpgacfg_1         => to_fpgacfg_1,
-      from_fpgacfg_1       => from_fpgacfg_1,
-      to_fpgacfg_2         => to_fpgacfg_2,
-      from_fpgacfg_2       => from_fpgacfg_2,
+      to_fpgacfg           => to_fpgacfg,
+      from_fpgacfg         => from_fpgacfg,
       to_pllcfg            => to_pllcfg_int,
       from_pllcfg          => from_pllcfg,
       to_tstcfg            => to_tstcfg,
       from_tstcfg          => from_tstcfg,
       to_tstcfg_from_rxtx  => to_tstcfg_from_rxtx,
-      to_txtspcfg_0        => to_txtspcfg_0,
-      from_txtspcfg_0      => from_txtspcfg_0,
-      to_txtspcfg_1        => to_txtspcfg_1,
-      from_txtspcfg_1      => from_txtspcfg_1,
       
-      -- to_rxtspcfg          => to_rxtspcfg,
-      -- from_rxtspcfg        => from_rxtspcfg,
-
-      to_rxtspcfg_2a          => to_rxtspcfg_2a, -- B.J.
-      from_rxtspcfg_2a        => from_rxtspcfg_2a, -- B.J.
-      to_rxtspcfg_2b          => to_rxtspcfg_2b, -- B.J.
-      from_rxtspcfg_2b        => from_rxtspcfg_2b, -- B.J.
-   
       to_periphcfg         => to_periphcfg,
-      from_periphcfg       => from_periphcfg,
-      to_tamercfg          => to_tamercfg,
-      from_tamercfg        => from_tamercfg,
-      to_gnsscfg           => to_gnsscfg,
-      from_gnsscfg         => from_gnsscfg,
-      to_memcfg            => to_memcfg,
-      from_memcfg          => from_memcfg,
-      from_cdcmcfg         => from_cdcmcfg,
-
-      to_rxtspcfg_3a          => to_rxtspcfg_3a,   -- B.J.
-      from_rxtspcfg_3a        => from_rxtspcfg_3a, -- B.J.
-      to_rxtspcfg_3b          => to_rxtspcfg_3b,   -- B.J.
-      from_rxtspcfg_3b        => from_rxtspcfg_3b,  -- B.J.
-
-      from_fircfg_tx_a        => from_fircfg_tx_a, -- B.J.
-      from_fircfg_tx_b        => from_fircfg_tx_b, -- B.J.
-      from_fircfg_rx_a        => from_fircfg_rx_a, -- B.J.
-      from_fircfg_rx_b        => from_fircfg_rx_b  -- B.J.
-
+      from_periphcfg       => from_periphcfg
    );
    
 -- ----------------------------------------------------------------------------
@@ -628,15 +470,7 @@ begin
 -- ----------------------------------------------------------------------------
    spi_0_SCLK <= inst0_spi_0_SCLK;
    spi_0_MOSI <= inst0_spi_0_MOSI;
-   spi_0_SS_n <= inst0_spi_0_SS_n;
-   
-   spi_1_SCLK <= inst0_spi_1_SCLK;
-   spi_1_MOSI <= inst0_spi_1_MOSI;
-   spi_1_SS_n <= inst0_spi_1_SS_n;
-   
-   spi_2_SCLK <= inst0_spi_2_SCLK;
-   spi_2_MOSI <= inst0_spi_2_MOSI;
-   spi_2_SS_n <= inst0_spi_2_SS_n;
+   spi_0_SS_n <= inst0_spi_0_SS_n(1);
    
    fpga_cfg_qspi_MOSI <= inst0_fpga_cfg_qspi_io0_o;
    inst0_fpga_cfg_qspi_io1_i <= fpga_cfg_qspi_MISO;
@@ -644,7 +478,11 @@ begin
    
    i2c_scl <= inst0_iic_0_scl_o when inst0_iic_0_scl_t = '0' else 'Z';
    i2c_sda <= inst0_iic_0_sda_o when inst0_iic_0_sda_t = '0' else 'Z';
-   
+   i2c_0_scl <= inst0_iic_0_scl_o when inst0_iic_0_scl_t = '0' else 'Z';
+   i2c_0_sda <= inst0_iic_0_sda_o when inst0_iic_0_sda_t = '0' else 'Z';
+   i2c_1_scl <= inst0_iic_0_scl_o when inst0_iic_0_scl_t = '0' else 'Z';
+   i2c_1_sda <= inst0_iic_0_sda_o when inst0_iic_0_sda_t = '0' else 'Z';
+       
    vctcxo_tamer_0_ctrl_export(0) <= vctcxo_tune_en_sync;
    vctcxo_tamer_0_ctrl_export(1) <= vctcxo_irq_sync;
    vctcxo_tamer_0_ctrl_export(2) <= '0';

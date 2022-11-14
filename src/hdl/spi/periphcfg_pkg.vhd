@@ -27,12 +27,6 @@ package periphcfg_pkg is
       PERIPH_OUTPUT_VAL_0  : std_logic_vector(15 downto 0);
       PERIPH_OUTPUT_OVRD_1 : std_logic_vector(15 downto 0);
       PERIPH_OUTPUT_VAL_1  : std_logic_vector(15 downto 0); 
-      RF_SWITCHES          : std_logic_vector(13 downto 0);
-      RF_AMP_CTRL          : std_logic_vector(5  downto 0);
-      LMS1_RFSW_MODE_A     : std_logic_vector(3  downto 0);
-      LMS1_RFSW_MODE_B     : std_logic_vector(3  downto 0);
-      LMS2_RFSW_MODE_A     : std_logic_vector(3  downto 0);
-      LMS2_RFSW_MODE_B     : std_logic_vector(3  downto 0);
    end record t_FROM_PERIPHCFG;
   
    -- Inputs to the .
@@ -40,8 +34,6 @@ package periphcfg_pkg is
       BOARD_GPIO_RD        : std_logic_vector(15 downto 0);
       PERIPH_INPUT_RD_0    : std_logic_vector(15 downto 0);
       PERIPH_INPUT_RD_1    : std_logic_vector(15 downto 0);
-      RF_SWITCHES          : std_logic_vector(13 downto 0);
-      RF_AMP_CTRL          : std_logic_vector(5  downto 0);
    end record t_TO_PERIPHCFG;
      
 
