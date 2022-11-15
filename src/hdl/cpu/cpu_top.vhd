@@ -91,20 +91,6 @@ entity cpu_top is
       pll_rcfg_to_pll_4    : out    std_logic_vector(63 downto 0);
       pll_rcfg_from_pll_5  : in     std_logic_vector(63 downto 0) := (others => '0');
       pll_rcfg_to_pll_5    : out    std_logic_vector(63 downto 0);
-      -- Avalon Slave port 0
-      avmm_s0_address      : in     std_logic_vector(8 downto 0) := (others => 'X');  -- address
-      avmm_s0_read         : in     std_logic                     := 'X';             -- read
-      avmm_s0_readdata     : out    std_logic_vector(31 downto 0);                    -- readdata
-      avmm_s0_write        : in     std_logic                     := 'X';             -- write
-      avmm_s0_writedata    : in     std_logic_vector(31 downto 0) := (others => 'X'); -- writedata
-      avmm_s0_waitrequest  : out    std_logic;                                        -- waitrequest
-      -- Avalon Slave port 1
-      avmm_s1_address      : in     std_logic_vector(8 downto 0) := (others => 'X');  -- address
-      avmm_s1_read         : in     std_logic                     := 'X';             -- read
-      avmm_s1_readdata     : out    std_logic_vector(31 downto 0);                    -- readdata
-      avmm_s1_write        : in     std_logic                     := 'X';             -- write
-      avmm_s1_writedata    : in     std_logic_vector(31 downto 0) := (others => 'X'); -- writedata
-      avmm_s1_waitrequest  : out    std_logic;                                        -- waitrequest
       -- Avalon master
       avmm_m0_address      : out    std_logic_vector(7 downto 0);                     -- avmm_m0.address
       avmm_m0_read         : out    std_logic;                                        --       .read
@@ -191,9 +177,6 @@ architecture arch of cpu_top is
    --inst1
    signal inst1_sdout            : std_logic;
    signal inst1_pllcfg_sdout     : std_logic;
-   
-   signal avmm_s0_address_int    : std_logic_vector(31 downto 0);
-   signal avmm_s1_address_int    : std_logic_vector(31 downto 0);
    
    signal vctcxo_tune_en_sync    : std_logic;
    signal vctcxo_irq_sync        : std_logic;
@@ -300,17 +283,6 @@ begin
    bus_sync_reg0 : entity work.bus_sync_reg
    generic map (2) 
    port map(clk, '1', smpl_cmp_status, smpl_cmp_status_sync);
-   
-   
-   -- byte oriented address is shifted to be word aligned
-   avmm_s0_address_int <=  "00000000000000000000000" & 
-                           avmm_s0_address(8) & 
-                           avmm_s0_address(5 downto 0) & 
-                           "00"; -- address range   0 - 1FF
-   avmm_s1_address_int <=  "00000000000000000000001" & 
-                           avmm_s1_address(8) & 
-                           avmm_s1_address(5 downto 0) & 
-                           "00"; -- address range 200 - 3FF
    
 -- ----------------------------------------------------------------------------
 -- MicroBlaze instance

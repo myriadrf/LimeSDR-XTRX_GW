@@ -248,6 +248,9 @@ signal inst1_lms2_smpl_cmp_cnt         : std_logic_vector(15 downto 0);
 signal inst1_rcnfg_to_axim             : t_TO_AXIM_32x32;
 signal inst1_pll_0_rcnfg_from_pll      : std_logic_vector(63 downto 0);
 
+signal inst6_rx_smpl_cmp_done       : std_logic; 
+signal inst6_rx_smpl_cmp_err        : std_logic; 
+
 begin
 
    --placeholder assignment
@@ -382,20 +385,6 @@ begin
       pll_rcfg_to_pll_4          => inst1_pll_rcfg_to_pll_4,
       pll_rcfg_from_pll_5        => (others=>'0'),
       pll_rcfg_to_pll_5          => inst1_pll_rcfg_to_pll_5,
-      -- Avalon Slave port 0
-      avmm_s0_address            => (others => '0'),--inst1_rcnfg_0_mgmt_address,
-      avmm_s0_read               => '0',            --inst1_rcnfg_0_mgmt_read,
-      avmm_s0_readdata           => open,           --inst0_avmm_s0_readdata, 
-      avmm_s0_write              => '0',            --inst1_rcnfg_0_mgmt_write,
-      avmm_s0_writedata          => (others => '0'),--inst1_rcnfg_0_mgmt_writedata, 
-      avmm_s0_waitrequest        => open,           --inst0_avmm_s0_waitrequest,
-      -- Avalon Slave port 1
-      avmm_s1_address            => (others => '0'),--inst1_rcnfg_1_mgmt_address,
-      avmm_s1_read               => '0',            --inst1_rcnfg_1_mgmt_read,
-      avmm_s1_readdata           => open,           --inst0_avmm_s1_readdata,
-      avmm_s1_write              => '0',            --inst1_rcnfg_1_mgmt_write,
-      avmm_s1_writedata          => (others => '0'),--inst1_rcnfg_1_mgmt_writedata, 
-      avmm_s1_waitrequest        => open,           --inst0_avmm_s1_waitrequest,
       -- Avalon master
       avmm_m0_address            => open,           --inst0_avmm_m0_address,
       avmm_m0_read               => open,           --inst0_avmm_m0_read,
@@ -424,6 +413,67 @@ begin
       smpl_cmp_sel               => inst1_smpl_cmp_sel,
       smpl_cmp_en                => inst1_smpl_cmp_en, 
       smpl_cmp_status            => inst1_smpl_cmp_status
+   );
+   
+   
+-- ----------------------------------------------------------------------------
+-- pll_top instance.
+-- Clock source for LMS#1, LMS#2 RX and TX logic
+-- ---------------------------------------------------------------------------- 
+   inst2_pll_top : entity work.pll_top
+   generic map(
+      INTENDED_DEVICE_FAMILY  => g_DEV_FAMILY,
+      N_PLL                   => 5,
+      -- TX pll parameters
+      LMS1_TXPLL_DRCT_C0_NDLY => 1,
+      LMS1_TXPLL_DRCT_C1_NDLY => 2,
+      -- RX pll parameters
+      LMS1_RXPLL_DRCT_C0_NDLY => 1,
+      LMS1_RXPLL_DRCT_C1_NDLY => 2,
+      -- TX pll parameters
+      LMS2_TXPLL_DRCT_C0_NDLY => 1,
+      LMS2_TXPLL_DRCT_C1_NDLY => 2,
+      -- RX pll parameters
+      LMS2_RXPLL_DRCT_C0_NDLY => 1,
+      LMS2_RXPLL_DRCT_C1_NDLY => 2
+   )
+   port map(
+      -- LMS#1 TX PLL 0 ports
+      lms1_txpll_inclk           => lms_o_mclk1,
+      lms1_txpll_reconfig_clk    => sys_clk,
+      lms1_txpll_rcnfg_to_pll    => inst1_pll_rcfg_to_pll_0,
+      lms1_txpll_rcnfg_from_pll  => inst1_lms1_txpll_rcnfg_from_pll,
+      lms1_txpll_logic_reset_n   => not inst1_pll_rst(0),
+      lms1_txpll_clk_ena         => inst1_from_fpgacfg.CLK_ENA(1 downto 0),
+      lms1_txpll_drct_clk_en     => inst1_from_fpgacfg.drct_clk_en(0) & inst1_from_fpgacfg.drct_clk_en(0),
+      lms1_txpll_c0              => lms_i_fclk1,
+      lms1_txpll_c1              => inst1_lms1_txpll_c1,
+      lms1_txpll_locked          => inst1_lms1_txpll_locked,
+      -- LMS#1 RX PLL ports
+      lms1_rxpll_inclk           => lms_o_mclk2,
+      lms1_rxpll_reconfig_clk    => sys_clk,
+      lms1_rxpll_rcnfg_to_pll    => inst1_pll_rcfg_to_pll_1,
+      lms1_rxpll_rcnfg_from_pll  => inst1_lms1_rxpll_rcnfg_from_pll,
+      lms1_rxpll_logic_reset_n   => not inst1_pll_rst(1),
+      lms1_rxpll_clk_ena         => inst1_from_fpgacfg.CLK_ENA(3 downto 2),
+      lms1_rxpll_drct_clk_en     => inst1_from_fpgacfg.drct_clk_en(1) & inst1_from_fpgacfg.drct_clk_en(1),
+      lms1_rxpll_c0              => inst1_lms1_rxpll_c0, --LMS1_FCLK2,
+      lms1_rxpll_c1              => inst1_lms1_rxpll_c1,
+      lms1_rxpll_locked          => inst1_lms1_rxpll_locked,
+      -- Sample comparing ports from LMS#1 RX interface
+      lms1_smpl_cmp_en           => inst1_lms1_smpl_cmp_en,      
+      lms1_smpl_cmp_done         => inst6_rx_smpl_cmp_done,
+      lms1_smpl_cmp_error        => inst6_rx_smpl_cmp_err,
+      lms1_smpl_cmp_cnt          => inst1_lms1_smpl_cmp_cnt, 
+      -- Reconfiguration AXI ports
+      rcnfg_axi_clk              => sys_clk,
+      rcnfg_axi_reset_n          => inst1_pll_axi_resetn_out(0),
+      rcnfg_from_axim            => inst1_pll_from_axim, 
+      rcnfg_to_axim              => inst1_rcnfg_to_axim,
+      rcnfg_sel                  => inst1_pll_axi_sel, 
+      -- pllcfg ports
+      from_pllcfg                => inst1_from_pllcfg,
+      to_pllcfg                  => inst1_to_pllcfg
    );
    
    
