@@ -34,7 +34,7 @@
 
     # DMA channels -------------------------------------------------------------
     "dma_channels"     :    1, # Number of DMA channels
-    "dma_buffering"    : 16384, # Buffering for each channel (in bytes)
+    "dma_buffering"    : 8192, # Buffering for each channel (in bytes)
     "dma_loopback"     : False, # Enable DMA loopback capability
     "dma_synchronizer" : False, # Enable DMA synchronizer capability
     "dma_monitor"      : False, # Enable DMA monitoring capability

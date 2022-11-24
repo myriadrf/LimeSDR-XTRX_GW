@@ -117,6 +117,8 @@ entity cpu_top is
       from_tamercfg        : out    t_FROM_TAMERCFG;
       to_gnsscfg           : in     t_TO_GNSSCFG;
       from_gnsscfg         : out    t_FROM_GNSSCFG;
+      to_memcfg            : in     t_TO_MEMCFG;
+      from_memcfg          : out    t_FROM_MEMCFG;
       
       smpl_cmp_en          : out    std_logic_vector ( 3 downto 0 );
       smpl_cmp_status      : in     std_logic_vector ( 1 downto 0 );
@@ -432,6 +434,8 @@ begin
       to_tstcfg            => to_tstcfg,
       from_tstcfg          => from_tstcfg,
       to_tstcfg_from_rxtx  => to_tstcfg_from_rxtx,
+      to_memcfg            => to_memcfg,
+      from_memcfg          => from_memcfg,
       
       to_periphcfg         => to_periphcfg,
       from_periphcfg       => from_periphcfg

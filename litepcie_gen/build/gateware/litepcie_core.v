@@ -9,7 +9,7 @@
 // Filename   : litepcie_core.v
 // Device     : xc7a
 // LiteX sha1 : c717e4c8
-// Date       : 2022-11-14 14:03:16
+// Date       : 2022-11-24 15:46:37
 //------------------------------------------------------------------------------
 
 
@@ -146,10 +146,10 @@ wire s7pciephy_tx_datapath_cdc_source_source_last;
 wire [127:0] s7pciephy_tx_datapath_cdc_source_source_payload_dat;
 wire [15:0] s7pciephy_tx_datapath_cdc_source_source_payload_be;
 wire s7pciephy_tx_datapath_cdc_cd_rst;
-wire from1553844640576_clk;
-wire from1553844640576_rst;
-wire to1553844640576_clk;
-wire to1553844640576_rst;
+wire from1944838708032_clk;
+wire from1944838708032_rst;
+wire to1944838708032_clk;
+wire to1944838708032_rst;
 wire s7pciephy_tx_datapath_cdc_cdc_sink_valid;
 wire s7pciephy_tx_datapath_cdc_cdc_sink_ready;
 wire s7pciephy_tx_datapath_cdc_cdc_sink_first;
@@ -319,10 +319,10 @@ wire s7pciephy_rx_datapath_cdc_source_source_last;
 wire [127:0] s7pciephy_rx_datapath_cdc_source_source_payload_dat;
 wire [15:0] s7pciephy_rx_datapath_cdc_source_source_payload_be;
 wire s7pciephy_rx_datapath_cdc_cd_rst;
-wire from1553845378096_clk;
-wire from1553845378096_rst;
-wire to1553845378096_clk;
-wire to1553845378096_rst;
+wire from1944839445552_clk;
+wire from1944839445552_rst;
+wire to1944839445552_clk;
+wire to1944839445552_rst;
 wire s7pciephy_rx_datapath_cdc_cdc_sink_valid;
 wire s7pciephy_rx_datapath_cdc_cdc_sink_ready;
 wire s7pciephy_rx_datapath_cdc_cdc_sink_first;
@@ -390,10 +390,10 @@ wire s7pciephy_msi_cdc_source_source_first;
 wire s7pciephy_msi_cdc_source_source_last;
 wire [7:0] s7pciephy_msi_cdc_source_source_payload_dat;
 wire s7pciephy_msi_cdc_cd_rst;
-wire from1553845088320_clk;
-wire from1553845088320_rst;
-wire to1553845088320_clk;
-wire to1553845088320_rst;
+wire from1944839155776_clk;
+wire from1944839155776_rst;
+wire to1944839155776_clk;
+wire to1944839155776_rst;
 wire s7pciephy_msi_cdc_cdc_sink_valid;
 wire s7pciephy_msi_cdc_cdc_sink_ready;
 wire s7pciephy_msi_cdc_cdc_sink_first;
@@ -1338,7 +1338,7 @@ wire [127:0] buffering_next_sink_payload_data;
 wire [23:0] buffering_csrfield_depth0;
 wire [3:0] buffering_csrfield_scratch0;
 wire buffering_csrfield_level_mode0;
-reg  [31:0] buffering_reader_fifo_control_storage = 32'd16384;
+reg  [31:0] buffering_reader_fifo_control_storage = 32'd8192;
 reg  buffering_reader_fifo_control_re = 1'd0;
 reg  [23:0] buffering_csrfield_level0 = 24'd0;
 wire [23:0] buffering_reader_fifo_status_status;
@@ -1347,7 +1347,7 @@ reg  buffering_reader_fifo_status_re = 1'd0;
 wire [23:0] buffering_csrfield_depth1;
 wire [3:0] buffering_csrfield_scratch1;
 wire buffering_csrfield_level_mode1;
-reg  [31:0] buffering_writer_fifo_control_storage = 32'd16384;
+reg  [31:0] buffering_writer_fifo_control_storage = 32'd8192;
 reg  buffering_writer_fifo_control_re = 1'd0;
 reg  [23:0] buffering_csrfield_level1 = 24'd0;
 wire [23:0] buffering_writer_fifo_status_status;
@@ -1371,26 +1371,26 @@ wire buffering_reader_fifo_syncfifo_re;
 wire buffering_reader_fifo_syncfifo_readable;
 wire [129:0] buffering_reader_fifo_syncfifo_din;
 wire [129:0] buffering_reader_fifo_syncfifo_dout;
-reg  [10:0] buffering_reader_fifo_level0 = 11'd0;
+reg  [9:0] buffering_reader_fifo_level0 = 10'd0;
 reg  buffering_reader_fifo_replace = 1'd0;
-reg  [9:0] buffering_reader_fifo_produce = 10'd0;
-reg  [9:0] buffering_reader_fifo_consume = 10'd0;
-reg  [9:0] buffering_reader_fifo_wrport_adr = 10'd0;
+reg  [8:0] buffering_reader_fifo_produce = 9'd0;
+reg  [8:0] buffering_reader_fifo_consume = 9'd0;
+reg  [8:0] buffering_reader_fifo_wrport_adr = 9'd0;
 wire [129:0] buffering_reader_fifo_wrport_dat_r;
 wire buffering_reader_fifo_wrport_we;
 wire [129:0] buffering_reader_fifo_wrport_dat_w;
 wire buffering_reader_fifo_do_read;
-wire [9:0] buffering_reader_fifo_rdport_adr;
+wire [8:0] buffering_reader_fifo_rdport_adr;
 wire [129:0] buffering_reader_fifo_rdport_dat_r;
 wire buffering_reader_fifo_rdport_re;
-wire [10:0] buffering_reader_fifo_level1;
+wire [9:0] buffering_reader_fifo_level1;
 wire [127:0] buffering_reader_fifo_fifo_in_payload_data;
 wire buffering_reader_fifo_fifo_in_first;
 wire buffering_reader_fifo_fifo_in_last;
 wire [127:0] buffering_reader_fifo_fifo_out_payload_data;
 wire buffering_reader_fifo_fifo_out_first;
 wire buffering_reader_fifo_fifo_out_last;
-reg  [10:0] buffering_reader_fifo_level_min = 11'd0;
+reg  [9:0] buffering_reader_fifo_level_min = 10'd0;
 reg  buffering_writer_fifo_sink_valid = 1'd0;
 wire buffering_writer_fifo_sink_ready;
 wire buffering_writer_fifo_sink_first;
@@ -1409,26 +1409,26 @@ wire buffering_writer_fifo_syncfifo_re;
 wire buffering_writer_fifo_syncfifo_readable;
 wire [129:0] buffering_writer_fifo_syncfifo_din;
 wire [129:0] buffering_writer_fifo_syncfifo_dout;
-reg  [10:0] buffering_writer_fifo_level0 = 11'd0;
+reg  [9:0] buffering_writer_fifo_level0 = 10'd0;
 reg  buffering_writer_fifo_replace = 1'd0;
-reg  [9:0] buffering_writer_fifo_produce = 10'd0;
-reg  [9:0] buffering_writer_fifo_consume = 10'd0;
-reg  [9:0] buffering_writer_fifo_wrport_adr = 10'd0;
+reg  [8:0] buffering_writer_fifo_produce = 9'd0;
+reg  [8:0] buffering_writer_fifo_consume = 9'd0;
+reg  [8:0] buffering_writer_fifo_wrport_adr = 9'd0;
 wire [129:0] buffering_writer_fifo_wrport_dat_r;
 wire buffering_writer_fifo_wrport_we;
 wire [129:0] buffering_writer_fifo_wrport_dat_w;
 wire buffering_writer_fifo_do_read;
-wire [9:0] buffering_writer_fifo_rdport_adr;
+wire [8:0] buffering_writer_fifo_rdport_adr;
 wire [129:0] buffering_writer_fifo_rdport_dat_r;
 wire buffering_writer_fifo_rdport_re;
-wire [10:0] buffering_writer_fifo_level1;
+wire [9:0] buffering_writer_fifo_level1;
 wire [127:0] buffering_writer_fifo_fifo_in_payload_data;
 wire buffering_writer_fifo_fifo_in_first;
 wire buffering_writer_fifo_fifo_in_last;
 wire [127:0] buffering_writer_fifo_fifo_out_payload_data;
 wire buffering_writer_fifo_fifo_out_first;
 wire buffering_writer_fifo_fifo_out_last;
-reg  [10:0] buffering_writer_fifo_level_max = 11'd0;
+reg  [9:0] buffering_writer_fifo_level_max = 10'd0;
 wire bufferizeendpoints0_sink_sink_valid;
 wire bufferizeendpoints0_sink_sink_ready;
 reg  bufferizeendpoints0_sink_sink_first = 1'd0;
@@ -2718,8 +2718,8 @@ assign s7pciephy_tx_datapath_source_source_last = s7pciephy_tx_datapath_pipe_rea
 assign s7pciephy_tx_datapath_source_source_payload_dat = s7pciephy_tx_datapath_pipe_ready_source_payload_dat;
 assign s7pciephy_tx_datapath_source_source_payload_be = s7pciephy_tx_datapath_pipe_ready_source_payload_be;
 assign s7pciephy_tx_datapath_pipe_valid_sink_ready = ((~s7pciephy_tx_datapath_pipe_valid_source_valid) | s7pciephy_tx_datapath_pipe_valid_source_ready);
-assign from1553844640576_clk = sys_clk;
-assign to1553844640576_clk = pcie_clk;
+assign from1944838708032_clk = sys_clk;
+assign to1944838708032_clk = pcie_clk;
 assign s7pciephy_tx_datapath_cdc_cd_rst = (sys_rst | pcie_rst);
 assign s7pciephy_tx_datapath_cdc_cdc_sink_valid = s7pciephy_tx_datapath_cdc_sink_sink_valid;
 assign s7pciephy_tx_datapath_cdc_sink_sink_ready = s7pciephy_tx_datapath_cdc_cdc_sink_ready;
@@ -2912,8 +2912,8 @@ assign s7pciephy_rx_datapath_converter_source_source_payload_data = s7pciephy_rx
 assign s7pciephy_rx_datapath_converter_converter_sink_ready = ((~s7pciephy_rx_datapath_converter_converter_strobe_all) | s7pciephy_rx_datapath_converter_converter_source_ready);
 assign s7pciephy_rx_datapath_converter_converter_source_valid = s7pciephy_rx_datapath_converter_converter_strobe_all;
 assign s7pciephy_rx_datapath_converter_converter_load_part = (s7pciephy_rx_datapath_converter_converter_sink_valid & s7pciephy_rx_datapath_converter_converter_sink_ready);
-assign from1553845378096_clk = pcie_clk;
-assign to1553845378096_clk = sys_clk;
+assign from1944839445552_clk = pcie_clk;
+assign to1944839445552_clk = sys_clk;
 assign s7pciephy_rx_datapath_cdc_cd_rst = (pcie_rst | sys_rst);
 assign s7pciephy_rx_datapath_cdc_cdc_sink_valid = s7pciephy_rx_datapath_cdc_sink_sink_valid;
 assign s7pciephy_rx_datapath_cdc_sink_sink_ready = s7pciephy_rx_datapath_cdc_cdc_sink_ready;
@@ -2969,8 +2969,8 @@ always @(*) begin
 end
 assign s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_next = (s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_next_binary ^ s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_next_binary[2:1]);
 assign s7pciephy_rx_datapath_pipe_valid_sink_ready = ((~s7pciephy_rx_datapath_pipe_valid_source_valid) | s7pciephy_rx_datapath_pipe_valid_source_ready);
-assign from1553845088320_clk = sys_clk;
-assign to1553845088320_clk = pcie_clk;
+assign from1944839155776_clk = sys_clk;
+assign to1944839155776_clk = pcie_clk;
 assign s7pciephy_msi_cdc_cd_rst = (sys_rst | pcie_rst);
 assign s7pciephy_msi_cdc_cdc_sink_valid = s7pciephy_msi_cdc_sink_sink_valid;
 assign s7pciephy_msi_cdc_sink_sink_ready = s7pciephy_msi_cdc_cdc_sink_ready;
@@ -5463,7 +5463,7 @@ assign buffering_reader_fifo_re = buffering_reader_fifo_source_ready;
 assign buffering_reader_fifo_syncfifo_re = (buffering_reader_fifo_syncfifo_readable & ((~buffering_reader_fifo_readable) | buffering_reader_fifo_re));
 assign buffering_reader_fifo_level1 = (buffering_reader_fifo_level0 + buffering_reader_fifo_readable);
 always @(*) begin
-	buffering_reader_fifo_wrport_adr <= 10'd0;
+	buffering_reader_fifo_wrport_adr <= 9'd0;
 	if (buffering_reader_fifo_replace) begin
 		buffering_reader_fifo_wrport_adr <= (buffering_reader_fifo_produce - 1'd1);
 	end else begin
@@ -5476,7 +5476,7 @@ assign buffering_reader_fifo_do_read = (buffering_reader_fifo_syncfifo_readable 
 assign buffering_reader_fifo_rdport_adr = buffering_reader_fifo_consume;
 assign buffering_reader_fifo_syncfifo_dout = buffering_reader_fifo_rdport_dat_r;
 assign buffering_reader_fifo_rdport_re = buffering_reader_fifo_do_read;
-assign buffering_reader_fifo_syncfifo_writable = (buffering_reader_fifo_level0 != 11'd1024);
+assign buffering_reader_fifo_syncfifo_writable = (buffering_reader_fifo_level0 != 10'd512);
 assign buffering_reader_fifo_syncfifo_readable = (buffering_reader_fifo_level0 != 1'd0);
 assign buffering_writer_fifo_syncfifo_din = {buffering_writer_fifo_fifo_in_last, buffering_writer_fifo_fifo_in_first, buffering_writer_fifo_fifo_in_payload_data};
 assign {buffering_writer_fifo_fifo_out_last, buffering_writer_fifo_fifo_out_first, buffering_writer_fifo_fifo_out_payload_data} = buffering_writer_fifo_syncfifo_dout;
@@ -5493,7 +5493,7 @@ assign buffering_writer_fifo_re = buffering_writer_fifo_source_ready;
 assign buffering_writer_fifo_syncfifo_re = (buffering_writer_fifo_syncfifo_readable & ((~buffering_writer_fifo_readable) | buffering_writer_fifo_re));
 assign buffering_writer_fifo_level1 = (buffering_writer_fifo_level0 + buffering_writer_fifo_readable);
 always @(*) begin
-	buffering_writer_fifo_wrport_adr <= 10'd0;
+	buffering_writer_fifo_wrport_adr <= 9'd0;
 	if (buffering_writer_fifo_replace) begin
 		buffering_writer_fifo_wrport_adr <= (buffering_writer_fifo_produce - 1'd1);
 	end else begin
@@ -5506,7 +5506,7 @@ assign buffering_writer_fifo_do_read = (buffering_writer_fifo_syncfifo_readable 
 assign buffering_writer_fifo_rdport_adr = buffering_writer_fifo_consume;
 assign buffering_writer_fifo_syncfifo_dout = buffering_writer_fifo_rdport_dat_r;
 assign buffering_writer_fifo_rdport_re = buffering_writer_fifo_do_read;
-assign buffering_writer_fifo_syncfifo_writable = (buffering_writer_fifo_level0 != 11'd1024);
+assign buffering_writer_fifo_syncfifo_writable = (buffering_writer_fifo_level0 != 10'd512);
 assign buffering_writer_fifo_syncfifo_readable = (buffering_writer_fifo_level0 != 1'd0);
 assign bufferizeendpoints0_pipe_valid_sink_ready = ((~bufferizeendpoints0_pipe_valid_source_valid) | bufferizeendpoints0_pipe_valid_source_ready);
 assign bufferizeendpoints0_pipe_valid_sink_valid = bufferizeendpoints0_sink_sink_valid;
@@ -6149,10 +6149,10 @@ assign s7pciephy_max_payload_size_status = xilinxmultiregimpl81;
 // Synchronous Logic
 //------------------------------------------------------------------------------
 
-always @(posedge from1553844640576_clk) begin
+always @(posedge from1944838708032_clk) begin
 	s7pciephy_tx_datapath_cdc_cdc_graycounter0_q_binary <= s7pciephy_tx_datapath_cdc_cdc_graycounter0_q_next_binary;
 	s7pciephy_tx_datapath_cdc_cdc_graycounter0_q <= s7pciephy_tx_datapath_cdc_cdc_graycounter0_q_next;
-	if (from1553844640576_rst) begin
+	if (from1944838708032_rst) begin
 		s7pciephy_tx_datapath_cdc_cdc_graycounter0_q <= 3'd0;
 		s7pciephy_tx_datapath_cdc_cdc_graycounter0_q_binary <= 3'd0;
 	end
@@ -6160,10 +6160,10 @@ always @(posedge from1553844640576_clk) begin
 	xilinxmultiregimpl11 <= xilinxmultiregimpl10;
 end
 
-always @(posedge from1553845088320_clk) begin
+always @(posedge from1944839155776_clk) begin
 	s7pciephy_msi_cdc_cdc_graycounter0_q_binary <= s7pciephy_msi_cdc_cdc_graycounter0_q_next_binary;
 	s7pciephy_msi_cdc_cdc_graycounter0_q <= s7pciephy_msi_cdc_cdc_graycounter0_q_next;
-	if (from1553845088320_rst) begin
+	if (from1944839155776_rst) begin
 		s7pciephy_msi_cdc_cdc_graycounter0_q <= 3'd0;
 		s7pciephy_msi_cdc_cdc_graycounter0_q_binary <= 3'd0;
 	end
@@ -6171,10 +6171,10 @@ always @(posedge from1553845088320_clk) begin
 	xilinxmultiregimpl51 <= xilinxmultiregimpl50;
 end
 
-always @(posedge from1553845378096_clk) begin
+always @(posedge from1944839445552_clk) begin
 	s7pciephy_rx_datapath_cdc_cdc_graycounter0_q_binary <= s7pciephy_rx_datapath_cdc_cdc_graycounter0_q_next_binary;
 	s7pciephy_rx_datapath_cdc_cdc_graycounter0_q <= s7pciephy_rx_datapath_cdc_cdc_graycounter0_q_next;
-	if (from1553845378096_rst) begin
+	if (from1944839445552_rst) begin
 		s7pciephy_rx_datapath_cdc_cdc_graycounter0_q <= 3'd0;
 		s7pciephy_rx_datapath_cdc_cdc_graycounter0_q_binary <= 3'd0;
 	end
@@ -6927,7 +6927,7 @@ always @(posedge sys_clk) begin
 		buffering_reader_fifo_level_min <= buffering_reader_fifo_level1;
 	end
 	if ((buffering_reader_fifo_status_re | (buffering_csrfield_level_mode0 == 1'd0))) begin
-		buffering_reader_fifo_level_min <= 11'd2047;
+		buffering_reader_fifo_level_min <= 10'd1023;
 	end
 	if ((buffering_writer_fifo_level1 > buffering_writer_fifo_level_max)) begin
 		buffering_writer_fifo_level_max <= buffering_writer_fifo_level1;
@@ -7356,22 +7356,22 @@ always @(posedge sys_clk) begin
 		reader_data_fifo_produce <= 10'd0;
 		reader_data_fifo_consume <= 10'd0;
 		reader_pending_words <= 11'd0;
-		buffering_reader_fifo_control_storage <= 32'd16384;
+		buffering_reader_fifo_control_storage <= 32'd8192;
 		buffering_reader_fifo_control_re <= 1'd0;
 		buffering_reader_fifo_status_re <= 1'd0;
-		buffering_writer_fifo_control_storage <= 32'd16384;
+		buffering_writer_fifo_control_storage <= 32'd8192;
 		buffering_writer_fifo_control_re <= 1'd0;
 		buffering_writer_fifo_status_re <= 1'd0;
 		buffering_reader_fifo_readable <= 1'd0;
-		buffering_reader_fifo_level0 <= 11'd0;
-		buffering_reader_fifo_produce <= 10'd0;
-		buffering_reader_fifo_consume <= 10'd0;
-		buffering_reader_fifo_level_min <= 11'd0;
+		buffering_reader_fifo_level0 <= 10'd0;
+		buffering_reader_fifo_produce <= 9'd0;
+		buffering_reader_fifo_consume <= 9'd0;
+		buffering_reader_fifo_level_min <= 10'd0;
 		buffering_writer_fifo_readable <= 1'd0;
-		buffering_writer_fifo_level0 <= 11'd0;
-		buffering_writer_fifo_produce <= 10'd0;
-		buffering_writer_fifo_consume <= 10'd0;
-		buffering_writer_fifo_level_max <= 11'd0;
+		buffering_writer_fifo_level0 <= 10'd0;
+		buffering_writer_fifo_produce <= 9'd0;
+		buffering_writer_fifo_consume <= 9'd0;
+		buffering_writer_fifo_level_max <= 10'd0;
 		bufferizeendpoints0_pipe_valid_source_valid <= 1'd0;
 		bufferizeendpoints0_pipe_valid_source_payload_data <= 128'd0;
 		bufferizeendpoints1_pipe_valid_source_valid <= 1'd0;
@@ -7450,10 +7450,10 @@ always @(posedge sys_clk) begin
 	xilinxmultiregimpl81 <= xilinxmultiregimpl80;
 end
 
-always @(posedge to1553844640576_clk) begin
+always @(posedge to1944838708032_clk) begin
 	s7pciephy_tx_datapath_cdc_cdc_graycounter1_q_binary <= s7pciephy_tx_datapath_cdc_cdc_graycounter1_q_next_binary;
 	s7pciephy_tx_datapath_cdc_cdc_graycounter1_q <= s7pciephy_tx_datapath_cdc_cdc_graycounter1_q_next;
-	if (to1553844640576_rst) begin
+	if (to1944838708032_rst) begin
 		s7pciephy_tx_datapath_cdc_cdc_graycounter1_q <= 3'd0;
 		s7pciephy_tx_datapath_cdc_cdc_graycounter1_q_binary <= 3'd0;
 	end
@@ -7461,10 +7461,10 @@ always @(posedge to1553844640576_clk) begin
 	xilinxmultiregimpl01 <= xilinxmultiregimpl00;
 end
 
-always @(posedge to1553845088320_clk) begin
+always @(posedge to1944839155776_clk) begin
 	s7pciephy_msi_cdc_cdc_graycounter1_q_binary <= s7pciephy_msi_cdc_cdc_graycounter1_q_next_binary;
 	s7pciephy_msi_cdc_cdc_graycounter1_q <= s7pciephy_msi_cdc_cdc_graycounter1_q_next;
-	if (to1553845088320_rst) begin
+	if (to1944839155776_rst) begin
 		s7pciephy_msi_cdc_cdc_graycounter1_q <= 3'd0;
 		s7pciephy_msi_cdc_cdc_graycounter1_q_binary <= 3'd0;
 	end
@@ -7472,10 +7472,10 @@ always @(posedge to1553845088320_clk) begin
 	xilinxmultiregimpl41 <= xilinxmultiregimpl40;
 end
 
-always @(posedge to1553845378096_clk) begin
+always @(posedge to1944839445552_clk) begin
 	s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_binary <= s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_next_binary;
 	s7pciephy_rx_datapath_cdc_cdc_graycounter1_q <= s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_next;
-	if (to1553845378096_rst) begin
+	if (to1944839445552_rst) begin
 		s7pciephy_rx_datapath_cdc_cdc_graycounter1_q <= 3'd0;
 		s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_binary <= 3'd0;
 	end
@@ -7518,12 +7518,12 @@ IBUFDS_GTE2 IBUFDS_GTE2(
 reg [145:0] storage[0:3];
 reg [145:0] storage_dat0;
 reg [145:0] storage_dat1;
-always @(posedge from1553844640576_clk) begin
+always @(posedge from1944838708032_clk) begin
 	if (s7pciephy_tx_datapath_cdc_cdc_wrport_we)
 		storage[s7pciephy_tx_datapath_cdc_cdc_wrport_adr] <= s7pciephy_tx_datapath_cdc_cdc_wrport_dat_w;
 	storage_dat0 <= storage[s7pciephy_tx_datapath_cdc_cdc_wrport_adr];
 end
-always @(posedge to1553844640576_clk) begin
+always @(posedge to1944838708032_clk) begin
 	storage_dat1 <= storage[s7pciephy_tx_datapath_cdc_cdc_rdport_adr];
 end
 assign s7pciephy_tx_datapath_cdc_cdc_wrport_dat_r = storage_dat0;
@@ -7538,12 +7538,12 @@ assign s7pciephy_tx_datapath_cdc_cdc_rdport_dat_r = storage_dat1;
 reg [145:0] storage_1[0:3];
 reg [145:0] storage_1_dat0;
 reg [145:0] storage_1_dat1;
-always @(posedge from1553845378096_clk) begin
+always @(posedge from1944839445552_clk) begin
 	if (s7pciephy_rx_datapath_cdc_cdc_wrport_we)
 		storage_1[s7pciephy_rx_datapath_cdc_cdc_wrport_adr] <= s7pciephy_rx_datapath_cdc_cdc_wrport_dat_w;
 	storage_1_dat0 <= storage_1[s7pciephy_rx_datapath_cdc_cdc_wrport_adr];
 end
-always @(posedge to1553845378096_clk) begin
+always @(posedge to1944839445552_clk) begin
 	storage_1_dat1 <= storage_1[s7pciephy_rx_datapath_cdc_cdc_rdport_adr];
 end
 assign s7pciephy_rx_datapath_cdc_cdc_wrport_dat_r = storage_1_dat0;
@@ -7558,12 +7558,12 @@ assign s7pciephy_rx_datapath_cdc_cdc_rdport_dat_r = storage_1_dat1;
 reg [9:0] storage_2[0:3];
 reg [9:0] storage_2_dat0;
 reg [9:0] storage_2_dat1;
-always @(posedge from1553845088320_clk) begin
+always @(posedge from1944839155776_clk) begin
 	if (s7pciephy_msi_cdc_cdc_wrport_we)
 		storage_2[s7pciephy_msi_cdc_cdc_wrport_adr] <= s7pciephy_msi_cdc_cdc_wrport_dat_w;
 	storage_2_dat0 <= storage_2[s7pciephy_msi_cdc_cdc_wrport_adr];
 end
-always @(posedge to1553845088320_clk) begin
+always @(posedge to1944839155776_clk) begin
 	storage_2_dat1 <= storage_2[s7pciephy_msi_cdc_cdc_rdport_adr];
 end
 assign s7pciephy_msi_cdc_cdc_wrport_dat_r = storage_2_dat0;
@@ -7649,11 +7649,11 @@ assign reader_data_fifo_rdport_dat_r = storage_6_dat1;
 
 
 //------------------------------------------------------------------------------
-// Memory storage_7: 1024-words x 130-bit
+// Memory storage_7: 512-words x 130-bit
 //------------------------------------------------------------------------------
 // Port 0 | Read: Sync  | Write: Sync | Mode: Read-First  | Write-Granularity: 130 
 // Port 1 | Read: Sync  | Write: ---- | 
-reg [129:0] storage_7[0:1023];
+reg [129:0] storage_7[0:511];
 reg [129:0] storage_7_dat0;
 reg [129:0] storage_7_dat1;
 always @(posedge sys_clk) begin
@@ -7670,11 +7670,11 @@ assign buffering_reader_fifo_rdport_dat_r = storage_7_dat1;
 
 
 //------------------------------------------------------------------------------
-// Memory storage_8: 1024-words x 130-bit
+// Memory storage_8: 512-words x 130-bit
 //------------------------------------------------------------------------------
 // Port 0 | Read: Sync  | Write: Sync | Mode: Read-First  | Write-Granularity: 130 
 // Port 1 | Read: Sync  | Write: ---- | 
-reg [129:0] storage_8[0:1023];
+reg [129:0] storage_8[0:511];
 reg [129:0] storage_8_dat0;
 reg [129:0] storage_8_dat1;
 always @(posedge sys_clk) begin
@@ -8087,7 +8087,7 @@ assign litepciecore_litepcieendpoint_syncfifo7_rdport_dat_r = storage_18_dat1;
 (* ars_ff1 = "true", async_reg = "true" *) FDPE #(
 	.INIT(1'd1)
 ) FDPE (
-	.C(from1553844640576_clk),
+	.C(from1944838708032_clk),
 	.CE(1'd1),
 	.D(1'd0),
 	.PRE(s7pciephy_tx_datapath_cdc_cd_rst),
@@ -8097,17 +8097,17 @@ assign litepciecore_litepcieendpoint_syncfifo7_rdport_dat_r = storage_18_dat1;
 (* ars_ff2 = "true", async_reg = "true" *) FDPE #(
 	.INIT(1'd1)
 ) FDPE_1 (
-	.C(from1553844640576_clk),
+	.C(from1944838708032_clk),
 	.CE(1'd1),
 	.D(rst_meta0),
 	.PRE(s7pciephy_tx_datapath_cdc_cd_rst),
-	.Q(from1553844640576_rst)
+	.Q(from1944838708032_rst)
 );
 
 (* ars_ff1 = "true", async_reg = "true" *) FDPE #(
 	.INIT(1'd1)
 ) FDPE_2 (
-	.C(to1553844640576_clk),
+	.C(to1944838708032_clk),
 	.CE(1'd1),
 	.D(1'd0),
 	.PRE(s7pciephy_tx_datapath_cdc_cd_rst),
@@ -8117,17 +8117,17 @@ assign litepciecore_litepcieendpoint_syncfifo7_rdport_dat_r = storage_18_dat1;
 (* ars_ff2 = "true", async_reg = "true" *) FDPE #(
 	.INIT(1'd1)
 ) FDPE_3 (
-	.C(to1553844640576_clk),
+	.C(to1944838708032_clk),
 	.CE(1'd1),
 	.D(rst_meta1),
 	.PRE(s7pciephy_tx_datapath_cdc_cd_rst),
-	.Q(to1553844640576_rst)
+	.Q(to1944838708032_rst)
 );
 
 (* ars_ff1 = "true", async_reg = "true" *) FDPE #(
 	.INIT(1'd1)
 ) FDPE_4 (
-	.C(from1553845378096_clk),
+	.C(from1944839445552_clk),
 	.CE(1'd1),
 	.D(1'd0),
 	.PRE(s7pciephy_rx_datapath_cdc_cd_rst),
@@ -8137,17 +8137,17 @@ assign litepciecore_litepcieendpoint_syncfifo7_rdport_dat_r = storage_18_dat1;
 (* ars_ff2 = "true", async_reg = "true" *) FDPE #(
 	.INIT(1'd1)
 ) FDPE_5 (
-	.C(from1553845378096_clk),
+	.C(from1944839445552_clk),
 	.CE(1'd1),
 	.D(rst_meta2),
 	.PRE(s7pciephy_rx_datapath_cdc_cd_rst),
-	.Q(from1553845378096_rst)
+	.Q(from1944839445552_rst)
 );
 
 (* ars_ff1 = "true", async_reg = "true" *) FDPE #(
 	.INIT(1'd1)
 ) FDPE_6 (
-	.C(to1553845378096_clk),
+	.C(to1944839445552_clk),
 	.CE(1'd1),
 	.D(1'd0),
 	.PRE(s7pciephy_rx_datapath_cdc_cd_rst),
@@ -8157,17 +8157,17 @@ assign litepciecore_litepcieendpoint_syncfifo7_rdport_dat_r = storage_18_dat1;
 (* ars_ff2 = "true", async_reg = "true" *) FDPE #(
 	.INIT(1'd1)
 ) FDPE_7 (
-	.C(to1553845378096_clk),
+	.C(to1944839445552_clk),
 	.CE(1'd1),
 	.D(rst_meta3),
 	.PRE(s7pciephy_rx_datapath_cdc_cd_rst),
-	.Q(to1553845378096_rst)
+	.Q(to1944839445552_rst)
 );
 
 (* ars_ff1 = "true", async_reg = "true" *) FDPE #(
 	.INIT(1'd1)
 ) FDPE_8 (
-	.C(from1553845088320_clk),
+	.C(from1944839155776_clk),
 	.CE(1'd1),
 	.D(1'd0),
 	.PRE(s7pciephy_msi_cdc_cd_rst),
@@ -8177,17 +8177,17 @@ assign litepciecore_litepcieendpoint_syncfifo7_rdport_dat_r = storage_18_dat1;
 (* ars_ff2 = "true", async_reg = "true" *) FDPE #(
 	.INIT(1'd1)
 ) FDPE_9 (
-	.C(from1553845088320_clk),
+	.C(from1944839155776_clk),
 	.CE(1'd1),
 	.D(rst_meta4),
 	.PRE(s7pciephy_msi_cdc_cd_rst),
-	.Q(from1553845088320_rst)
+	.Q(from1944839155776_rst)
 );
 
 (* ars_ff1 = "true", async_reg = "true" *) FDPE #(
 	.INIT(1'd1)
 ) FDPE_10 (
-	.C(to1553845088320_clk),
+	.C(to1944839155776_clk),
 	.CE(1'd1),
 	.D(1'd0),
 	.PRE(s7pciephy_msi_cdc_cd_rst),
@@ -8197,15 +8197,15 @@ assign litepciecore_litepcieendpoint_syncfifo7_rdport_dat_r = storage_18_dat1;
 (* ars_ff2 = "true", async_reg = "true" *) FDPE #(
 	.INIT(1'd1)
 ) FDPE_11 (
-	.C(to1553845088320_clk),
+	.C(to1944839155776_clk),
 	.CE(1'd1),
 	.D(rst_meta5),
 	.PRE(s7pciephy_msi_cdc_cd_rst),
-	.Q(to1553845088320_rst)
+	.Q(to1944839155776_rst)
 );
 
 endmodule
 
 // -----------------------------------------------------------------------------
-//  Auto-Generated by LiteX on 2022-11-14 14:03:16.
+//  Auto-Generated by LiteX on 2022-11-24 15:46:37.
 //------------------------------------------------------------------------------
