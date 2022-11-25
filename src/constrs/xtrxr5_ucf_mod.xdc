@@ -22,47 +22,47 @@ create_clock -name usb_phy_clk -period 16 [get_ports usb_clk]
 create_clock -name cfg_mclk -period 12  [get_nets inst0_xtrx_top/cfg_mclk]
 create_clock -name sys_clk -period 10   [get_ports sys_clk_p]
 create_clock -name clk_vctcxo -period 20 [get_ports fpga_clk_vctcxo]
-create_clock -name rx_mclk_in -period 2.5 [get_ports lms_o_mclk2]
-create_clock -name tx_mclk_in -period 2.5 [get_ports lms_o_mclk1]
+create_clock -name rx_mclk_in -period 8.138 [get_ports lms_o_mclk2]
+create_clock -name tx_mclk_in -period 8.138 [get_ports lms_o_mclk1]
 
 
 # PCIe and master clocks
-set_clock_groups -asynchronous -group [get_clocks -include_generated_clocks usb_phy_clk]
-set_clock_groups -asynchronous -group [get_clocks -include_generated_clocks sys_clk]
-set_clock_groups -asynchronous -group [get_clocks -include_generated_clocks clk_vctcxo]
+#set_clock_groups -asynchronous -group [get_clocks -include_generated_clocks usb_phy_clk]
+#set_clock_groups -asynchronous -group [get_clocks -include_generated_clocks sys_clk]
+#set_clock_groups -asynchronous -group [get_clocks -include_generated_clocks clk_vctcxo]
 
-set_property LOC MMCME2_ADV_X1Y1 [get_cells inst0_xtrx_top/xlnx_pci_clocking/mmcm_i]
+#set_property LOC MMCME2_ADV_X1Y1 [get_cells inst0_xtrx_top/xlnx_pci_clocking/mmcm_i]
 
-set_false_path -to [get_pins {inst0_xtrx_top/xlnx_pci_clocking/pclk_i1_bufgctrl.pclk_i1/S0}]
-set_false_path -to [get_pins {inst0_xtrx_top/xlnx_pci_clocking/pclk_i1_bufgctrl.pclk_i1/S1}]
+#set_false_path -to [get_pins {inst0_xtrx_top/xlnx_pci_clocking/pclk_i1_bufgctrl.pclk_i1/S0}]
+#set_false_path -to [get_pins {inst0_xtrx_top/xlnx_pci_clocking/pclk_i1_bufgctrl.pclk_i1/S1}]
 
-create_generated_clock -name clk_125mhz_x0y0 [get_pins inst0_xtrx_top/xlnx_pci_clocking/mmcm_i/CLKOUT0]
-create_generated_clock -name clk_250mhz_x0y0 [get_pins inst0_xtrx_top/xlnx_pci_clocking/mmcm_i/CLKOUT1]
-create_generated_clock -name clk_31mhz_x0y0 [get_pins inst0_xtrx_top/xlnx_pci_clocking/mmcm_i/CLKOUT4]
+#create_generated_clock -name clk_125mhz_x0y0 [get_pins inst0_xtrx_top/xlnx_pci_clocking/mmcm_i/CLKOUT0]
+#create_generated_clock -name clk_250mhz_x0y0 [get_pins inst0_xtrx_top/xlnx_pci_clocking/mmcm_i/CLKOUT1]
+#create_generated_clock -name clk_31mhz_x0y0 [get_pins inst0_xtrx_top/xlnx_pci_clocking/mmcm_i/CLKOUT4]
 
-create_generated_clock -name clk_125mhz_mux_x0y0 \
-                        -source [get_pins inst0_xtrx_top/xlnx_pci_clocking/pclk_i1_bufgctrl.pclk_i1/I0] \
-                        -divide_by 1 \
-                        [get_pins inst0_xtrx_top/xlnx_pci_clocking/pclk_i1_bufgctrl.pclk_i1/O]
+#create_generated_clock -name clk_125mhz_mux_x0y0 \
+#                        -source [get_pins inst0_xtrx_top/xlnx_pci_clocking/pclk_i1_bufgctrl.pclk_i1/I0] \
+#                        -divide_by 1 \
+#                        [get_pins inst0_xtrx_top/xlnx_pci_clocking/pclk_i1_bufgctrl.pclk_i1/O]
 
-create_generated_clock -name clk_250mhz_mux_x0y0 \
-                        -source [get_pins inst0_xtrx_top/xlnx_pci_clocking/pclk_i1_bufgctrl.pclk_i1/I1] \
-                        -divide_by 1 -add -master_clock [get_clocks -of [get_pins inst0_xtrx_top/xlnx_pci_clocking/pclk_i1_bufgctrl.pclk_i1/I1]] \
-                        [get_pins inst0_xtrx_top/xlnx_pci_clocking/pclk_i1_bufgctrl.pclk_i1/O]
+#create_generated_clock -name clk_250mhz_mux_x0y0 \
+#                        -source [get_pins inst0_xtrx_top/xlnx_pci_clocking/pclk_i1_bufgctrl.pclk_i1/I1] \
+#                        -divide_by 1 -add -master_clock [get_clocks -of [get_pins inst0_xtrx_top/xlnx_pci_clocking/pclk_i1_bufgctrl.pclk_i1/I1]] \
+#                        [get_pins inst0_xtrx_top/xlnx_pci_clocking/pclk_i1_bufgctrl.pclk_i1/O]
 
-set_clock_groups -name pcieclkmux -physically_exclusive -group clk_125mhz_mux_x0y0 -group clk_250mhz_mux_x0y0
+#set_clock_groups -name pcieclkmux -physically_exclusive -group clk_125mhz_mux_x0y0 -group clk_250mhz_mux_x0y0
 
 
 
-create_generated_clock -name clk_userclk_mux \
-                        -source [get_pins inst0_xtrx_top/userclk_c_bufg/I0] \
-                        -divide_by 1 \
-                        [get_pins inst0_xtrx_top/userclk_c_bufg/O]
+#create_generated_clock -name clk_userclk_mux \
+#                        -source [get_pins inst0_xtrx_top/userclk_c_bufg/I0] \
+#                        -divide_by 1 \
+#                        [get_pins inst0_xtrx_top/userclk_c_bufg/O]
 
-create_generated_clock -name clk_cfgmclk_mux \
-                        -source [get_pins inst0_xtrx_top/userclk_c_bufg/I1] \
-                        -divide_by 1 -add -master_clock [get_clocks -of [get_pins inst0_xtrx_top/userclk_c_bufg/I1]] \
-                        [get_pins inst0_xtrx_top/userclk_c_bufg/O]
+#create_generated_clock -name clk_cfgmclk_mux \
+#                        -source [get_pins inst0_xtrx_top/userclk_c_bufg/I1] \
+#                        -divide_by 1 -add -master_clock [get_clocks -of [get_pins inst0_xtrx_top/userclk_c_bufg/I1]] \
+#                        [get_pins inst0_xtrx_top/userclk_c_bufg/O]
 
 ##create_generated_clock -name clk_cfgmclk_mux \
 ##                        -source [get_pins inst0_xtrx_top/STARTUPE2_inst/CFGMCLK] \
@@ -74,19 +74,19 @@ create_generated_clock -name clk_cfgmclk_mux \
 #                       -divide_by 1 -add -master_clock [get_clocks cfg_mclk] \
 #                       [get_pins inst0_xtrx_top/userclk_c_bufg/O]
 
-set_clock_groups -name userclkmux -physically_exclusive -group clk_userclk_mux -group clk_cfgmclk_mux
+#set_clock_groups -name userclkmux -physically_exclusive -group clk_userclk_mux -group clk_cfgmclk_mux
 
 
-set_false_path -from [get_clocks -of [get_pins inst0_xtrx_top/userclk_c_bufg/I0]] -to [get_clocks -of [get_pins inst0_xtrx_top/userclk_c_bufg/I1]]
-set_false_path -from [get_clocks -of [get_pins inst0_xtrx_top/userclk_c_bufg/I1]] -to [get_clocks -of [get_pins inst0_xtrx_top/userclk_c_bufg/I0]]
+#set_false_path -from [get_clocks -of [get_pins inst0_xtrx_top/userclk_c_bufg/I0]] -to [get_clocks -of [get_pins inst0_xtrx_top/userclk_c_bufg/I1]]
+#set_false_path -from [get_clocks -of [get_pins inst0_xtrx_top/userclk_c_bufg/I1]] -to [get_clocks -of [get_pins inst0_xtrx_top/userclk_c_bufg/I0]]
 
-set_false_path -from [get_clocks -of [get_pins inst0_xtrx_top/userclk_c_bufg/I0]] -to [get_clocks clk_cfgmclk_mux]
-set_false_path -from [get_clocks clk_cfgmclk_mux] -to [get_clocks -of [get_pins inst0_xtrx_top/userclk_c_bufg/I0]]
+#set_false_path -from [get_clocks -of [get_pins inst0_xtrx_top/userclk_c_bufg/I0]] -to [get_clocks clk_cfgmclk_mux]
+#set_false_path -from [get_clocks clk_cfgmclk_mux] -to [get_clocks -of [get_pins inst0_xtrx_top/userclk_c_bufg/I0]]
 
 
 # LML Port 1
 #set_property LOC OUT_FIFO_X0Y0   [get_cells lml_tx/tx_fifo.out_fifo]
-set_property LOC IN_FIFO_X0Y0    [get_cells inst0_xtrx_top/lml_tx/rx_fifo.in_fifo]
+#set_property LOC IN_FIFO_X0Y0    [get_cells inst0_xtrx_top/lml_tx/rx_fifo.in_fifo]
 #set_property LOC MMCME2_ADV_X0Y0 [get_cells lml_tx/mmcm_gen.mmcme2]
 
 #create_generated_clock -name tx_fclk      -source [get_pins lml_tx/mmcm_gen.mmcme2/CLKIN1] [get_pins lml_tx/mmcm_gen.mmcme2/CLKOUT0]
@@ -103,7 +103,7 @@ set_property LOC IN_FIFO_X0Y0    [get_cells inst0_xtrx_top/lml_tx/rx_fifo.in_fif
 
 
 # LML Port 2
-set_property LOC OUT_FIFO_X1Y1   [get_cells inst0_xtrx_top/lml_rx/tx_fifo.out_fifo]
+#set_property LOC OUT_FIFO_X1Y1   [get_cells inst0_xtrx_top/lml_rx/tx_fifo.out_fifo]
 #set_property LOC IN_FIFO_X1Y1    [get_cells lml_rx/rx_fifo.in_fifo]
 #set_property LOC MMCME2_ADV_X1Y0 [get_cells lml_rx/mmcm_gen.mmcme2]
 
@@ -120,29 +120,29 @@ set_property LOC OUT_FIFO_X1Y1   [get_cells inst0_xtrx_top/lml_rx/tx_fifo.out_fi
 #set_false_path -from [get_clocks rx_ref_clk_p1] -to [get_clocks rx_mclk_in]
 
 
-set_clock_groups -asynchronous -group [get_clocks -include_generated_clocks rx_mclk_in]
-set_clock_groups -asynchronous -group [get_clocks -include_generated_clocks tx_mclk_in]
+#set_clock_groups -asynchronous -group [get_clocks -include_generated_clocks rx_mclk_in]
+#set_clock_groups -asynchronous -group [get_clocks -include_generated_clocks tx_mclk_in]
 
 
 # other clocks rules
 
-set_false_path -from [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]] -to [get_clocks usb_phy_clk]
-set_false_path -from [get_clocks usb_phy_clk] -to [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]]
+#set_false_path -from [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]] -to [get_clocks usb_phy_clk]
+#set_false_path -from [get_clocks usb_phy_clk] -to [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]]
 
-set_false_path -from [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]] -to [get_clocks cfg_mclk]
-set_false_path -from [get_clocks cfg_mclk] -to [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]]
+#set_false_path -from [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]] -to [get_clocks cfg_mclk]
+#set_false_path -from [get_clocks cfg_mclk] -to [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]]
 
-set_false_path -from [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]] -to [get_clocks tx_mclk_in]
-set_false_path -from [get_clocks tx_mclk_in] -to [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]]
+#set_false_path -from [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]] -to [get_clocks tx_mclk_in]
+#set_false_path -from [get_clocks tx_mclk_in] -to [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]]
 
-set_false_path -from [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]] -to [get_clocks rx_mclk_in]
-set_false_path -from [get_clocks rx_mclk_in] -to [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]]
+#set_false_path -from [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]] -to [get_clocks rx_mclk_in]
+#set_false_path -from [get_clocks rx_mclk_in] -to [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]]
 
-set_false_path -from [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]] -to [get_clocks clk_vctcxo]
-set_false_path -from [get_clocks clk_vctcxo] -to [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]]
+#set_false_path -from [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]] -to [get_clocks clk_vctcxo]
+#set_false_path -from [get_clocks clk_vctcxo] -to [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]]
 
-set_false_path -from [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]] -to [get_clocks clk_31mhz_x0y0]
-set_false_path -from [get_clocks clk_31mhz_x0y0] -to [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]]
+#set_false_path -from [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]] -to [get_clocks clk_31mhz_x0y0]
+#set_false_path -from [get_clocks clk_31mhz_x0y0] -to [get_clocks -of_objects [get_nets inst0_xtrx_top/user_clk]]
 
 
 
