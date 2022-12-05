@@ -53,7 +53,7 @@ entity LimeSDR_XTRX_top is
       g_GNSSCFG_START_ADDR    : integer := 256;
       g_MEMCFG_START_ADDR     : integer := 65504;
       -- TX interface 
-      g_TX_N_BUFF             : integer := 4;      -- N 4KB buffers in TX interface (2 OR 4)
+      g_TX_N_BUFF             : integer := 2;      -- N 4KB buffers in TX interface (2 OR 4)
       g_TX_PCT_SIZE           : integer := 4096;   -- TX packet size in bytes
       g_TX_IN_PCT_HDR_SIZE    : integer := 16
    );
@@ -83,14 +83,14 @@ entity LimeSDR_XTRX_top is
    lms_i_txnrx1    : out   std_logic;
    lms_o_mclk1     : in    std_logic;
    lms_i_fclk1     : out   std_logic; 
-   lms_io_iqsel1   : in    std_logic;
-   lms_diq1        : in    std_logic_vector(11 downto 0);
+   lms_io_iqsel1   : out   std_logic;
+   lms_diq1        : out   std_logic_vector(11 downto 0);
    --LMS port2 - RX
    lms_i_txnrx2    : out   std_logic;
    lms_o_mclk2     : in    std_logic;
    lms_i_fclk2     : out   std_logic;
-   lms_io_iqsel2   : inout std_logic;
-   lms_diq2        : inout std_logic_vector(11 downto 0);
+   lms_io_iqsel2   : in    std_logic;
+   lms_diq2        : in    std_logic_vector(11 downto 0);
    --AUX
    en_tcxo         : out   std_logic;
    ext_clk         : out   std_logic;      
@@ -153,9 +153,6 @@ constant c_F2H_S0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_FPGA2HOST_S0
 constant c_H2F_C0_RDUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_HOST2FPGA_C0_0_SIZE/(c_H2F_C0_RWIDTH/8),true);
 constant c_F2H_C0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_FPGA2HOST_C0_0_SIZE/(c_F2H_C0_WWIDTH/8),true);
 
-
-attribute DONT_TOUCH : string;
-attribute DONT_TOUCH of inst0: label is "TRUE";
 
 signal sys_clk : std_logic;
 signal global_rst_n : std_logic;
@@ -280,9 +277,15 @@ signal      inst1_lms2_smpl_cmp_en          : std_logic;
 signal      inst1_lms2_smpl_cmp_cnt         : std_logic_vector(15 downto 0);
 signal      inst1_rcnfg_to_axim             : t_TO_AXIM_32x32;
 signal      inst1_pll_0_rcnfg_from_pll      : std_logic_vector(63 downto 0);
+
+signal      inst4_txant_en                  : std_logic;
             
-signal      inst6_rx_smpl_cmp_done          : std_logic; 
-signal      inst6_rx_smpl_cmp_err           : std_logic; 
+signal      inst4_rx_smpl_cmp_done          : std_logic; 
+signal      inst4_rx_smpl_cmp_err           : std_logic; 
+signal      inst4_rx_smpl_cmp_start         : std_logic;
+signal      inst4_rx_smpl_cmp_en            : std_logic;
+signal      inst4_sdout                     : std_logic;
+
 
 begin
 
@@ -507,8 +510,8 @@ begin
       lms1_rxpll_locked          => inst1_lms1_rxpll_locked,
       -- Sample comparing ports from LMS#1 RX interface
       lms1_smpl_cmp_en           => inst1_lms1_smpl_cmp_en,      
-      lms1_smpl_cmp_done         => inst6_rx_smpl_cmp_done,
-      lms1_smpl_cmp_error        => inst6_rx_smpl_cmp_err,
+      lms1_smpl_cmp_done         => inst4_rx_smpl_cmp_done,
+      lms1_smpl_cmp_error        => inst4_rx_smpl_cmp_err,
       lms1_smpl_cmp_cnt          => inst1_lms1_smpl_cmp_cnt, 
       -- Reconfiguration AXI ports
       rcnfg_axi_clk              => sys_clk,
@@ -587,6 +590,85 @@ begin
       ext_rx_en => '0',--dpd_tx_en,   
       tx_dma_en => inst0_s0_dma_en
    );   
+
+-- ----------------------------------------------------------------------------
+-- lms7002m_top instance.
+-- Receive and transmit interface for LMS7002
+-- ----------------------------------------------------------------------------    
+   
+      inst4_lms7002_top : entity work.lms7002_top
+      generic map (
+                   g_DEV_FAMILY             => g_DEV_FAMILY,
+                   g_IQ_WIDTH               => 12,
+                   g_INV_INPUT_CLK          => "ON",
+                   g_TX_SMPL_FIFO_0_WRUSEDW => 9,
+                   g_TX_SMPL_FIFO_0_DATAW   => 128,
+                   g_TX_SMPL_FIFO_1_WRUSEDW => 9,
+                   g_TX_SMPL_FIFO_1_DATAW   => 128
+   )
+      port map (
+                -- Configuration registers
+                from_fpgacfg       => inst1_from_fpgacfg,
+                from_tstcfg        => inst1_from_tstcfg,
+                from_memcfg        => inst1_from_memcfg,
+                -- Memory module reset
+                mem_reset_n        => global_rst_n,
+                -- PORT1 interface
+                MCLK1              => inst1_lms1_txpll_c1,
+                MCLK1_2x           => '0',
+                FCLK1              => open,
+                -- DIQ1
+                DIQ1               => lms_diq1,
+                ENABLE_IQSEL1      => lms_io_iqsel1,
+                TXNRX1             => lms_i_txnrx1,
+                -- PORT2 interface
+                MCLK2              => inst1_lms1_rxpll_c1,
+                FCLK2              => open,
+                -- DIQ2
+                DIQ2               => lms_diq2,
+                ENABLE_IQSEL2      => lms_io_iqsel2,
+                TXNRX2             => lms_i_txnrx2,
+                -- MISC
+                RESET              => lms_i_reset,
+                TXEN               => lms_i_txen,
+                RXEN               => lms_i_rxen,
+                CORE_LDO_EN        => open,
+                -- Internal TX ports
+                tx_reset_n         => inst1_lms1_txpll_locked,
+                tx_fifo_0_wrclk    => inst1_lms1_txpll_c1,
+                tx_fifo_0_reset_n  => inst1_from_fpgacfg.rx_en,
+                tx_fifo_0_wrreq    => inst3_tx_samplefifo_wrreq,
+                tx_fifo_0_data     => inst3_tx_samplefifo_data,
+                tx_fifo_0_wrfull   => inst3_tx_samplefifo_wrfull,
+                tx_fifo_0_wrusedw  => inst3_tx_samplefifo_wrusedw,
+                tx_fifo_1_wrclk    => '0',--tx_fifo_1_wrclk,
+                tx_fifo_1_reset_n  => '0',--tx_fifo_1_reset_n,
+                tx_fifo_1_wrreq    => '0',--tx_fifo_1_wrreq,
+                tx_fifo_1_data     => (others => '0'),--tx_fifo_1_data,
+                tx_fifo_1_wrfull   => open,--tx_fifo_1_wrfull,
+                tx_fifo_1_wrusedw  => open,--tx_fifo_1_wrusedw,
+                tx_ant_en          => inst4_txant_en,
+                -- Internal RX ports
+                rx_reset_n         => inst1_lms1_rxpll_locked,
+                rx_diq_h           => open,
+                rx_diq_l           => open,
+                rx_data_valid      => inst3_rx_samplefifo_wrreq,
+                rx_data            => inst3_rx_samplefifo_data,
+                rx_smpl_cmp_start  => inst4_rx_smpl_cmp_start,
+                rx_smpl_cmp_length => inst1_from_pllcfg.auto_phcfg_smpls,
+                rx_smpl_cmp_done   => inst4_rx_smpl_cmp_done,
+                rx_smpl_cmp_err    => inst4_rx_smpl_cmp_err,
+                rx_smpl_cnt_en     => inst3_rx_smpl_cnt_en,
+                -- SPI ports for internal modules
+                sdin               => inst1_spi_0_MOSI,
+                sclk               => inst1_spi_0_SCLK,
+                sen                => inst1_spi_0_SS_n(3),
+                sdout              => inst4_sdout
+   );
+
+   inst4_rx_smpl_cmp_start <= inst1_smpl_cmp_en(0) when inst1_smpl_cmp_sel(0)='0' else '0';
+   inst1_smpl_cmp_status(0)   <= inst4_rx_smpl_cmp_done;   
+   inst1_smpl_cmp_status(1)   <= inst4_rx_smpl_cmp_err;
    
    
 
