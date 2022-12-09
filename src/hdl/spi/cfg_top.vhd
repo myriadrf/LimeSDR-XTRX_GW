@@ -17,9 +17,6 @@ use work.pllcfg_pkg.all;
 use work.tstcfg_pkg.all;
 use work.txtspcfg_pkg.all;
 use work.rxtspcfg_pkg.all;
-use work.periphcfg_pkg.all;
-use work.tamercfg_pkg.all;
-use work.gnsscfg_pkg.all;
 use work.memcfg_pkg.all;
 use work.cdcmcfg_pkg.all;
 
@@ -36,9 +33,6 @@ entity cfg_top is
       TSTCFG_START_ADDR    : integer := 96;
       TXTSPCFG_START_ADDR  : integer := 128;
       RXTSPCFG_START_ADDR  : integer := 160;
-      PERIPHCFG_START_ADDR : integer := 192;
-      TAMERCFG_START_ADDR  : integer := 224;
-      GNSSCFG_START_ADDR   : integer := 256;
       CDCMCFG_START_ADDR   : integer := 320;
    
       RXTSPCFG_START_ADDR_3  : integer := 352; -- B.J.
@@ -70,11 +64,7 @@ entity cfg_top is
       to_tstcfg_from_rxtx  : in  t_TO_TSTCFG_FROM_RXTX;
       from_tstcfg          : out t_FROM_TSTCFG;
       to_memcfg            : in  t_TO_MEMCFG;
-      from_memcfg          : out t_FROM_MEMCFG;
-
-
-      to_periphcfg         : in  t_TO_PERIPHCFG;
-      from_periphcfg       : out t_FROM_PERIPHCFG
+      from_memcfg          : out t_FROM_MEMCFG
    );
 end cfg_top;
 
@@ -91,9 +81,6 @@ signal inst1_sdoutA  : std_logic;
 
 --inst3
 signal inst3_sdout   : std_logic;
-
---inst6
-signal inst6_sdout   : std_logic;
 
 --inst255
 signal inst255_sdout         : std_logic;
@@ -180,32 +167,7 @@ begin
       to_tstcfg_from_rxtx  => to_tstcfg_from_rxtx,
       from_tstcfg          => from_tstcfg
    );
-  
-   
--- ----------------------------------------------------------------------------
--- periphcfg instance
--- ----------------------------------------------------------------------------    
-   inst6_periphcfg : entity work.periphcfg
-   port map(
-      -- Address and location of this module
-      -- Will be hard wired at the top level
-      maddress    => std_logic_vector(to_unsigned(PERIPHCFG_START_ADDR/32,10)),
-      mimo_en     => '1',   
-      -- Serial port IOs
-      sdin        => sdin,
-      sclk        => sclk,
-      sen         => sen,
-      sdout       => inst6_sdout,  
-      -- Signals coming from the pins or top level serial interface
-      lreset      => lreset,   -- Logic reset signal, resets logic cells only  (use only one reset)
-      mreset      => mreset,   -- Memory reset signal, resets configuration memory only (use only one reset)      
-      oen         => open,
-      stateo      => open,    
-      to_periphcfg   => to_periphcfg,
-      from_periphcfg => from_periphcfg
-   );
-   
-   
+ 
 -- ----------------------------------------------------------------------------
 -- memcfg instance
 -- ----------------------------------------------------------------------------     
@@ -236,7 +198,7 @@ from_memcfg       <= inst255_from_memcfg;
 -- Output ports
 -- ----------------------------------------------------------------------------    
    sdout <= inst0_sdout OR inst1_sdoutA OR 
-            inst3_sdout OR inst6_sdout OR inst255_sdout;
+            inst3_sdout OR inst255_sdout;
             
   
 end arch;   

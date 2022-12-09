@@ -81,12 +81,7 @@ entity lms7002_top is
       rx_smpl_cmp_done  : out std_logic;
       rx_smpl_cmp_err   : out std_logic;
       -- RX sample counter enable
-      rx_smpl_cnt_en    : out std_logic;
-         -- SPI for internal modules
-      sdin              : in std_logic;   -- Data in
-      sclk              : in std_logic;   -- Data clock
-      sen               : in std_logic;   -- Enable signal (active low)
-      sdout             : out std_logic  -- Data out
+      rx_smpl_cnt_en    : out std_logic
    );
 end lms7002_top;
 
@@ -294,12 +289,7 @@ inst1_lms7002_tx : entity work.lms7002_tx
       fifo_1_wrreq         => tx_fifo_1_wrreq,
       fifo_1_data          => tx_fifo_1_data,
       fifo_1_wrfull        => tx_fifo_1_wrfull,
-      fifo_1_wrusedw       => tx_fifo_1_wrusedw,
-      --TX sample ports (direct access to DDR cells)
-      sdin                 => sdin,  
-      sclk                 => sclk,
-      sen                  => sen,  
-      sdout                => sdout
+      fifo_1_wrusedw       => tx_fifo_1_wrusedw
       
       
    );

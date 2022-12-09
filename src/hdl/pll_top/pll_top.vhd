@@ -41,8 +41,6 @@ entity pll_top is
       -- LMS#1 TX PLL ports
       lms1_txpll_inclk              : in  std_logic;
       lms1_txpll_reconfig_clk       : in  std_logic;
-      lms1_txpll_rcnfg_to_pll       : in  std_logic_vector(63 downto 0);
-      lms1_txpll_rcnfg_from_pll     : out std_logic_vector(63 downto 0);
       lms1_txpll_logic_reset_n      : in  std_logic;
       lms1_txpll_clk_ena            : in  std_logic_vector(1 downto 0);
       lms1_txpll_drct_clk_en        : in  std_logic_vector(1 downto 0);
@@ -52,8 +50,6 @@ entity pll_top is
       -- LMS#1 RX PLL ports
       lms1_rxpll_inclk              : in  std_logic;
       lms1_rxpll_reconfig_clk       : in  std_logic;
-      lms1_rxpll_rcnfg_to_pll       : in  std_logic_vector(63 downto 0);
-      lms1_rxpll_rcnfg_from_pll     : out std_logic_vector(63 downto 0);
       lms1_rxpll_logic_reset_n      : in  std_logic;
       lms1_rxpll_clk_ena            : in  std_logic_vector(1 downto 0);
       lms1_rxpll_drct_clk_en        : in  std_logic_vector(1 downto 0); 

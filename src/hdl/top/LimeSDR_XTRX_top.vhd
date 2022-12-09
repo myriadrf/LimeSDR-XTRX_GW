@@ -17,9 +17,6 @@ use work.FIFO_PACK.all;
 use work.fpgacfg_pkg.all;
 use work.pllcfg_pkg.all;
 use work.tstcfg_pkg.all;
-use work.periphcfg_pkg.all;
-use work.tamercfg_pkg.all;
-use work.gnsscfg_pkg.all;
 use work.memcfg_pkg.all;
 use work.axi_pkg.all;
 
@@ -48,9 +45,6 @@ entity LimeSDR_XTRX_top is
       g_TSTCFG_START_ADDR     : integer := 96;
       g_TXTSPCFG_START_ADDR   : integer := 128;
       g_RXTSPCFG_START_ADDR   : integer := 160;
-      g_PERIPHCFG_START_ADDR  : integer := 192;
-      g_TAMERCFG_START_ADDR   : integer := 224;
-      g_GNSSCFG_START_ADDR    : integer := 256;
       g_MEMCFG_START_ADDR     : integer := 65504;
       -- TX interface 
       g_TX_N_BUFF             : integer := 2;      -- N 4KB buffers in TX interface (2 OR 4)
@@ -188,49 +182,17 @@ signal      inst0_s0_wdata                  :  std_logic_vector(63 downto 0);
 signal      inst0_s0_wrusedw                :  std_logic_vector(c_F2H_S0_WRUSEDW_WIDTH-1 downto 0);
                 
 --cpu
-signal      inst1_gpo                       : std_logic_vector(7 downto 0);
-signal      inst1_lms_ctr_gpio              : std_logic_vector(3 downto 0);
 signal      inst1_spi_0_MISO                : std_logic;
 signal      inst1_spi_0_MOSI                : std_logic;
 signal      inst1_spi_0_SCLK                : std_logic;
-signal      inst1_spi_0_SS_n                : std_logic_vector(3 downto 0);
-signal      inst1_spi_1_MOSI                : std_logic;
-signal      inst1_spi_1_SCLK                : std_logic;
-signal      inst1_spi_1_SS_n                : std_logic_vector(5 downto 0);
-signal      inst1_spi_2_MISO                : std_logic;
-signal      inst1_spi_2_MOSI                : std_logic;
-signal      inst1_spi_2_SCLK                : std_logic;
-signal      inst1_spi_2_SS_n                : std_logic_vector(3 downto 0);
-signal      inst1_pll_stat                  : std_logic_vector(9 downto 0);
+signal      inst1_spi_0_SS_n                : std_logic_vector(1 downto 0);
 signal      inst1_pll_rst                   : std_logic_vector(31 downto 0);
-signal      inst1_pll_rcfg_to_pll_0         : std_logic_vector(63 downto 0);
-signal      inst1_pll_rcfg_to_pll_1         : std_logic_vector(63 downto 0);
-signal      inst1_pll_rcfg_to_pll_2         : std_logic_vector(63 downto 0);
-signal      inst1_pll_rcfg_to_pll_3         : std_logic_vector(63 downto 0);
-signal      inst1_pll_rcfg_to_pll_4         : std_logic_vector(63 downto 0);
-signal      inst1_pll_rcfg_to_pll_5         : std_logic_vector(63 downto 0);
-signal      inst1_avmm_s0_readdata          : std_logic_vector(31 downto 0);
-signal      inst1_avmm_s0_waitrequest       : std_logic;
-signal      inst1_avmm_s1_readdata          : std_logic_vector(31 downto 0);
-signal      inst1_avmm_s1_waitrequest       : std_logic;
-signal      inst1_avmm_m0_address           : std_logic_vector(7 downto 0);
-signal      inst1_avmm_m0_read              : std_logic;
-signal      inst1_avmm_m0_write             : std_logic;
-signal      inst1_avmm_m0_writedata         : std_logic_vector(7 downto 0);
-signal      inst1_avmm_m0_clk_clk           : std_logic;
-signal      inst1_avmm_m0_reset_reset       : std_logic;
 signal      inst1_from_fpgacfg              : t_FROM_FPGACFG;
 signal      inst1_to_fpgacfg                : t_TO_FPGACFG;
 signal      inst1_from_pllcfg               : t_FROM_PLLCFG;
 signal      inst1_to_pllcfg                 : t_TO_PLLCFG;
 signal      inst1_from_tstcfg               : t_FROM_TSTCFG;
 signal      inst1_to_tstcfg                 : t_TO_TSTCFG;
-signal      inst1_from_periphcfg            : t_FROM_PERIPHCFG;
-signal      inst1_to_periphcfg              : t_TO_PERIPHCFG;
-signal      inst1_from_tamercfg             : t_FROM_TAMERCFG;
-signal      inst1_to_tamercfg               : t_TO_TAMERCFG;
-signal      inst1_from_gnsscfg              : t_FROM_GNSSCFG;
-signal      inst1_to_gnsscfg                : t_TO_GNSSCFG;
 signal      inst1_to_memcfg                 : t_TO_MEMCFG;
 signal      inst1_from_memcfg               : t_FROM_MEMCFG;
 signal      inst1_pll_from_axim             : t_FROM_AXIM_32x32;
@@ -254,37 +216,21 @@ signal      inst3_rx_samplefifo_data        : std_logic_vector(47  downto 0);
 
 
 --placeholders
-signal      inst1_lms1_txpll_c0             : std_logic;
 signal      inst1_lms1_txpll_c1             : std_logic;
 signal      inst1_lms1_txpll_locked         : std_logic;
 signal      inst1_lms1_txpll_rcnfg_from_pll : std_logic_vector(63 downto 0);
-signal      inst1_lms1_rxpll_c0             : std_logic;
 signal      inst1_lms1_rxpll_c1             : std_logic;
 signal      inst1_lms1_rxpll_locked         : std_logic;
 signal      inst1_lms1_rxpll_rcnfg_from_pll : std_logic_vector(63 downto 0);
-signal      inst1_lms1_smpl_cmp_en          : std_logic;
-signal      inst1_lms1_smpl_cmp_cnt         : std_logic_vector(15 downto 0);
             
-signal      inst1_lms2_txpll_c1             : std_logic;
-signal      inst1_lms2_txpll_c2             : std_logic;
-signal      inst1_lms2_txpll_locked         : std_logic;
 signal      inst1_lms2_txpll_rcnfg_from_pll : std_logic_vector(63 downto 0);
-signal      inst1_lms2_rxpll_c0             : std_logic;
-signal      inst1_lms2_rxpll_c1             : std_logic;
-signal      inst1_lms2_rxpll_locked         : std_logic;
-signal      inst1_lms2_rxpll_rcnfg_from_pll : std_logic_vector(63 downto 0);
-signal      inst1_lms2_smpl_cmp_en          : std_logic;
-signal      inst1_lms2_smpl_cmp_cnt         : std_logic_vector(15 downto 0);
 signal      inst1_rcnfg_to_axim             : t_TO_AXIM_32x32;
-signal      inst1_pll_0_rcnfg_from_pll      : std_logic_vector(63 downto 0);
 
-signal      inst4_txant_en                  : std_logic;
+--signal      inst4_txant_en                  : std_logic;
             
 signal      inst4_rx_smpl_cmp_done          : std_logic; 
 signal      inst4_rx_smpl_cmp_err           : std_logic; 
 signal      inst4_rx_smpl_cmp_start         : std_logic;
-signal      inst4_rx_smpl_cmp_en            : std_logic;
-signal      inst4_sdout                     : std_logic;
 
 
 begin
@@ -366,7 +312,6 @@ begin
    inst0_s0_rdclk <= inst1_lms1_txpll_c1;
    inst0_s0_wclk  <= inst1_lms1_rxpll_c1;
    
-   
    -- ----------------------------------------------------------------------------
 -- Microblaze CPU instance.
 -- CPU is responsible for communication interfaces and control logic
@@ -377,10 +322,7 @@ begin
       PLLCFG_START_ADDR    => g_PLLCFG_START_ADDR,
       TSTCFG_START_ADDR    => g_TSTCFG_START_ADDR,
       TXTSPCFG_START_ADDR  => g_TXTSPCFG_START_ADDR,
-      RXTSPCFG_START_ADDR  => g_RXTSPCFG_START_ADDR,
-      PERIPHCFG_START_ADDR => g_PERIPHCFG_START_ADDR,
-      TAMERCFG_START_ADDR  => g_TAMERCFG_START_ADDR,
-      GNSSCFG_START_ADDR   => g_GNSSCFG_START_ADDR
+      RXTSPCFG_START_ADDR  => g_RXTSPCFG_START_ADDR
    )
    port map(
       clk                        => sys_clk,
@@ -394,10 +336,10 @@ begin
       exfifo_of_wrfull           => inst0_F2H_C0_wfull,
       exfifo_of_rst              => inst0_F2H_C0_aclrn, 
       -- SPI 0 
-      spi_0_MISO                 => lms_o_sdo,
-      spi_0_MOSI                 => lms_io_sdio,
-      spi_0_SCLK                 => lms_i_sclk,
-      spi_0_SS_n                 => lms_i_saen,
+      spi_0_MISO                 => inst1_spi_0_MISO,
+      spi_0_MOSI                 => inst1_spi_0_MOSI,
+      spi_0_SCLK                 => inst1_spi_0_SCLK,
+      spi_0_SS_n                 => inst1_spi_0_SS_n,
       -- Config QSPI
       fpga_cfg_qspi_MOSI         => open,--FPGA_CFG_MOSI,
       fpga_cfg_qspi_MISO         => '0',--FPGA_CFG_MISO,
@@ -419,18 +361,6 @@ begin
       pll_from_axim              => inst1_pll_from_axim,
       pll_to_axim                => inst1_rcnfg_to_axim, 
       pll_axi_sel                => inst1_pll_axi_sel,
-      pll_rcfg_from_pll_0        => inst1_lms1_txpll_rcnfg_from_pll,
-      pll_rcfg_to_pll_0          => inst1_pll_rcfg_to_pll_0,
-      pll_rcfg_from_pll_1        => inst1_lms1_rxpll_rcnfg_from_pll,
-      pll_rcfg_to_pll_1          => inst1_pll_rcfg_to_pll_1,
-      pll_rcfg_from_pll_2        => inst1_lms2_txpll_rcnfg_from_pll,
-      pll_rcfg_to_pll_2          => inst1_pll_rcfg_to_pll_2,
-      pll_rcfg_from_pll_3        => inst1_lms2_rxpll_rcnfg_from_pll,
-      pll_rcfg_to_pll_3          => inst1_pll_rcfg_to_pll_3,
-      pll_rcfg_from_pll_4        => inst1_pll_0_rcnfg_from_pll,
-      pll_rcfg_to_pll_4          => inst1_pll_rcfg_to_pll_4,
-      pll_rcfg_from_pll_5        => (others=>'0'),
-      pll_rcfg_to_pll_5          => inst1_pll_rcfg_to_pll_5,
       -- Avalon master
       avmm_m0_address            => open,           --inst0_avmm_m0_address,
       avmm_m0_read               => open,           --inst0_avmm_m0_read,
@@ -450,12 +380,6 @@ begin
       to_tstcfg                  => inst1_to_tstcfg,
       to_tstcfg_from_rxtx        => inst1_to_tstcfg_from_rxtx,
       
-      from_periphcfg             => inst1_from_periphcfg,
-      to_periphcfg               => inst1_to_periphcfg,
-      from_tamercfg              => inst1_from_tamercfg,
-      to_tamercfg                => inst1_to_tamercfg,
-      from_gnsscfg               => inst1_from_gnsscfg,
-      to_gnsscfg                 => inst1_to_gnsscfg,
       to_memcfg                  => inst1_to_memcfg,
       from_memcfg                => inst1_from_memcfg,
       smpl_cmp_sel               => inst1_smpl_cmp_sel,
@@ -463,6 +387,10 @@ begin
       smpl_cmp_status            => inst1_smpl_cmp_status
    );
    
+   inst1_spi_0_MISO  <= lms_o_sdo;
+   lms_io_sdio       <= inst1_spi_0_MOSI;
+   lms_i_sclk        <= inst1_spi_0_SCLK;
+   lms_i_saen        <= inst1_spi_0_SS_n(1);
    
 -- ----------------------------------------------------------------------------
 -- pll_top instance.
@@ -489,8 +417,6 @@ begin
       -- LMS#1 TX PLL 0 ports
       lms1_txpll_inclk           => lms_o_mclk1,
       lms1_txpll_reconfig_clk    => sys_clk,
-      lms1_txpll_rcnfg_to_pll    => inst1_pll_rcfg_to_pll_0,
-      lms1_txpll_rcnfg_from_pll  => inst1_lms1_txpll_rcnfg_from_pll,
       lms1_txpll_logic_reset_n   => not inst1_pll_rst(0),
       lms1_txpll_clk_ena         => inst1_from_fpgacfg.CLK_ENA(1 downto 0),
       lms1_txpll_drct_clk_en     => inst1_from_fpgacfg.drct_clk_en(0) & inst1_from_fpgacfg.drct_clk_en(0),
@@ -500,19 +426,17 @@ begin
       -- LMS#1 RX PLL ports
       lms1_rxpll_inclk           => lms_o_mclk2,
       lms1_rxpll_reconfig_clk    => sys_clk,
-      lms1_rxpll_rcnfg_to_pll    => inst1_pll_rcfg_to_pll_1,
-      lms1_rxpll_rcnfg_from_pll  => inst1_lms1_rxpll_rcnfg_from_pll,
       lms1_rxpll_logic_reset_n   => not inst1_pll_rst(1),
       lms1_rxpll_clk_ena         => inst1_from_fpgacfg.CLK_ENA(3 downto 2),
       lms1_rxpll_drct_clk_en     => inst1_from_fpgacfg.drct_clk_en(1) & inst1_from_fpgacfg.drct_clk_en(1),
-      lms1_rxpll_c0              => inst1_lms1_rxpll_c0, --LMS1_FCLK2,
+      lms1_rxpll_c0              => lms_i_fclk2,
       lms1_rxpll_c1              => inst1_lms1_rxpll_c1,
       lms1_rxpll_locked          => inst1_lms1_rxpll_locked,
       -- Sample comparing ports from LMS#1 RX interface
-      lms1_smpl_cmp_en           => inst1_lms1_smpl_cmp_en,      
+      lms1_smpl_cmp_en           => open,
       lms1_smpl_cmp_done         => inst4_rx_smpl_cmp_done,
       lms1_smpl_cmp_error        => inst4_rx_smpl_cmp_err,
-      lms1_smpl_cmp_cnt          => inst1_lms1_smpl_cmp_cnt, 
+      lms1_smpl_cmp_cnt          => open,--, 
       -- Reconfiguration AXI ports
       rcnfg_axi_clk              => sys_clk,
       rcnfg_axi_reset_n          => inst1_pll_axi_resetn_out(0),
@@ -647,7 +571,7 @@ begin
                 tx_fifo_1_data     => (others => '0'),--tx_fifo_1_data,
                 tx_fifo_1_wrfull   => open,--tx_fifo_1_wrfull,
                 tx_fifo_1_wrusedw  => open,--tx_fifo_1_wrusedw,
-                tx_ant_en          => inst4_txant_en,
+                tx_ant_en          => open,--inst4_txant_en,
                 -- Internal RX ports
                 rx_reset_n         => inst1_lms1_rxpll_locked,
                 rx_diq_h           => open,
@@ -658,12 +582,7 @@ begin
                 rx_smpl_cmp_length => inst1_from_pllcfg.auto_phcfg_smpls,
                 rx_smpl_cmp_done   => inst4_rx_smpl_cmp_done,
                 rx_smpl_cmp_err    => inst4_rx_smpl_cmp_err,
-                rx_smpl_cnt_en     => inst3_rx_smpl_cnt_en,
-                -- SPI ports for internal modules
-                sdin               => inst1_spi_0_MOSI,
-                sclk               => inst1_spi_0_SCLK,
-                sen                => inst1_spi_0_SS_n(3),
-                sdout              => inst4_sdout
+                rx_smpl_cnt_en     => inst3_rx_smpl_cnt_en
    );
 
    inst4_rx_smpl_cmp_start <= inst1_smpl_cmp_en(0) when inst1_smpl_cmp_sel(0)='0' else '0';

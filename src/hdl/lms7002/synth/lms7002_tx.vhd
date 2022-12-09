@@ -70,12 +70,7 @@ entity lms7002_tx is
       fifo_1_wrreq         : in  std_logic;
       fifo_1_data          : in  std_logic_vector(g_SMPL_FIFO_0_DATAW-1 downto 0);
       fifo_1_wrfull        : out std_logic;
-      fifo_1_wrusedw       : out std_logic_vector(g_SMPL_FIFO_0_WRUSEDW-1 downto 0);    
-      -- SPI for internal modules
-      sdin                 : in std_logic;   -- Data in
-      sclk                 : in std_logic;   -- Data clock
-      sen                  : in std_logic;   -- Enable signal (active low)
-      sdout                : out std_logic := '0'  -- Data out
+      fifo_1_wrusedw       : out std_logic_vector(g_SMPL_FIFO_0_WRUSEDW-1 downto 0)
       );
 end lms7002_tx;
 

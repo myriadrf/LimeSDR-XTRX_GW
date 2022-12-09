@@ -37,9 +37,7 @@ entity cpu_top is
       TSTCFG_START_ADDR    : integer := 96;
       TXTSPCFG_START_ADDR  : integer := 128;
       RXTSPCFG_START_ADDR  : integer := 160;
-      PERIPHCFG_START_ADDR : integer := 192;
-      TAMERCFG_START_ADDR  : integer := 224;
-      GNSSCFG_START_ADDR   : integer := 256;
+--      PERIPHCFG_START_ADDR : integer := 192;
       MEMCFG_START_ADDR    : integer := 65504
       );
    port (
@@ -57,7 +55,7 @@ entity cpu_top is
       spi_0_MISO           : in     std_logic;
       spi_0_MOSI           : out    std_logic;
       spi_0_SCLK           : out    std_logic;
-      spi_0_SS_n           : out    std_logic;
+      spi_0_SS_n           : out    std_logic_vector(1 downto 0);
       -- I2C
       i2c_0_scl            : inout  std_logic;
       i2c_0_sda            : inout  std_logic;
@@ -79,18 +77,6 @@ entity cpu_top is
       pll_from_axim        : out    t_FROM_AXIM_32x32;
       pll_to_axim          : in     t_TO_AXIM_32x32;
       pll_axi_sel          : out    std_logic_vector(3 downto 0);
-      pll_rcfg_from_pll_0  : in     std_logic_vector(63 downto 0) := (others => '0');
-      pll_rcfg_to_pll_0    : out    std_logic_vector(63 downto 0);
-      pll_rcfg_from_pll_1  : in     std_logic_vector(63 downto 0) := (others => '0');
-      pll_rcfg_to_pll_1    : out    std_logic_vector(63 downto 0);
-      pll_rcfg_from_pll_2  : in     std_logic_vector(63 downto 0) := (others => '0');
-      pll_rcfg_to_pll_2    : out    std_logic_vector(63 downto 0);
-      pll_rcfg_from_pll_3  : in     std_logic_vector(63 downto 0) := (others => '0');
-      pll_rcfg_to_pll_3    : out    std_logic_vector(63 downto 0);
-      pll_rcfg_from_pll_4  : in     std_logic_vector(63 downto 0) := (others => '0');
-      pll_rcfg_to_pll_4    : out    std_logic_vector(63 downto 0);
-      pll_rcfg_from_pll_5  : in     std_logic_vector(63 downto 0) := (others => '0');
-      pll_rcfg_to_pll_5    : out    std_logic_vector(63 downto 0);
       -- Avalon master
       avmm_m0_address      : out    std_logic_vector(7 downto 0);                     -- avmm_m0.address
       avmm_m0_read         : out    std_logic;                                        --       .read
@@ -109,14 +95,6 @@ entity cpu_top is
       from_tstcfg          : out    t_FROM_TSTCFG;
       to_tstcfg            : in     t_TO_TSTCFG;
       to_tstcfg_from_rxtx  : in     t_TO_TSTCFG_FROM_RXTX;
-
-
-      to_periphcfg         : in     t_TO_PERIPHCFG;
-      from_periphcfg       : out    t_FROM_PERIPHCFG;
-      to_tamercfg          : in     t_TO_TAMERCFG;
-      from_tamercfg        : out    t_FROM_TAMERCFG;
-      to_gnsscfg           : in     t_TO_GNSSCFG;
-      from_gnsscfg         : out    t_FROM_GNSSCFG;
       to_memcfg            : in     t_TO_MEMCFG;
       from_memcfg          : out    t_FROM_MEMCFG;
       
@@ -409,10 +387,8 @@ begin
       PLLCFG_START_ADDR    => PLLCFG_START_ADDR,
       TSTCFG_START_ADDR    => TSTCFG_START_ADDR,
       TXTSPCFG_START_ADDR  => TXTSPCFG_START_ADDR,
-      RXTSPCFG_START_ADDR  => RXTSPCFG_START_ADDR,
-      PERIPHCFG_START_ADDR => PERIPHCFG_START_ADDR,
-      TAMERCFG_START_ADDR  => TAMERCFG_START_ADDR,
-      GNSSCFG_START_ADDR   => GNSSCFG_START_ADDR
+      RXTSPCFG_START_ADDR  => RXTSPCFG_START_ADDR
+--      PERIPHCFG_START_ADDR => PERIPHCFG_START_ADDR
       )
    port map(
       -- Serial port IOs
@@ -435,10 +411,7 @@ begin
       from_tstcfg          => from_tstcfg,
       to_tstcfg_from_rxtx  => to_tstcfg_from_rxtx,
       to_memcfg            => to_memcfg,
-      from_memcfg          => from_memcfg,
-      
-      to_periphcfg         => to_periphcfg,
-      from_periphcfg       => from_periphcfg
+      from_memcfg          => from_memcfg
    );
    
 -- ----------------------------------------------------------------------------
@@ -446,7 +419,7 @@ begin
 -- ----------------------------------------------------------------------------
    spi_0_SCLK <= inst0_spi_0_SCLK;
    spi_0_MOSI <= inst0_spi_0_MOSI;
-   spi_0_SS_n <= inst0_spi_0_SS_n(1);
+   spi_0_SS_n <= inst0_spi_0_SS_n;
    
    fpga_cfg_qspi_MOSI <= inst0_fpga_cfg_qspi_io0_o;
    inst0_fpga_cfg_qspi_io1_i <= fpga_cfg_qspi_MISO;
