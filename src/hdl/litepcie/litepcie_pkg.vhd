@@ -19,7 +19,7 @@ use ieee.numeric_std.all;
 package litepcie_pkg is
    
    constant c_DMA_DATA_WIDTH   : integer := 128;
-   constant c_CNTRL_DATA_WIDTH : integer := 32;--512;
+   constant c_CNTRL_DATA_WIDTH : integer := 512;
    
    -- Outputs from the DMA Writer
    type t_FROM_DMA_WRITER is record
