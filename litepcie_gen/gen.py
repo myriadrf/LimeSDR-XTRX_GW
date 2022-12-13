@@ -48,7 +48,7 @@ from litepcie.frontend.axi import LitePCIeAXISlave
 from litepcie.software import generate_litepcie_software
 
 from litex.build.generic_platform import *
-control_width = 32
+control_width = 512
 
 # IOs/Interfaces -----------------------------------------------------------------------------------
 
