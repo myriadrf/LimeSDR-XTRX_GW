@@ -147,6 +147,12 @@ constant c_F2H_S0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_FPGA2HOST_S0
 constant c_H2F_C0_RDUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_HOST2FPGA_C0_0_SIZE/(c_H2F_C0_RWIDTH/8),true);
 constant c_F2H_C0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_FPGA2HOST_C0_0_SIZE/(c_F2H_C0_WWIDTH/8),true);
 
+signal fpga_clk_vctcxo_reg : std_logic;
+attribute MARK_DEBUG : string;
+attribute MARK_DEBUG of fpga_clk_vctcxo_reg : signal is "TRUE";
+				
+				
+
 
 signal sys_clk : std_logic;
 signal global_rst_n : std_logic;
@@ -156,7 +162,6 @@ signal global_rst_n : std_logic;
 
      --Control endpoint FIFO (Host->FPGA)
 signal      inst0_H2F_C0_rdclk              :  std_logic;
-signal      inst0_H2F_C0_aclrn              :  std_logic;
 signal      inst0_H2F_C0_rd                 :  std_logic;
 signal      inst0_H2F_C0_rdata              :  std_logic_vector(c_H2F_C0_RWIDTH-1 downto 0);
 signal      inst0_H2F_C0_rempty             :  std_logic;
@@ -176,6 +181,7 @@ signal      inst0_s0_rempty                 :  std_logic;
 signal      inst0_s0_rdusedw                :  std_logic_vector(c_H2F_S0_0_RDUSEDW_WIDTH-1 downto 0);
        --Stream endpoint FIFO (FPGA->Host)
 signal      inst0_s0_wclk                   :  std_logic;
+signal      inst0_s0_wfull                  :  std_logic;
 signal      inst0_s0_waclrn                 :  std_logic;
 signal      inst0_s0_wr                     :  std_logic;
 signal      inst0_s0_wdata                  :  std_logic_vector(63 downto 0);           
@@ -202,6 +208,8 @@ signal      inst1_pll_axi_resetn_out        : std_logic_vector(0 downto 0);
 signal      inst1_smpl_cmp_en               : std_logic_vector(3 downto 0);
 signal      inst1_smpl_cmp_status           : std_logic_vector(1 downto 0);
 signal      inst1_smpl_cmp_sel              : std_logic_vector(0 downto 0);
+signal      inst1_lms_reset_cpu             : std_logic;
+signal      inst1_xtrx_ctrl_gpio            : std_logic_vector(3 downto 0);
 --rxtx_top
 signal      inst3_rx_smpl_cnt_en            : std_logic;
 ----tx interface
@@ -231,9 +239,18 @@ signal      inst1_rcnfg_to_axim             : t_TO_AXIM_32x32;
 signal      inst4_rx_smpl_cmp_done          : std_logic; 
 signal      inst4_rx_smpl_cmp_err           : std_logic; 
 signal      inst4_rx_smpl_cmp_start         : std_logic;
+signal      inst4_rx_smpl_cmp_cnt           : std_logic_vector(15 downto 0);
+signal      inst4_lms_reset                 : std_logic;
 
 
 begin
+
+    process(all)
+    begin
+        if rising_edge(sys_clk) then
+            fpga_clk_vctcxo_reg <= fpga_clk_vctcxo;
+        end if;
+    end process; 
 
    --placeholder assignment
    global_rst_n <= sys_rst_n;
@@ -259,12 +276,12 @@ begin
      g_F2H_C0_WWIDTH            => c_F2H_C0_WWIDTH 
   )
       port map (
-                clk              => sys_clk,
+                clk              => sys_clk     ,
                 reset_n          => global_rst_n,
                 
-                pcie_perstn      => sys_rst_n,--
-                pcie_refclk_p    => sys_clk_p,
-                pcie_refclk_n    => sys_clk_n,
+                pcie_perstn      => sys_rst_n  ,
+                pcie_refclk_p    => sys_clk_p  ,
+                pcie_refclk_n    => sys_clk_n  ,
                 pcie_rx_p        => pci_exp_rxp,
                 pcie_rx_n        => pci_exp_rxn,
                 pcie_tx_p        => pci_exp_txp,
@@ -275,42 +292,44 @@ begin
                 H2F_S0_dma_en    => inst0_s0_dma_en ,
                 H2F_S0_0_rdclk   => inst0_s0_rdclk  ,
                 H2F_S0_0_aclrn   => inst0_s0_raclrn ,
-                H2F_S0_0_rd      => inst0_s0_rd     ,
+                H2F_S0_0_rd      => '1',--inst0_s0_rd     ,
                 H2F_S0_0_rdata   => inst0_s0_rdata  ,
                 H2F_S0_0_rempty  => inst0_s0_rempty ,
                 H2F_S0_0_rdusedw => inst0_s0_rdusedw,
                 
-                H2F_S0_1_rdclk   => '0',--H2F_S0_1_rdclk,
-                H2F_S0_1_aclrn   => '0',--H2F_S0_1_aclrn,
-                H2F_S0_1_rd      => '0',--H2F_S0_1_rd,
-                H2F_S0_1_rdata   => open,--H2F_S0_1_rdata,
-                H2F_S0_1_rempty  => open,--H2F_S0_1_rempty,
-                H2F_S0_1_rdusedw => open,--H2F_S0_1_rdusedw,
+                H2F_S0_1_rdclk   => '0'  ,--H2F_S0_1_rdclk,
+                H2F_S0_1_aclrn   => '0'  ,--H2F_S0_1_aclrn,
+                H2F_S0_1_rd      => '0'  ,--H2F_S0_1_rd,
+                H2F_S0_1_rdata   => open ,--H2F_S0_1_rdata,
+                H2F_S0_1_rempty  => open ,--H2F_S0_1_rempty,
+                H2F_S0_1_rdusedw => open ,--H2F_S0_1_rdusedw,
                 
                 F2H_S0_wclk      => inst0_s0_wclk   ,
                 F2H_S0_aclrn     => inst0_s0_waclrn ,
-                F2H_S0_wr        => inst0_s0_wr     ,
+                F2H_S0_wr        => not inst0_s0_wfull,--inst0_s0_wr     ,
                 F2H_S0_wdata     => inst0_s0_wdata  ,
-                F2H_S0_wfull     => open            ,
+                F2H_S0_wfull     => inst0_s0_wfull  ,
                 F2H_S0_wrusedw   => inst0_s0_wrusedw,
                 
-                H2F_C0_rdclk     => inst0_H2F_C0_rdclk ,
-                H2F_C0_aclrn     => inst0_H2F_C0_aclrn ,
-                H2F_C0_rd        => inst0_H2F_C0_rd    ,
-                H2F_C0_rdata     => inst0_H2F_C0_rdata ,
-                H2F_C0_rempty    => inst0_H2F_C0_rempty,
-                F2H_C0_wclk      => inst0_F2H_C0_wclk  ,
+                H2F_C0_rdclk     => inst0_H2F_C0_rdclk     ,
+                H2F_C0_aclrn     => global_rst_n           ,
+                H2F_C0_rd        => inst0_H2F_C0_rd        ,
+                H2F_C0_rdata     => inst0_H2F_C0_rdata     ,
+                H2F_C0_rempty    => inst0_H2F_C0_rempty    ,
+                F2H_C0_wclk      => inst0_F2H_C0_wclk      ,
                 F2H_C0_aclrn     => not inst0_F2H_C0_aclrn ,
-                F2H_C0_wr        => inst0_F2H_C0_wr    ,
-                F2H_C0_wdata     => inst0_F2H_C0_wdata ,
-                F2H_C0_wfull     => inst0_F2H_C0_wfull ,
+                F2H_C0_wr        => inst0_F2H_C0_wr        ,
+                F2H_C0_wdata     => inst0_F2H_C0_wdata     ,
+                F2H_C0_wfull     => inst0_F2H_C0_wfull     ,
                 
                 S0_rx_en         => '0',--S0_rx_en,
                 F2H_S0_open      => open--F2H_S0_open
    );
    
-   inst0_s0_rdclk <= inst1_lms1_txpll_c1;
-   inst0_s0_wclk  <= inst1_lms1_rxpll_c1;
+   inst0_s0_rdclk     <= inst1_lms1_txpll_c1;
+   inst0_s0_wclk      <= inst1_lms1_rxpll_c1;
+   inst0_H2F_C0_rdclk <= sys_clk;
+   inst0_F2H_C0_wclk  <= sys_clk;
    
    -- ----------------------------------------------------------------------------
 -- Microblaze CPU instance.
@@ -345,10 +364,10 @@ begin
       fpga_cfg_qspi_MISO         => '0',--FPGA_CFG_MISO,
       fpga_cfg_qspi_SS_n         => open,--FPGA_CFG_CS,
       -- I2C
-      i2c_0_scl                  => i2c1_scl,
-      i2c_0_sda                  => i2c1_sda,
-      i2c_1_scl                  => i2c2_scl,
-      i2c_1_sda                  => i2c2_sda,
+      i2c_1_scl                  => i2c1_scl,
+      i2c_1_sda                  => i2c1_sda,
+      i2c_2_scl                  => i2c2_scl,
+      i2c_2_sda                  => i2c2_sda,
       -- Genral purpose I/O
       gpi                        => "00000000",--"0000" & FPGA_SW,
       gpo                        => open,--inst0_gpo, 
@@ -384,7 +403,8 @@ begin
       from_memcfg                => inst1_from_memcfg,
       smpl_cmp_sel               => inst1_smpl_cmp_sel,
       smpl_cmp_en                => inst1_smpl_cmp_en, 
-      smpl_cmp_status            => inst1_smpl_cmp_status
+      smpl_cmp_status            => inst1_smpl_cmp_status,
+      xtrx_ctrl_gpio             => inst1_xtrx_ctrl_gpio
    );
    
    inst1_spi_0_MISO  <= lms_o_sdo;
@@ -399,7 +419,7 @@ begin
    inst2_pll_top : entity work.pll_top
    generic map(
       INTENDED_DEVICE_FAMILY  => g_DEV_FAMILY,
-      N_PLL                   => 5,
+      N_PLL                   => 2,
       -- TX pll parameters
       LMS1_TXPLL_DRCT_C0_NDLY => 1,
       LMS1_TXPLL_DRCT_C1_NDLY => 2,
@@ -433,10 +453,10 @@ begin
       lms1_rxpll_c1              => inst1_lms1_rxpll_c1,
       lms1_rxpll_locked          => inst1_lms1_rxpll_locked,
       -- Sample comparing ports from LMS#1 RX interface
-      lms1_smpl_cmp_en           => open,
+      lms1_smpl_cmp_en           => inst4_rx_smpl_cmp_start,
       lms1_smpl_cmp_done         => inst4_rx_smpl_cmp_done,
       lms1_smpl_cmp_error        => inst4_rx_smpl_cmp_err,
-      lms1_smpl_cmp_cnt          => open,--, 
+      lms1_smpl_cmp_cnt          => inst4_rx_smpl_cmp_cnt,--, 
       -- Reconfiguration AXI ports
       rcnfg_axi_clk              => sys_clk,
       rcnfg_axi_reset_n          => inst1_pll_axi_resetn_out(0),
@@ -553,7 +573,7 @@ begin
                 ENABLE_IQSEL2      => lms_io_iqsel2,
                 TXNRX2             => lms_i_txnrx2,
                 -- MISC
-                RESET              => lms_i_reset,
+                RESET              => inst4_lms_reset,
                 TXEN               => lms_i_txen,
                 RXEN               => lms_i_rxen,
                 CORE_LDO_EN        => open,
@@ -585,11 +605,18 @@ begin
                 rx_smpl_cnt_en     => inst3_rx_smpl_cnt_en
    );
 
-   inst4_rx_smpl_cmp_start <= inst1_smpl_cmp_en(0) when inst1_smpl_cmp_sel(0)='0' else '0';
-   inst1_smpl_cmp_status(0)   <= inst4_rx_smpl_cmp_done;   
-   inst1_smpl_cmp_status(1)   <= inst4_rx_smpl_cmp_err;
+--   inst4_rx_smpl_cmp_start <= inst1_smpl_cmp_en(0) when inst1_smpl_cmp_sel(0)='0' else '0';
+--   inst1_smpl_cmp_status(0)   <= inst4_rx_smpl_cmp_done;   
+--   inst1_smpl_cmp_status(1)   <= inst4_rx_smpl_cmp_err;
    
    
+   lms_i_reset <= inst4_lms_reset and inst1_xtrx_ctrl_gpio(0);--inst1_lms_reset_cpu; -- reset is active low, so any module can reset the LMS
+   en_tcxo    <= inst1_xtrx_ctrl_gpio(1);--'1'; --tcxo enabled
+   iovcc_sel  <= inst1_xtrx_ctrl_gpio(2);--'0'; 
+   ext_clk    <= inst1_xtrx_ctrl_gpio(3);--'0'; --internal clock used
+
+   lms_i_gpwrdwn <= '1';
+    
 
 
 
