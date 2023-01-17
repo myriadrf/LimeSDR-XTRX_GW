@@ -16,7 +16,7 @@ entity diq2fifo is
    generic( 
 
       -- added by B.J.
-      DPDTopWrapper_enable : INTEGER := 1; -- B.J.
+      DPDTopWrapper_enable : INTEGER := 0; -- B.J.
 
       dev_family           : string := "Cyclone IV E";
       iq_width             : integer := 12;

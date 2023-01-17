@@ -22,8 +22,8 @@ create_clock -period 16.000 -name usb_phy_clk [get_ports usb_clk]
 create_clock -name cfg_mclk -period 12  [get_nets inst0_xtrx_top/cfg_mclk]
 create_clock -period 10.000 -name sys_clk [get_ports sys_clk_p]
 create_clock -period 20.000 -name clk_vctcxo [get_ports fpga_clk_vctcxo]
-create_clock -period 8.138 -name rx_mclk_in [get_ports lms_o_mclk2]
-create_clock -period 8.138 -name tx_mclk_in [get_ports lms_o_mclk1]
+#create_clock -period 8.138 -name rx_mclk_in [get_ports lms_o_mclk2]
+#create_clock -period 8.138 -name tx_mclk_in [get_ports lms_o_mclk1]
 
 
 # PCIe and master clocks
@@ -412,8 +412,8 @@ set_property PULLDOWN true [get_ports lms_io_sdio]
 set_property PULLDOWN true [get_ports lms_o_sdo]
 
 # LML Port 1
-set_property IOSTANDARD LVCMOS25 [get_ports lms_i_fclk1]
-set_property IOSTANDARD LVCMOS25 [get_ports {{lms_diq1[*]} lms_i_txnrx1 lms_io_iqsel1 lms_o_mclk1}]
+set_property IOSTANDARD LVCMOS25 [get_ports lms_i_fclk2]
+set_property IOSTANDARD LVCMOS25 [get_ports {{lms_diq2[*]} lms_i_txnrx2 lms_io_iqsel2 lms_o_mclk2}]
 #set_property IOSTANDARD HSTL_I_18          [get_ports {lms_diq1[*] lms_i_txnrx1 lms_io_iqsel1 lms_o_mclk1}]
 
 # 'if' isn't supported, so edit it manually:
@@ -421,18 +421,18 @@ set_property IOSTANDARD LVCMOS25 [get_ports {{lms_diq1[*]} lms_i_txnrx1 lms_io_i
 #set_property IN_TERM UNTUNED_SPLIT_50 [get_ports {lms_diq1[*] lms_i_fclk1 lms_io_iqsel1}]
 #set_property INTERNAL_VREF 0.9         [get_iobanks 14]
 #} else {
-set_property SLEW FAST [get_ports {{lms_diq1[*]} lms_i_fclk1 lms_io_iqsel1}]
-set_property DRIVE 8 [get_ports {{lms_diq1[*]} lms_i_fclk1 lms_io_iqsel1}]
+set_property SLEW FAST [get_ports {{lms_diq2[*]} lms_i_fclk2 lms_io_iqsel2}]
+set_property DRIVE 8 [get_ports {{lms_diq2[*]} lms_i_fclk2 lms_io_iqsel2}]
 #}
 
 # LML Port 2
-set_property IOSTANDARD LVCMOS25 [get_ports {{lms_diq2[*]} lms_i_txnrx2 lms_io_iqsel2 lms_o_mclk2 lms_i_fclk2}]
+set_property IOSTANDARD LVCMOS25 [get_ports {{lms_diq1[*]} lms_i_txnrx1 lms_io_iqsel1 lms_o_mclk1 lms_i_fclk1}]
 #if { $VIO_LML2_TYPE == "HSTL_II_18"} {
 #set_property IN_TERM UNTUNED_SPLIT_50 [get_ports {lms_diq2[*] lms_i_fclk2 lms_io_iqsel1}]
 #set_property INTERNAL_VREF 0.9         [get_iobanks 34]
 #} else {
-set_property SLEW FAST [get_ports lms_i_fclk2]
-set_property DRIVE 8 [get_ports lms_i_fclk2]
+set_property SLEW FAST [get_ports lms_i_fclk1]
+set_property DRIVE 8 [get_ports lms_i_fclk1]
 #}
 
 

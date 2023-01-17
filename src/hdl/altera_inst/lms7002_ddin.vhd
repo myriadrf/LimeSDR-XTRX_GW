@@ -48,6 +48,13 @@ signal datain       : std_logic_vector(iq_width downto 0);
 signal int_data_Q1  : std_logic_vector(iq_width downto 0);
 signal int_data_Q2  : std_logic_vector(iq_width downto 0);
 
+
+--attribute MARK_DEBUG : string;
+--attribute MARK_DEBUG of data_out_h: signal is "TRUE";
+--attribute MARK_DEBUG of data_out_l: signal is "TRUE";
+				
+				
+
 component altddio_in
    generic (
       intended_device_family       :   string := "unused";

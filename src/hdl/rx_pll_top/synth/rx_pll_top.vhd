@@ -162,7 +162,7 @@ signal drct_c0_dly_chain         : std_logic_vector(drct_c0_ndly-1 downto 0);
 signal drct_c1_dly_chain         : std_logic_vector(drct_c1_ndly-1 downto 0);
 
 signal c0_mux, c1_mux            : std_logic;
-signal locked_mux                : std_logic;
+signal locked_mux                : std_logic;		
 
 begin
    
@@ -339,14 +339,13 @@ inst1_pll_scanclk <= rcnfg_clk;
       s_axi_rdata    => rcnfig_to_axim.rdata,          -- out
       s_axi_rresp    => rcnfig_to_axim.rresp,          -- out
       s_axi_rvalid   => rcnfig_to_axim.rvalid(0),         -- out
-      s_axi_rready   => rcnfig_from_axim.rready(0),         -- in
+      s_axi_rready   => rcnfig_from_axim.rready(0)         -- in
       
-      psclk          => inst1_pll_scanclk,
-      psen           => inst2_pll_phasestep,
-      psincdec       => inst2_pll_phaseupdown,
-      psdone         => inst3_phasedone 
+--      psclk          => inst1_pll_scanclk,
+--      psen           => inst2_pll_phasestep,
+--      psincdec       => inst2_pll_phaseupdown,
+--      psdone         => inst3_phasedone 
   );
-
 
 end generate;
 

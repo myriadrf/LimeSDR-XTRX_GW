@@ -147,13 +147,6 @@ constant c_F2H_S0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_FPGA2HOST_S0
 constant c_H2F_C0_RDUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_HOST2FPGA_C0_0_SIZE/(c_H2F_C0_RWIDTH/8),true);
 constant c_F2H_C0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_FPGA2HOST_C0_0_SIZE/(c_F2H_C0_WWIDTH/8),true);
 
-signal fpga_clk_vctcxo_reg : std_logic;
-attribute MARK_DEBUG : string;
-attribute MARK_DEBUG of fpga_clk_vctcxo_reg : signal is "TRUE";
-				
-				
-
-
 signal sys_clk : std_logic;
 signal global_rst_n : std_logic;
 
@@ -205,9 +198,8 @@ signal      inst1_pll_from_axim             : t_FROM_AXIM_32x32;
 signal      inst1_to_tstcfg_from_rxtx       : t_TO_TSTCFG_FROM_RXTX;
 signal      inst1_pll_axi_sel               : std_logic_vector(3 downto 0);
 signal      inst1_pll_axi_resetn_out        : std_logic_vector(0 downto 0);
-signal      inst1_smpl_cmp_en               : std_logic_vector(3 downto 0);
+signal      inst1_smpl_cmp_en               : std_logic_vector(0 downto 0);
 signal      inst1_smpl_cmp_status           : std_logic_vector(1 downto 0);
-signal      inst1_smpl_cmp_sel              : std_logic_vector(0 downto 0);
 signal      inst1_lms_reset_cpu             : std_logic;
 signal      inst1_xtrx_ctrl_gpio            : std_logic_vector(3 downto 0);
 --rxtx_top
@@ -244,13 +236,6 @@ signal      inst4_lms_reset                 : std_logic;
 
 
 begin
-
-    process(all)
-    begin
-        if rising_edge(sys_clk) then
-            fpga_clk_vctcxo_reg <= fpga_clk_vctcxo;
-        end if;
-    end process; 
 
    --placeholder assignment
    global_rst_n <= sys_rst_n;
@@ -292,7 +277,7 @@ begin
                 H2F_S0_dma_en    => inst0_s0_dma_en ,
                 H2F_S0_0_rdclk   => inst0_s0_rdclk  ,
                 H2F_S0_0_aclrn   => inst0_s0_raclrn ,
-                H2F_S0_0_rd      => '1',--inst0_s0_rd     ,
+                H2F_S0_0_rd      => inst0_s0_rd     ,
                 H2F_S0_0_rdata   => inst0_s0_rdata  ,
                 H2F_S0_0_rempty  => inst0_s0_rempty ,
                 H2F_S0_0_rdusedw => inst0_s0_rdusedw,
@@ -306,7 +291,7 @@ begin
                 
                 F2H_S0_wclk      => inst0_s0_wclk   ,
                 F2H_S0_aclrn     => inst0_s0_waclrn ,
-                F2H_S0_wr        => not inst0_s0_wfull,--inst0_s0_wr     ,
+                F2H_S0_wr        => inst0_s0_wr     ,
                 F2H_S0_wdata     => inst0_s0_wdata  ,
                 F2H_S0_wfull     => inst0_s0_wfull  ,
                 F2H_S0_wrusedw   => inst0_s0_wrusedw,
@@ -401,7 +386,6 @@ begin
       
       to_memcfg                  => inst1_to_memcfg,
       from_memcfg                => inst1_from_memcfg,
-      smpl_cmp_sel               => inst1_smpl_cmp_sel,
       smpl_cmp_en                => inst1_smpl_cmp_en, 
       smpl_cmp_status            => inst1_smpl_cmp_status,
       xtrx_ctrl_gpio             => inst1_xtrx_ctrl_gpio
@@ -453,10 +437,10 @@ begin
       lms1_rxpll_c1              => inst1_lms1_rxpll_c1,
       lms1_rxpll_locked          => inst1_lms1_rxpll_locked,
       -- Sample comparing ports from LMS#1 RX interface
-      lms1_smpl_cmp_en           => inst4_rx_smpl_cmp_start,
-      lms1_smpl_cmp_done         => inst4_rx_smpl_cmp_done,
-      lms1_smpl_cmp_error        => inst4_rx_smpl_cmp_err,
-      lms1_smpl_cmp_cnt          => inst4_rx_smpl_cmp_cnt,--, 
+      lms1_smpl_cmp_en           => open,--inst4_rx_smpl_cmp_start,
+      lms1_smpl_cmp_done         => '0',--inst4_rx_smpl_cmp_done,
+      lms1_smpl_cmp_error        => '0',--inst4_rx_smpl_cmp_err,
+      lms1_smpl_cmp_cnt          => open,--inst4_rx_smpl_cmp_cnt,--, 
       -- Reconfiguration AXI ports
       rcnfg_axi_clk              => sys_clk,
       rcnfg_axi_reset_n          => inst1_pll_axi_resetn_out(0),
@@ -605,9 +589,9 @@ begin
                 rx_smpl_cnt_en     => inst3_rx_smpl_cnt_en
    );
 
---   inst4_rx_smpl_cmp_start <= inst1_smpl_cmp_en(0) when inst1_smpl_cmp_sel(0)='0' else '0';
---   inst1_smpl_cmp_status(0)   <= inst4_rx_smpl_cmp_done;   
---   inst1_smpl_cmp_status(1)   <= inst4_rx_smpl_cmp_err;
+   inst4_rx_smpl_cmp_start    <= inst1_smpl_cmp_en(0)  ;-- when inst1_smpl_cmp_sel(0)='0' else '0';
+   inst1_smpl_cmp_status(0)   <= inst4_rx_smpl_cmp_done;   
+   inst1_smpl_cmp_status(1)   <= inst4_rx_smpl_cmp_err ;
    
    
    lms_i_reset <= inst4_lms_reset and inst1_xtrx_ctrl_gpio(0);--inst1_lms_reset_cpu; -- reset is active low, so any module can reset the LMS

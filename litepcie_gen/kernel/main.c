@@ -32,11 +32,13 @@
 #include <linux/poll.h>
 #include <linux/cdev.h>
 #include <linux/platform_device.h>
+#include <linux/version.h>
 
 #include "litepcie.h"
 #include "csr.h"
 #include "config.h"
 #include "flags.h"
+#include "soc.h"
 
 //#define DEBUG_CSR
 //#define DEBUG_MSI
@@ -975,7 +977,9 @@ static int litepcie_pci_probe(struct pci_dev *dev, const struct pci_device_id *i
 	int i;
 	char fpga_identifier[256];
 	struct litepcie_device *litepcie_dev = NULL;
+#ifdef CSR_UART_XOVER_RXTX_ADDR
 	struct resource *tty_res = NULL;
+#endif
 
 	dev_info(&dev->dev, "\e[1m[Probing device]\e[0m\n");
 
@@ -1033,7 +1037,11 @@ static int litepcie_pci_probe(struct pci_dev *dev, const struct pci_device_id *i
 	dev_info(&dev->dev, "Version %s\n", fpga_identifier);
 
 	pci_set_master(dev);
-	ret = pci_set_dma_mask(dev, DMA_BIT_MASK(32));
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 18, 0)
+	ret = pci_set_dma_mask(dev, DMA_BIT_MASK(DMA_ADDR_WIDTH));
+#else
+	ret = dma_set_mask(&dev->dev, DMA_BIT_MASK(DMA_ADDR_WIDTH));
+#endif
 	if (ret) {
 		dev_err(&dev->dev, "Failed to set DMA mask\n");
 		goto fail1;

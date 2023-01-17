@@ -56,11 +56,11 @@ constant c_INST1_WRUSEDW_WITDTH   : integer := FIFOWR_SIZE (g_BUFF_RWIDTH, g_BUF
    signal  inst1_wrfull    : std_logic;
    
    
-   attribute MARK_DEBUG : string;
+--   attribute MARK_DEBUG : string;
 --   attribute MARK_DEBUG of inst0_valid      : signal is "TRUE";
-	attribute MARK_DEBUG of cntrl_ready          : signal is "TRUE";
-	attribute MARK_DEBUG of cntrl_valid      : signal is "TRUE";
-	attribute MARK_DEBUG of cntrl_data       : signal is "TRUE";
+--	attribute MARK_DEBUG of cntrl_ready          : signal is "TRUE";
+--	attribute MARK_DEBUG of cntrl_valid      : signal is "TRUE";
+--	attribute MARK_DEBUG of cntrl_data       : signal is "TRUE";
 
 
   

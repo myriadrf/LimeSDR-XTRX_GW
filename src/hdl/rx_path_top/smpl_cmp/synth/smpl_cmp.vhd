@@ -76,20 +76,20 @@ signal debug_compare_stop : std_logic;
 type state_type is (idle, wait_cyc, compare, compare_done);
 signal current_state, next_state : state_type;
 
-attribute mark_debug    : string;
-attribute keep          : string;
-attribute mark_debug of current_state       : signal is "true";
-attribute mark_debug of debug_compare_stop  : signal is "true";
-attribute mark_debug of diq_h_reg           : signal is "true";
-attribute mark_debug of diq_l_reg           : signal is "true";
-attribute mark_debug of AI_err              : signal is "true";
-attribute mark_debug of AQ_err              : signal is "true";
-attribute mark_debug of BQ_err              : signal is "true";
-attribute mark_debug of IQ_SEL_err          : signal is "true";
-attribute mark_debug of smpl_err            : signal is "true";
-attribute mark_debug of cmp_start           : signal is "true";
-attribute mark_debug of cmp_done_reg        : signal is "true";
-attribute mark_debug of cmp_error_reg       : signal is "true";
+--attribute mark_debug    : string;
+--attribute keep          : string;
+--attribute mark_debug of current_state       : signal is "true";
+--attribute mark_debug of debug_compare_stop  : signal is "true";
+--attribute mark_debug of diq_h_reg           : signal is "true";
+--attribute mark_debug of diq_l_reg           : signal is "true";
+--attribute mark_debug of AI_err              : signal is "true";
+--attribute mark_debug of AQ_err              : signal is "true";
+--attribute mark_debug of BQ_err              : signal is "true";
+--attribute mark_debug of IQ_SEL_err          : signal is "true";
+--attribute mark_debug of smpl_err            : signal is "true";
+--attribute mark_debug of cmp_start           : signal is "true";
+--attribute mark_debug of cmp_done_reg        : signal is "true";
+--attribute mark_debug of cmp_error_reg       : signal is "true";
 
   
 begin

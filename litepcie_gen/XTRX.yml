@@ -18,7 +18,7 @@
     "clk_external": False,         # Use external User provided Clk
 
     # Endpoint -----------------------------------------------------------------
-    "ep_max_pending_requests" : 8,
+    "ep_max_pending_requests" : 4,
 
     # Control ------------------------------------------------------------------
     "ctrl": False,
@@ -40,5 +40,5 @@
     "dma_monitor"      : False, # Enable DMA monitoring capability
 
     # MSI IRQs -----------------------------------------------------------------
-    "msi_irqs": 16,                # Number or MSI IRQs
+    "msi_irqs": 8,                # Number or MSI IRQs
 }

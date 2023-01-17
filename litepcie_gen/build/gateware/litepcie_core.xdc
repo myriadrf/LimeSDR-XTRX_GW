@@ -3937,30 +3937,6 @@ set_property LOC X [get_ports {msi_irqs[6]}]
 # msi_irqs:0
 set_property LOC X [get_ports {msi_irqs[7]}]
 
-# msi_irqs:0
-set_property LOC X [get_ports {msi_irqs[8]}]
-
-# msi_irqs:0
-set_property LOC X [get_ports {msi_irqs[9]}]
-
-# msi_irqs:0
-set_property LOC X [get_ports {msi_irqs[10]}]
-
-# msi_irqs:0
-set_property LOC X [get_ports {msi_irqs[11]}]
-
-# msi_irqs:0
-set_property LOC X [get_ports {msi_irqs[12]}]
-
-# msi_irqs:0
-set_property LOC X [get_ports {msi_irqs[13]}]
-
-# msi_irqs:0
-set_property LOC X [get_ports {msi_irqs[14]}]
-
-# msi_irqs:0
-set_property LOC X [get_ports {msi_irqs[15]}]
-
 ################################################################################
 # Design constraints
 ################################################################################

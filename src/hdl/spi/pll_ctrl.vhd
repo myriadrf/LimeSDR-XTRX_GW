@@ -120,7 +120,7 @@ auto_phcfg_done_vect(15 downto N_PLL)  <= (others=>'0');
 auto_phcfg_err_vect(N_PLL-1 downto 0)  <= auto_phcfg_err;
 auto_phcfg_err_vect(15 downto N_PLL)   <= (others=>'0');
 
-pll_lock_vect(N_PLL-1 downto 0)        <= (others => '1');-- TEMP CHANGE, DEBUGpll_lock;
+pll_lock_vect(N_PLL-1 downto 0)        <= pll_lock;
 pll_lock_vect(15 downto N_PLL)         <= (others=>'0');
 
 process(pll_ind, pllcfg_busy_vect, pllcfg_done_vect) begin

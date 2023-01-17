@@ -55,10 +55,10 @@ constant c_INST0_RDUSEDW_WIDTH   : integer := FIFORD_SIZE (g_BUFF_WRWIDTH, c_INS
    --inst1
    signal inst1_in_rdreq   : std_logic;
 
-attribute MARK_DEBUG : string;
-attribute MARK_DEBUG of cntrl_valid : signal is "TRUE";
-attribute MARK_DEBUG of cntrl_data  : signal is "TRUE";
-attribute MARK_DEBUG of cntrl_ready : signal is "TRUE";
+--attribute MARK_DEBUG : string;
+--attribute MARK_DEBUG of cntrl_valid : signal is "TRUE";
+--attribute MARK_DEBUG of cntrl_data  : signal is "TRUE";
+--attribute MARK_DEBUG of cntrl_ready : signal is "TRUE";
 				
 begin
 

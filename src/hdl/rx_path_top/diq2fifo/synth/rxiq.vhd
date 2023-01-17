@@ -57,6 +57,17 @@ signal mux_fifo_wdata	: std_logic_vector(iq_width*4-1 downto 0);
 
 signal fifo_wrreq_reg   : std_logic;
 signal fifo_wdata_reg   : std_logic_vector(iq_width*4-1 downto 0);
+
+--attribute MARK_DEBUG : string;
+--attribute MARK_DEBUG of fifo_wdata : signal is "TRUE";
+--attribute MARK_DEBUG of fifo_wrreq : signal is "TRUE";
+--attribute MARK_DEBUG of fifo_wfull : signal is "TRUE";
+
+--attribute MARK_DEBUG of DIQ_h : signal is "TRUE";
+--attribute MARK_DEBUG of DIQ_l : signal is "TRUE";
+--attribute MARK_DEBUG of inst0_reset_n : signal is "TRUE";
+--attribute MARK_DEBUG of inst1_reset_n : signal is "TRUE";
+				
   
 begin
  

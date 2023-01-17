@@ -99,9 +99,8 @@ entity cpu_top is
         to_memcfg            : in     t_TO_MEMCFG;
         from_memcfg          : out    t_FROM_MEMCFG;
 
-        smpl_cmp_en          : out    std_logic_vector ( 3 downto 0 );
-        smpl_cmp_status      : in     std_logic_vector ( 1 downto 0 );
-        smpl_cmp_sel         : out    std_logic_vector (0 downto 0)
+        smpl_cmp_en          : out    std_logic_vector ( 0 downto 0 );
+        smpl_cmp_status      : in     std_logic_vector ( 1 downto 0 )
     );
 end cpu_top;
 
@@ -200,7 +199,7 @@ architecture arch of cpu_top is
             I2C_2_sda_o                : out std_logic;
             I2C_2_sda_t                : out std_logic;
             pll_rst_tri_o              : out STD_LOGIC_VECTOR ( 31 downto 0 );
-            --      pllcfg_cmd_tri_i           : in STD_LOGIC_VECTOR ( 3 downto 0 );
+            pllcfg_cmd_tri_i           : in STD_LOGIC_VECTOR ( 3 downto 0 );
             pllcfg_stat_tri_o          : out STD_LOGIC_VECTOR ( 11 downto 0 );
             reset_n                    : in std_logic;
             spi_0_io0_i                : in std_logic;
@@ -247,9 +246,8 @@ architecture arch of cpu_top is
             extm_0_axi_wstrb           : out STD_LOGIC_VECTOR ( 3 downto 0 );
             extm_0_axi_wvalid          : out STD_LOGIC_VECTOR ( 0 to 0 );
             extm_0_axi_sel_tri_o       : out STD_LOGIC_VECTOR ( 3 downto 0 );
-            smpl_cmp_en_tri_o          : out STD_LOGIC_VECTOR ( 3 downto 0 );
+            smpl_cmp_en_tri_o          : out STD_LOGIC_VECTOR ( 0 downto 0 );
             smpl_cmp_status_tri_i      : in STD_LOGIC_VECTOR ( 1 downto 0 );
-            smpl_cmp_sel_tri_o         : out STD_LOGIC_VECTOR ( 0 to 0 );
             vctcxo_tamer_0_ctrl_tri_i  : in STD_LOGIC_VECTOR ( 3 downto 0 );
             xtrx_ctrl_gpio_tri_o       : out STD_LOGIC_VECTOR (3 downto 0)
 
@@ -314,7 +312,7 @@ begin
             I2C_2_sda_t              => inst0_i2c_2_sda_t,
             --
             pll_rst_tri_o            => pll_rst,
-            --      pllcfg_cmd_tri_i         => inst0_pllcfg_cmd_export,
+            pllcfg_cmd_tri_i         => inst0_pllcfg_cmd_export,
             pllcfg_stat_tri_o        => inst0_pllcfg_stat_export,
             reset_n                  => reset_n,
             spi_0_io0_i              => '0',
@@ -368,8 +366,7 @@ begin
 
             -- tsting
             smpl_cmp_en_tri_o        => smpl_cmp_en,
-            smpl_cmp_status_tri_i    => smpl_cmp_status_sync,
-            smpl_cmp_sel_tri_o       => smpl_cmp_sel
+            smpl_cmp_status_tri_i    => smpl_cmp_status_sync
         );
 
     avmm_m0_clk_clk                     <= clk;
@@ -393,8 +390,8 @@ begin
               to_pllcfg_int.pllcfg_done  <= inst0_pllcfg_stat_export(0);
               to_pllcfg_int.pllcfg_busy  <= inst0_pllcfg_stat_export(1);
               to_pllcfg_int.pllcfg_err   <= inst0_pllcfg_stat_export(9 downto 2);
-        --      to_pllcfg_int.phcfg_done   <= inst0_pllcfg_stat_export(10);
-        --      to_pllcfg_int.phcfg_error  <= inst0_pllcfg_stat_export(11);
+              to_pllcfg_int.phcfg_done   <= inst0_pllcfg_stat_export(10);
+              to_pllcfg_int.phcfg_error  <= inst0_pllcfg_stat_export(11);
     end process;
 
     -- ----------------------------------------------------------------------------
