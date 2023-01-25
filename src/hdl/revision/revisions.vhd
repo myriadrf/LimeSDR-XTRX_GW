@@ -12,14 +12,14 @@ use IEEE.std_logic_unsigned.all;
 
 package revisions is
 	constant MAJOR_REV : INTEGER := 1;
-	constant MINOR_REV : INTEGER := 1;
-	constant BETA_REV : INTEGER := 1;
-	constant COMPILE_REV : INTEGER := 1;
-	constant COMPILE_YEAR_STAMP : INTEGER := 22;
-	constant COMPILE_MONTH_STAMP : INTEGER := 11;
-	constant COMPILE_DAY_STAMP : INTEGER := 14;
-	constant COMPILE_HOUR_STAMP : INTEGER := 12;
+	constant MINOR_REV : INTEGER := 0;
+	constant BETA_REV : INTEGER := 0;
+	constant COMPILE_REV : INTEGER := 0;
+	constant COMPILE_YEAR_STAMP : INTEGER := 23;
+	constant COMPILE_MONTH_STAMP : INTEGER := 01;
+	constant COMPILE_DAY_STAMP : INTEGER := 25;
+	constant COMPILE_HOUR_STAMP : INTEGER := 16;
 	
 	constant MAGIC_NUM : STD_LOGIC_VECTOR(31 downto 0) := X"D8A5F009";
-   constant BOARD_ID : STD_LOGIC_VECTOR(15 downto 0) := X"001A"; -- 5G Radio (temp)
+   constant BOARD_ID : STD_LOGIC_VECTOR(15 downto 0) := 16d"27"; -- 5G Radio (temp)
 end revisions;
