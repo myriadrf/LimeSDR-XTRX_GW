@@ -40,6 +40,8 @@ package fpgacfg_pkg is
       txpct_loss_clr : std_logic;
       rx_en          : std_logic;
       tx_en          : std_logic;
+      rx_rf_sw       : std_logic_vector(1 downto 0);
+      tx_rf_sw       : std_logic;
       rx_ptrn_en     : std_logic;
       tx_ptrn_en     : std_logic;
       tx_cnt_en      : std_logic;
@@ -51,10 +53,6 @@ package fpgacfg_pkg is
       
       LMS1_SS        : std_logic;
       LMS2_SS        : std_logic;
-      -- ADF_SS      : std_logic;
-      -- DAC_SS      : std_logic;
-      -- POT1_SS     : std_logic;
-      
       LMS1_RESET        : std_logic;
       LMS1_CORE_LDO_EN  : std_logic;
       LMS1_TXNRX1       : std_logic;
@@ -72,10 +70,10 @@ package fpgacfg_pkg is
       GPIO              : std_logic_vector(15 downto 0);
       FPGA_LED1_CTRL    : std_logic_vector(2 downto 0);
       FPGA_LED2_CTRL    : std_logic_vector(2 downto 0);
-      FPGA_LED3_CTRL		: std_logic_vector(2 downto 0);
-		FPGA_LED4_CTRL		: std_logic_vector(2 downto 0);
-		FPGA_LED5_CTRL		: std_logic_vector(2 downto 0);
-		FPGA_LED6_CTRL		: std_logic_vector(2 downto 0);
+      FPGA_LED3_CTRL    : std_logic_vector(2 downto 0);
+	  FPGA_LED4_CTRL	: std_logic_vector(2 downto 0);
+	  FPGA_LED5_CTRL	: std_logic_vector(2 downto 0);
+	  FPGA_LED6_CTRL	: std_logic_vector(2 downto 0);
       FX3_LED_CTRL      : std_logic_vector(2 downto 0);
       CLK_ENA           : std_logic_vector(7 downto 0);
       sync_pulse_period : std_logic_vector(31 downto 0);

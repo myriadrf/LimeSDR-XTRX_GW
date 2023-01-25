@@ -73,7 +73,7 @@ entity cpu_top is
         vctcxo_tune_en       : in     std_logic;
         vctcxo_irq           : in     std_logic;
         -- PLL reconfiguration
-        pll_rst              : out    std_logic_vector(31 downto 0);
+        pll_rst              : out    std_logic_vector(1 downto 0);
         pll_axi_resetn_out   : out    std_logic_vector ( 0 to 0 );
         pll_from_axim        : out    t_FROM_AXIM_32x32;
         pll_to_axim          : in     t_TO_AXIM_32x32;
@@ -198,7 +198,8 @@ architecture arch of cpu_top is
             I2C_2_sda_i                : in std_logic;
             I2C_2_sda_o                : out std_logic;
             I2C_2_sda_t                : out std_logic;
-            pll_rst_tri_o              : out STD_LOGIC_VECTOR ( 31 downto 0 );
+            pll_locked_tri_i           : in STD_LOGIC_VECTOR (1 downto 0):="11";
+            pll_rst_tri_o              : out STD_LOGIC_VECTOR ( 1 downto 0 );
             pllcfg_cmd_tri_i           : in STD_LOGIC_VECTOR ( 3 downto 0 );
             pllcfg_stat_tri_o          : out STD_LOGIC_VECTOR ( 11 downto 0 );
             reset_n                    : in std_logic;

@@ -204,7 +204,7 @@ begin
          mem(11)  <= "0000000000000000";  -- 16 free, 
          mem(12)  <= "0000000000000011";  --  0 free, wfm_ch_en
          mem(13)  <= "0000000000000000";  --  0 free, Reserved,wfm_load,wfm_play,Reserved
-         mem(14)  <= "0000000000000000";  -- 16 free, Reserved
+         mem(14)  <= "0000000000000000";  -- 16 free, RX_PACKET_SIZE
          mem(15)  <= x"03FC";             -- 16 free, sync_size
          --Peripheral config
          mem(16)  <= x"0001";             -- 16 free, txant_pre
@@ -215,8 +215,8 @@ begin
          mem(21)  <= "0000000000000000";  --  0 free, (Reserved LMS control)
          mem(22)  <= "0000000000000000";  --  0 free, (Reserved LMS control)
          mem(23)  <= "0010001101000000";  --  0 free, (Reserved), GPIO[6:0]
-         mem(24)  <= "0000000000000001";  -- 15 free, Reserved[15:1],  TX_HI_FREQ_MODE
-         mem(25)  <= "0001000000000000";  -- 16 free, (Reserved)
+         mem(24)  <= "0000000000000000";  -- 15 free, Reserved[15:1],  TX_HI_FREQ_MODE
+         mem(25)  <= "0001000000000000";  -- 16 free, RX_PACKET_SIZE
          mem(26)  <= "0000000000000000";  --  0 free, Reserved[15:8],FPGA_LED2_G,FPGA_LED2_R,FPGA_LED2_OVRD,Reserved,FPGA_LED1_G,FPGA_LED1_R,FPGA_LED1_OVRD
          mem(27)  <= "0000000000000000";  --  0 free, Reserved[15:0]
          mem(28)  <= "0000000000000000";  --  0 free, Reserved[15:4],FX3_LED_G,FX3_LED_R,FX3_LED_OVRD
@@ -260,9 +260,12 @@ begin
       from_fpgacfg.txpct_loss_clr      <= mem(9) (1);
       from_fpgacfg.rx_en               <= mem(10) (0);
       from_fpgacfg.tx_en               <= mem(10) (1);
+      from_fpgacfg.rx_rf_sw            <= mem(10) (3 downto 2);
+      from_fpgacfg.tx_rf_sw            <= mem(10) (4);
       from_fpgacfg.rx_ptrn_en          <= mem(10) (8);
       from_fpgacfg.tx_ptrn_en          <= mem(10) (9);
       from_fpgacfg.tx_cnt_en           <= mem(10) (10);
+      from_fpgacfg.tx_pct_cnt_rst      <= mem(11)(0);
       
       from_fpgacfg.wfm_ch_en           <= mem(12) (15 downto 0);
       from_fpgacfg.wfm_play            <= mem(13) (1);
@@ -306,7 +309,7 @@ begin
       from_fpgacfg.FX3_LED_CTRL        <= mem(28)(2 downto 0);
       from_fpgacfg.CLK_ENA             <= mem(29)(7 downto 0);
       from_fpgacfg.sync_pulse_period   <= mem(30)(15 downto 0) & mem(31)(15 downto 0);
-      from_fpgacfg.tx_pct_cnt_rst      <= mem(11)(0);
+      
 
 
 end fpgacfg_arch;

@@ -185,7 +185,7 @@ signal      inst1_spi_0_MISO                : std_logic;
 signal      inst1_spi_0_MOSI                : std_logic;
 signal      inst1_spi_0_SCLK                : std_logic;
 signal      inst1_spi_0_SS_n                : std_logic_vector(1 downto 0);
-signal      inst1_pll_rst                   : std_logic_vector(31 downto 0);
+signal      inst1_pll_rst                   : std_logic_vector(1 downto 0);
 signal      inst1_from_fpgacfg              : t_FROM_FPGACFG;
 signal      inst1_to_fpgacfg                : t_TO_FPGACFG;
 signal      inst1_from_pllcfg               : t_FROM_PLLCFG;
@@ -345,9 +345,9 @@ begin
       spi_0_SCLK                 => inst1_spi_0_SCLK,
       spi_0_SS_n                 => inst1_spi_0_SS_n,
       -- Config QSPI
-      fpga_cfg_qspi_MOSI         => open,--FPGA_CFG_MOSI,
-      fpga_cfg_qspi_MISO         => '0',--FPGA_CFG_MISO,
-      fpga_cfg_qspi_SS_n         => open,--FPGA_CFG_CS,
+      fpga_cfg_qspi_MOSI         => flash_d(0),--FPGA_CFG_MOSI,
+      fpga_cfg_qspi_MISO         => flash_d(1),--FPGA_CFG_MISO,
+      fpga_cfg_qspi_SS_n         => flash_fcs_b,--FPGA_CFG_CS,     
       -- I2C
       i2c_1_scl                  => i2c1_scl,
       i2c_1_sda                  => i2c1_sda,
@@ -395,6 +395,12 @@ begin
    lms_io_sdio       <= inst1_spi_0_MOSI;
    lms_i_sclk        <= inst1_spi_0_SCLK;
    lms_i_saen        <= inst1_spi_0_SS_n(1);
+   
+   tx_switch         <= inst1_from_fpgacfg.tx_rf_sw;
+   rx_switch_1       <= inst1_from_fpgacfg.rx_rf_sw(0);
+   rx_switch_2       <= inst1_from_fpgacfg.rx_rf_sw(1);
+   
+   
    
 -- ----------------------------------------------------------------------------
 -- pll_top instance.
