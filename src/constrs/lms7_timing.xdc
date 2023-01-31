@@ -9,7 +9,7 @@
 #
 # ----------------------------------------------------------------------------
 
-set clk_period        32.55; 
+set clk_period        8.138; 
 # ----------------------------------------------------------------------------
 # Primary Clocks
 # ----------------------------------------------------------------------------
@@ -20,13 +20,13 @@ create_clock -period $clk_period -name LMS1_MCLK2 [get_ports lms_o_mclk2]
 # ----------------------------------------------------------------------------
 # Virtual clocks
 # ----------------------------------------------------------------------------
-create_clock -period $clk_period -name LMS1_MCLK2_VIRT
-
+#Adding an offset to the clock to satisfy timing analysis, since the phase can be changed during runtime
+create_clock -period 8.138 -name LMS1_MCLK2_VIRT -waveform {3.8 7.869}
 # ----------------------------------------------------------------------------
 # Generated clocks
 # ----------------------------------------------------------------------------
-
-create_generated_clock -name LMS1_FCLK1 -source [get_pins inst2_pll_top/inst0_tx_pll_top_cyc5/XILINX_PLL_DDIO.XILINX_PLL_DDIO/C] -multiply_by 1 [get_ports lms_i_fclk1]
+#Adding an offset to the clock to satisfy timing analysis, since the phase can be changed during runtime
+create_generated_clock -name LMS1_FCLK1 -source [get_pins inst2_pll_top/inst0_tx_pll_top_cyc5/XILINX_PLL_DDIO.XILINX_PLL_DDIO/C] -multiply_by 1 [get_ports lms_i_fclk1] -waveform {1 5.069}
 
 ##  B.J.
 ##create_generated_clock -name LMS1_FCLK2 -source [get_pins inst1_pll_top/inst1_rx_pll_top_cyc5/XILINX_PLL_DDIO.XILINX_PLL_DDIO/C] -multiply_by 1 -phase 90 [get_ports LMS1_FCLK2]
