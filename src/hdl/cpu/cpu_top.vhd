@@ -16,14 +16,8 @@ use ieee.numeric_std.all;
 use work.fpgacfg_pkg.all;
 use work.pllcfg_pkg.all;
 use work.tstcfg_pkg.all;
-use work.txtspcfg_pkg.all;
-use work.rxtspcfg_pkg.all;
-use work.tamercfg_pkg.all;
-use work.gnsscfg_pkg.all;
 use work.memcfg_pkg.all;
 use work.axi_pkg.all;
-use work.cdcmcfg_pkg.all;
-use work.fircfg_pkg.all;  --B.J.
 
 -- ----------------------------------------------------------------------------
 -- Entity declaration
@@ -402,8 +396,7 @@ begin
             FPGACFG_START_ADDR   => FPGACFG_START_ADDR,
             PLLCFG_START_ADDR    => PLLCFG_START_ADDR,
             TSTCFG_START_ADDR    => TSTCFG_START_ADDR,
-            TXTSPCFG_START_ADDR  => TXTSPCFG_START_ADDR,
-            RXTSPCFG_START_ADDR  => RXTSPCFG_START_ADDR
+            MEMCFG_START_ADDR    => MEMCFG_START_ADDR
             --      PERIPHCFG_START_ADDR => PERIPHCFG_START_ADDR
         )
         port map(

@@ -15,12 +15,7 @@ use ieee.numeric_std.all;
 use work.fpgacfg_pkg.all;
 use work.pllcfg_pkg.all;
 use work.tstcfg_pkg.all;
-use work.txtspcfg_pkg.all;
-use work.rxtspcfg_pkg.all;
 use work.memcfg_pkg.all;
-use work.cdcmcfg_pkg.all;
-
-use work.fircfg_pkg.all; -- B.J.
 
 -- ----------------------------------------------------------------------------
 -- Entity declaration
@@ -31,14 +26,6 @@ entity cfg_top is
       FPGACFG_START_ADDR   : integer := 0;
       PLLCFG_START_ADDR    : integer := 32;
       TSTCFG_START_ADDR    : integer := 96;
-      TXTSPCFG_START_ADDR  : integer := 128;
-      RXTSPCFG_START_ADDR  : integer := 160;
-      CDCMCFG_START_ADDR   : integer := 320;
-   
-      RXTSPCFG_START_ADDR_3  : integer := 352; -- B.J.
-      FIRCFG_TX    : integer := 704;  -- BJ (for Transmitter)
-      FIRCFG_RX    : integer := 704+32; -- BJ (for Receiver)
-
       MEMCFG_START_ADDR    : integer := 65504
       );
    port (
