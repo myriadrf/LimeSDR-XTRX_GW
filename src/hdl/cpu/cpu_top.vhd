@@ -18,7 +18,6 @@ use work.pllcfg_pkg.all;
 use work.tstcfg_pkg.all;
 use work.txtspcfg_pkg.all;
 use work.rxtspcfg_pkg.all;
-use work.periphcfg_pkg.all;
 use work.tamercfg_pkg.all;
 use work.gnsscfg_pkg.all;
 use work.memcfg_pkg.all;
