@@ -226,7 +226,7 @@ signal      inst1_lms1_rxpll_rcnfg_from_pll : std_logic_vector(63 downto 0);
 signal      inst1_lms2_txpll_rcnfg_from_pll : std_logic_vector(63 downto 0);
 signal      inst1_rcnfg_to_axim             : t_TO_AXIM_32x32;
 
---signal      inst4_txant_en                  : std_logic;
+signal      inst4_txant_en                  : std_logic;
             
 signal      inst4_rx_smpl_cmp_done          : std_logic; 
 signal      inst4_rx_smpl_cmp_err           : std_logic; 
@@ -581,7 +581,7 @@ begin
                 tx_fifo_1_data     => (others => '0'),--tx_fifo_1_data,
                 tx_fifo_1_wrfull   => open,--tx_fifo_1_wrfull,
                 tx_fifo_1_wrusedw  => open,--tx_fifo_1_wrusedw,
-                tx_ant_en          => open,--inst4_txant_en,
+                tx_ant_en          => inst4_txant_en,
                 -- Internal RX ports
                 rx_reset_n         => inst1_lms1_rxpll_locked,
                 rx_diq_h           => open,
@@ -607,7 +607,17 @@ begin
 
    lms_i_gpwrdwn <= '1';
     
-
-
+-- ----------------------------------------------------------------------------
+-- tdd_control instance.
+-- Simple module for TDD signal control
+-- ----------------------------------------------------------------------------    
+    inst5_tdd_control : entity work.tdd_control
+      port map (
+                MANUAL_VALUE => inst1_from_fpgacfg.tdd_manual,
+                AUTO_ENABLE  => inst1_from_fpgacfg.tdd_auto_en,
+                AUTO_IN      => inst4_txant_en,
+                AUTO_INVERT  => inst1_from_fpgacfg.tdd_invert,
+                TDD_OUT      => gpio(3) --This GPIO is used for TDD control
+   );
 
 end architecture Structural;

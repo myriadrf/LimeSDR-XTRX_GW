@@ -262,6 +262,9 @@ begin
       from_fpgacfg.tx_en               <= mem(10) (1);
       from_fpgacfg.rx_rf_sw            <= mem(10) (3 downto 2);
       from_fpgacfg.tx_rf_sw            <= mem(10) (4);
+      from_fpgacfg.tdd_manual          <= mem(10) (5);
+      from_fpgacfg.tdd_auto_en         <= mem(10) (6);
+      from_fpgacfg.tdd_invert          <= mem(10) (7);
       from_fpgacfg.rx_ptrn_en          <= mem(10) (8);
       from_fpgacfg.tx_ptrn_en          <= mem(10) (9);
       from_fpgacfg.tx_cnt_en           <= mem(10) (10);
