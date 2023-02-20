@@ -147,9 +147,9 @@ constant c_F2H_S0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_FPGA2HOST_S0
 constant c_H2F_C0_RDUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_HOST2FPGA_C0_0_SIZE/(c_H2F_C0_RWIDTH/8),true);
 constant c_F2H_C0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_FPGA2HOST_C0_0_SIZE/(c_F2H_C0_WWIDTH/8),true);
 
-signal sys_clk : std_logic;
+signal sys_clk      : std_logic;
 signal global_rst_n : std_logic;
-
+signal rx_switches  : std_logic_vector(1 downto 0);
 
 --pcie
 
@@ -396,9 +396,7 @@ begin
    lms_i_sclk        <= inst1_spi_0_SCLK;
    lms_i_saen        <= inst1_spi_0_SS_n(1);
    
-   tx_switch         <= inst1_from_fpgacfg.tx_rf_sw;
-   rx_switch_1       <= inst1_from_fpgacfg.rx_rf_sw(0);
-   rx_switch_2       <= inst1_from_fpgacfg.rx_rf_sw(1);
+
    
    
    
@@ -613,11 +611,21 @@ begin
 -- ----------------------------------------------------------------------------    
     inst5_tdd_control : entity work.tdd_control
       port map (
-                MANUAL_VALUE => inst1_from_fpgacfg.tdd_manual,
-                AUTO_ENABLE  => inst1_from_fpgacfg.tdd_auto_en,
-                AUTO_IN      => inst4_txant_en,
-                AUTO_INVERT  => inst1_from_fpgacfg.tdd_invert,
-                TDD_OUT      => gpio(3) --This GPIO is used for TDD control
+                MANUAL_VALUE       => inst1_from_fpgacfg.tdd_manual,
+                AUTO_ENABLE        => inst1_from_fpgacfg.tdd_auto_en,
+                AUTO_IN            => inst4_txant_en,
+                AUTO_INVERT        => inst1_from_fpgacfg.tdd_invert,
+                --
+                RX_RF_SW_IN        => inst1_from_fpgacfg.rx_rf_sw,
+                TX_RF_SW_IN        => inst1_from_fpgacfg.tx_rf_sw,
+                RF_SW_AUTO_ENANBLE => inst1_from_fpgacfg.rf_sw_auto_en,
+                --
+                TDD_OUT            => gpio(3), --This GPIO is used for TDD control
+                RX_RF_SW_OUT       => rx_switches,
+                TX_RF_SW_OUT       => tx_switch
    );
+   
+   rx_switch_1       <= rx_switches(0);
+   rx_switch_2       <= rx_switches(1);
 
 end architecture Structural;

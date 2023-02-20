@@ -42,6 +42,7 @@ package fpgacfg_pkg is
       tx_en          : std_logic;
       rx_rf_sw       : std_logic_vector(1 downto 0);
       tx_rf_sw       : std_logic;
+      rf_sw_auto_en  : std_logic;
       tdd_manual     : std_logic;
       tdd_auto_en    : std_logic;
       tdd_invert     : std_logic;

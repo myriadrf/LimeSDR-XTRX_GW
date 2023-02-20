@@ -268,6 +268,7 @@ begin
       from_fpgacfg.rx_ptrn_en          <= mem(10) (8);
       from_fpgacfg.tx_ptrn_en          <= mem(10) (9);
       from_fpgacfg.tx_cnt_en           <= mem(10) (10);
+      from_fpgacfg.rf_sw_auto_en       <= mem(10) (11);
       from_fpgacfg.tx_pct_cnt_rst      <= mem(11)(0);
       
       from_fpgacfg.wfm_ch_en           <= mem(12) (15 downto 0);
