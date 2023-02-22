@@ -265,6 +265,9 @@ TX_gen0 : if TX_EN = true generate
       decomp_fifo_size     => 9
       )
    port map(
+      sys_clk              => sys_clk,
+      from_tstcfg          => from_tstcfg,
+      to_tstcfg            => to_tstcfg,
       pct_wrclk            => tx_clk,
       iq_rdclk             => tx_clk,
       reset_n              => inst1_reset_n,

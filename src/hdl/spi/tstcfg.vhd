@@ -133,7 +133,34 @@ begin
          -- Load operation
          elsif dout_reg_len = '1' then
             case inst_reg(4 downto 0) is	-- mux read-only outputs
-               when "00000" => dout_reg <= (15 downto 8 => '0') & GW_TEST_RES & mem(0)(3 downto 0);
+               when "00000"  => dout_reg <= (15 downto 8 => '0') & GW_TEST_RES & mem(0)(3 downto 0);
+               --
+               when 5d"1"    => dout_reg <= to_tstcfg.TX_TS_BUF(0)(15 downto  0);
+               when 5d"2"    => dout_reg <= to_tstcfg.TX_TS_BUF(0)(31 downto 16);
+               when 5d"3"    => dout_reg <= to_tstcfg.TX_TS_BUF(0)(47 downto 32);
+               when 5d"4"    => dout_reg <= to_tstcfg.TX_TS_BUF(0)(63 downto 48);
+               --
+               when 5d"5"    => dout_reg <= to_tstcfg.TX_TS_BUF(1)(15 downto  0);
+               when 5d"6"    => dout_reg <= to_tstcfg.TX_TS_BUF(1)(31 downto 16);
+               when 5d"7"    => dout_reg <= to_tstcfg.TX_TS_BUF(1)(47 downto 32);
+               when 5d"8"    => dout_reg <= to_tstcfg.TX_TS_BUF(1)(63 downto 48);
+               --
+               when 5d"9"    => dout_reg <= to_tstcfg.TX_TS_BUF(2)(15 downto  0);
+               when 5d"10"   => dout_reg <= to_tstcfg.TX_TS_BUF(2)(31 downto 16);
+               when 5d"11"   => dout_reg <= to_tstcfg.TX_TS_BUF(2)(47 downto 32);
+               when 5d"12"   => dout_reg <= to_tstcfg.TX_TS_BUF(2)(63 downto 48);
+               --
+               when 5d"13"   => dout_reg <= to_tstcfg.TX_TS_BUF(3)(15 downto  0);
+               when 5d"14"   => dout_reg <= to_tstcfg.TX_TS_BUF(3)(31 downto 16);
+               when 5d"15"   => dout_reg <= to_tstcfg.TX_TS_BUF(3)(47 downto 32);
+               when 5d"16"   => dout_reg <= to_tstcfg.TX_TS_BUF(3)(63 downto 48);
+               --
+               when 5d"17"   => dout_reg <= to_tstcfg.TX_RX_TS(15 downto  0);
+               when 5d"18"   => dout_reg <= to_tstcfg.TX_RX_TS(31 downto 16);
+               when 5d"19"   => dout_reg <= to_tstcfg.TX_RX_TS(47 downto 32);
+               when 5d"20"   => dout_reg <= to_tstcfg.TX_RX_TS(63 downto 48);
+               --
+               when 5d"21"   => dout_reg <= 8d"0" & to_tstcfg.TX_AVAIL_BUFS & to_tstcfg.crnt_buff_cnt;
                when others => dout_reg <= mem(to_integer(unsigned(inst_reg(4 downto 0))));
             end case;
          end if;  

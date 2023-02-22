@@ -17,6 +17,8 @@ use ieee.numeric_std.all;
 -- Package declaration
 -- ----------------------------------------------------------------------------
 package tstcfg_pkg is
+
+   type BUF_TIMESTAMPS is array(3 downto 0) of std_logic_vector(63 downto 0);
    
    -- Outputs from the 
    type t_FROM_TSTCFG is record
@@ -26,7 +28,10 @@ package tstcfg_pkg is
   
    -- Inputs to the .
    type t_TO_TSTCFG is record
-    placeholder : std_logic;
+    TX_TS_BUF     : BUF_TIMESTAMPS;
+    TX_RX_TS      : std_logic_vector(63 downto 0);
+    TX_AVAIL_BUFS : std_logic_vector(3 downto 0);
+    crnt_buff_cnt : std_logic_vector(3 downto 0);
    end record t_TO_TSTCFG;   
 
 end package tstcfg_pkg;
