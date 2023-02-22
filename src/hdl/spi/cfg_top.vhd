@@ -48,7 +48,6 @@ entity cfg_top is
       to_pllcfg            : in  t_TO_PLLCFG;
       from_pllcfg          : out t_FROM_PLLCFG;
       to_tstcfg            : in  t_TO_TSTCFG;
-      to_tstcfg_from_rxtx  : in  t_TO_TSTCFG_FROM_RXTX;
       from_tstcfg          : out t_FROM_TSTCFG;
       to_memcfg            : in  t_TO_MEMCFG;
       from_memcfg          : out t_FROM_MEMCFG
@@ -151,7 +150,6 @@ begin
       oen                  => open,
       stateo               => open,    
       to_tstcfg            => to_tstcfg,
-      to_tstcfg_from_rxtx  => to_tstcfg_from_rxtx,
       from_tstcfg          => from_tstcfg
    );
  

@@ -51,8 +51,8 @@ entity rxtx_top is
       -- Configuration memory ports     
       from_fpgacfg            : in     t_FROM_FPGACFG;
       to_fpgacfg              : out    t_TO_FPGACFG;
-      to_tstcfg_from_rxtx     : out    t_TO_TSTCFG_FROM_RXTX;
       from_tstcfg             : in     t_FROM_TSTCFG;
+      to_tstcfg               : out    t_TO_TSTCFG;
       -- TX path
       tx_clk                  : in     std_logic;
       tx_clk_reset_n          : in     std_logic;    

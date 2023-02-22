@@ -88,7 +88,6 @@ entity cpu_top is
         to_pllcfg            : in     t_TO_PLLCFG;
         from_tstcfg          : out    t_FROM_TSTCFG;
         to_tstcfg            : in     t_TO_TSTCFG;
-        to_tstcfg_from_rxtx  : in     t_TO_TSTCFG_FROM_RXTX;
         to_memcfg            : in     t_TO_MEMCFG;
         from_memcfg          : out    t_FROM_MEMCFG;
 
@@ -418,7 +417,6 @@ begin
             from_pllcfg          => from_pllcfg,
             to_tstcfg            => to_tstcfg,
             from_tstcfg          => from_tstcfg,
-            to_tstcfg_from_rxtx  => to_tstcfg_from_rxtx,
             to_memcfg            => to_memcfg,
             from_memcfg          => from_memcfg
         );

@@ -195,7 +195,6 @@ signal      inst1_to_tstcfg                 : t_TO_TSTCFG;
 signal      inst1_to_memcfg                 : t_TO_MEMCFG;
 signal      inst1_from_memcfg               : t_FROM_MEMCFG;
 signal      inst1_pll_from_axim             : t_FROM_AXIM_32x32;
-signal      inst1_to_tstcfg_from_rxtx       : t_TO_TSTCFG_FROM_RXTX;
 signal      inst1_pll_axi_sel               : std_logic_vector(3 downto 0);
 signal      inst1_pll_axi_resetn_out        : std_logic_vector(0 downto 0);
 signal      inst1_smpl_cmp_en               : std_logic_vector(0 downto 0);
@@ -382,7 +381,6 @@ begin
       to_pllcfg                  => inst1_to_pllcfg,
       from_tstcfg                => inst1_from_tstcfg,
       to_tstcfg                  => inst1_to_tstcfg,
-      to_tstcfg_from_rxtx        => inst1_to_tstcfg_from_rxtx,
       
       to_memcfg                  => inst1_to_memcfg,
       from_memcfg                => inst1_from_memcfg,
@@ -485,8 +483,8 @@ begin
       sys_clk                 => sys_clk,                                     
       from_fpgacfg            => inst1_from_fpgacfg,
       to_fpgacfg              => inst1_to_fpgacfg,
-      to_tstcfg_from_rxtx     => inst1_to_tstcfg_from_rxtx,
-      from_tstcfg             => inst1_from_tstcfg,      
+      from_tstcfg             => inst1_from_tstcfg, 
+      to_tstcfg               => inst1_to_tstcfg,      
       from_memcfg             => inst1_from_memcfg,
       to_memcfg               => inst1_to_memcfg,
       -- TX module signals
