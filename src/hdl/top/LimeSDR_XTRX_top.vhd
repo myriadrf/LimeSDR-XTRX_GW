@@ -47,7 +47,7 @@ entity LimeSDR_XTRX_top is
       g_RXTSPCFG_START_ADDR   : integer := 160;
       g_MEMCFG_START_ADDR     : integer := 65504;
       -- TX interface 
-      g_TX_N_BUFF             : integer := 2;      -- N 4KB buffers in TX interface (2 OR 4)
+      g_TX_N_BUFF             : integer := 4;      -- N 4KB buffers in TX interface (2 OR 4)
       g_TX_PCT_SIZE           : integer := 4096;   -- TX packet size in bytes
       g_TX_IN_PCT_HDR_SIZE    : integer := 16
    );
