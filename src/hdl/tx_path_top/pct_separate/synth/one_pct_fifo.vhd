@@ -114,7 +114,7 @@ begin
       infifo_rdempty    => infifo_rdempty,
       pct_wrreq         => inst0_pct_wrreq,
       pct_data          => inst0_pct_data,
-      pct_wrempty       => inst1_almostwrempty AND (NOT inst1_wr_rst_busy),
+      pct_wrempty       => inst1_wrempty AND (NOT inst1_wr_rst_busy),--inst1_almostwrempty AND (NOT inst1_wr_rst_busy),
       pct_header        => inst0_pct_header,    
       pct_header_valid  => inst0_pct_header_valid,
       pct_counter       => pct_counter    ,
