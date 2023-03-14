@@ -81,6 +81,12 @@ architecture arch of wr_stream_buff is
    signal inst2_reset_n             : std_logic;
    signal inst2_wrfull              : std_logic;
    
+       
+--    attribute MARK_DEBUG : string;
+--    attribute MARK_DEBUG of inst0_rdusedw : signal is "TRUE";
+--    attribute MARK_DEBUG of buff_0_rd : signal is "TRUE";
+                    
+				
    
    
 begin

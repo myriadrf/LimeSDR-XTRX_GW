@@ -68,7 +68,6 @@ constant c_INST1_RDUSEDW_WIDTH   : integer := FIFO_WORDS_TO_Nbits(g_PCT_MAX_SIZE
 signal inst1_reset_n             : std_logic;
 signal inst1_wrempty             : std_logic;
 signal inst1_wrusedw             : std_logic_vector(c_INST1_WRUSEDW_WIDTH-1 downto 0);
-signal inst1_almostwrempty       : std_logic;
 signal inst1_rdusedw             : std_logic_vector(c_INST1_RDUSEDW_WIDTH-1 downto 0);
 signal inst1_rdempty             : std_logic;
 signal inst1_wr_rst_busy         : std_logic;
@@ -88,6 +87,13 @@ signal pct_rdy_reg               : std_logic;
 -- attribute MARK_DEBUG : string;
 -- attribute MARK_DEBUG of infifo_rdreq : signal is "TRUE";
 -- attribute MARK_DEBUG of infifo_data  : signal is "TRUE";
+-- attribute MARK_DEBUG of pct_words  : signal is "TRUE";
+-- attribute MARK_DEBUG of pct_rdy  : signal is "TRUE";
+-- attribute MARK_DEBUG of inst1_reset_n  : signal is "TRUE";
+-- attribute MARK_DEBUG of inst1_rdusedw  : signal is "TRUE";
+-- attribute MARK_DEBUG of inst1_wrusedw  : signal is "TRUE";
+-- attribute MARK_DEBUG of pct_data_rdreq  : signal is "TRUE";
+-- attribute MARK_DEBUG of inst1_rdempty  : signal is "TRUE";
 				
 				  
 begin
@@ -114,7 +120,7 @@ begin
       infifo_rdempty    => infifo_rdempty,
       pct_wrreq         => inst0_pct_wrreq,
       pct_data          => inst0_pct_data,
-      pct_wrempty       => inst1_wrempty AND (NOT inst1_wr_rst_busy),--inst1_almostwrempty AND (NOT inst1_wr_rst_busy),
+      pct_wrempty       => inst1_wrempty AND (NOT inst1_wr_rst_busy),
       pct_header        => inst0_pct_header,    
       pct_header_valid  => inst0_pct_header_valid,
       pct_counter       => pct_counter    ,
@@ -150,20 +156,6 @@ begin
       rdusedw        => inst1_rdusedw           
    );
    
-   almostempty_gen : process(clk)
-   begin
-   --clocking to aid timing
-       if rising_edge(clk) then
-            --Almost empty when less than 64 cycles remain
-            --Using this instead of "empty" increases data throughput
-            if unsigned(inst1_wrusedw) < 64 then
-                inst1_almostwrempty <= '1';
-            else
-                inst1_almostwrempty <= '0';
-            end if;
-       end if;
-   end process;
-
 -- ----------------------------------------------------------------------------
 -- FIFO for storing packet header
 -- ----------------------------------------------------------------------------
@@ -208,8 +200,8 @@ begin
    
    -- Capture packet size in bytes from packet header and convert to FIFO read words count
    pct_words_proc : process(pct_rdclk, reset_n)
-   begin
-      if reset_n = '0' then 
+   begin --reset pct_words signal when p2d_wr_fsm starts reading the packet
+      if reset_n = '0' or (pct_rdy_reg='1' and pct_data_rdreq='1') then 
          pct_words  <= (others=>'1');
       elsif (pct_rdclk'event AND pct_rdclk='1') then
          if pct_header_valid = '1' then
