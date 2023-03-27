@@ -53,79 +53,79 @@ entity LimeSDR_XTRX_top is
    );
    port (
    --PCIe ports
-   pci_exp_txp     : out  std_logic_vector(1 downto 0);
-   pci_exp_txn     : out  std_logic_vector(1 downto 0);
-   pci_exp_rxp     : in   std_logic_vector(1 downto 0);
-   pci_exp_rxn     : in   std_logic_vector(1 downto 0);
+   PCI_EXP_TXP     : out  std_logic_vector(1 downto 0);
+   PCI_EXP_TXN     : out  std_logic_vector(1 downto 0);
+   PCI_EXP_RXP     : in   std_logic_vector(1 downto 0);
+   PCI_EXP_RXN     : in   std_logic_vector(1 downto 0);
    --pseudo - GPIO
-   led_2           : out  std_logic;
-   option           : in   std_logic;
-   sys_clk_p       : in   std_logic;
-   sys_clk_n       : in   std_logic;
-   sys_rst_n       : in   std_logic;
+   LED_2           : out  std_logic;
+   OPTION           : in   std_logic;
+   SYS_CLK_P       : in   std_logic;
+   SYS_CLK_N       : in   std_logic;
+   SYS_RST_N       : in   std_logic;
    --LMS SPI               
-   lms_io_sdio     : out  std_logic;
-   lms_i_sclk      : out  std_logic;
-   lms_o_sdo       : in   std_logic;
-   lms_i_saen      : out  std_logic;
+   LMS_IO_SDIO     : out  std_logic;
+   LMS_I_SCLK      : out  std_logic;
+   LMS_O_SDO       : in   std_logic;
+   LMS_I_SAEN      : out  std_logic;
    --LMS generic           
-   lms_i_reset     : out  std_logic;
-   lms_i_rxen      : out  std_logic;
-   lms_i_txen      : out  std_logic;
-   lms_i_gpwrdwn   : out  std_logic;
+   LMS_I_RESET     : out  std_logic;
+   LMS_I_RXEN      : out  std_logic;
+   LMS_I_TXEN      : out  std_logic;
+   LMS_I_GPWRDWN   : out  std_logic;
    --LMS port1 - TX
-   lms_i_txnrx1    : out   std_logic;
-   lms_o_mclk1     : in    std_logic;
-   lms_i_fclk1     : out   std_logic; 
-   lms_io_iqsel1   : out   std_logic;
-   lms_diq1        : out   std_logic_vector(11 downto 0);
+   LMS_I_TXNRX1    : out   std_logic;
+   LMS_O_MCLK1     : in    std_logic;
+   LMS_I_FCLK1     : out   std_logic; 
+   LMS_IO_IQSEL1   : out   std_logic;
+   LMS_DIQ1        : out   std_logic_vector(11 downto 0);
    --LMS port2 - RX
-   lms_i_txnrx2    : out   std_logic;
-   lms_o_mclk2     : in    std_logic;
-   lms_i_fclk2     : out   std_logic;
-   lms_io_iqsel2   : in    std_logic;
-   lms_diq2        : in    std_logic_vector(11 downto 0);
+   LMS_I_TXNRX2    : out   std_logic;
+   LMS_O_MCLK2     : in    std_logic;
+   LMS_I_FCLK2     : out   std_logic;
+   LMS_IO_IQSEL2   : in    std_logic;
+   LMS_DIQ2        : in    std_logic_vector(11 downto 0);
    --AUX
-   en_tcxo         : out   std_logic;
-   ext_clk         : out   std_logic;      
-   en_gps          : out   std_logic;
-   iovcc_sel       : out   std_logic;
-   en_smsigio      : out   std_logic;           
-   fpga_clk_vctcxo : in    std_logic;
+   EN_TCXO         : out   std_logic;
+   EXT_CLK         : out   std_logic;      
+   EN_GPS          : out   std_logic;
+   IOVCC_SEL       : out   std_logic;
+   EN_SMSIGIO      : out   std_logic;           
+   FPGA_CLK_VCTCXO : in    std_logic;
    --GPS
-   gps_pps         : in    std_logic;
-   gps_txd         : in    std_logic;
-   gps_rxd         : out   std_logic;
+   GPS_PPS         : in    std_logic;
+   GPS_TXD         : in    std_logic;
+   GPS_RXD         : out   std_logic;
    --GPIO
-   gpio            : inout std_logic_vector(11 downto 0); 
-   gpio13          : inout std_logic;
+   GPIO            : inout std_logic_vector(11 downto 0); 
+   GPIO13          : inout std_logic;
    --I2C BUS1 (3v3: TMP108, LTC26x6, LP8758 [FPGA])
-   i2c1_sda        : inout std_logic;
-   i2c1_scl        : inout std_logic;
+   I2C1_SDA        : inout std_logic;
+   I2C1_SCL        : inout std_logic;
    --I2C BUS2 (vio: LP8758 [LMS])
-   i2c2_sda        : inout std_logic;
-   i2c2_scl        : inout std_logic;
+   I2C2_SDA        : inout std_logic;
+   I2C2_SCL        : inout std_logic;
    --TX/RX SWITCH
-   tx_switch       : out   std_logic; 
-   rx_switch_1     : out   std_logic;
-   rx_switch_2     : out   std_logic;
+   TX_SWITCH       : out   std_logic; 
+   RX_SWITCH_1     : out   std_logic;
+   RX_SWITCH_2     : out   std_logic;
    --FLASH & BOOT
-   flash_d         : inout std_logic_vector(3 downto 0);    
-   flash_fcs_b     : out   std_logic;
+   FLASH_D         : inout std_logic_vector(3 downto 0);    
+   FLASH_FCS_B     : out   std_logic;
    --SIM
-   sim_mode        : out   std_logic;
-   sim_enable      : out   std_logic;
-   sim_clk         : out   std_logic;
-   sim_reset       : out   std_logic;
-   sim_data        : inout std_logic;
+   SIM_MODE        : out   std_logic;
+   SIM_ENABLE      : out   std_logic;
+   SIM_CLK         : out   std_logic;
+   SIM_RESET       : out   std_logic;
+   SIM_DATA        : inout std_logic;
    --USB2 PHY
-   usb_d           : inout std_logic_vector(7 downto 0);
-   usb_clk         : in    std_logic;
-   usb_nrst        : out   std_logic;
-   usb_26m         : out   std_logic;
-   usb_dir         : in    std_logic;
-   usb_stp         : inout std_logic;
-   usb_nxt         : in    std_logic
+   USB_D           : inout std_logic_vector(7 downto 0);
+   USB_CLK         : in    std_logic;
+   USB_NRST        : out   std_logic;
+   USB_26M         : out   std_logic;
+   USB_DIR         : in    std_logic;
+   USB_STP         : inout std_logic;
+   USB_NXT         : in    std_logic
    );
 end entity LimeSDR_XTRX_top;
 
