@@ -3,7 +3,7 @@
 ################################################################################
 
 
-create_clock -name pcie_refclk_p -period 10.0 [get_ports pcie_refclk_p]
+create_clock -name pcie_refclk_p -period 10.0 [get_ports PCI_REF_CLK_p]
 
 ################################################################################
 # False path constraints
