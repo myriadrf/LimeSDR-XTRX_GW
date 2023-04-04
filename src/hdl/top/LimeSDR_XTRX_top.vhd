@@ -616,7 +616,16 @@ begin
    ext_clk    <= inst1_xtrx_ctrl_gpio(3);--'0'; --internal clock used
 
    LMS_CORE_LDO_EN <= '1';
-    
+   
+   
+   blinker_proc : process(sys_clk)
+    variable blink_counter : unsigned(30 downto 0) := (others => '0');
+   begin
+    if rising_edge(sys_clk) then
+        blink_counter := blink_counter +1;
+    end if;
+        FPGA_LED1 <= blink_counter(blink_counter'LEFT);   
+   end process;
 -- ----------------------------------------------------------------------------
 -- tdd_control instance.
 -- Simple module for TDD signal control

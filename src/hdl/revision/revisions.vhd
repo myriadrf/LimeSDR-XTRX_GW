@@ -1,25 +1,26 @@
 -- ----------------------------------------------------------------------------	
--- FILE: 	revisions.vhd
--- DESCRIPTION:	Project revision constatns
--- DATE:	Aug 22, 2016
--- AUTHOR(s):	Lime Microsystems
--- REVISIONS:
+-- file: 	revisions.vhd
+-- description:	project revision constatns
+-- date:	aug 22, 2016
+-- author(s):	lime microsystems
+-- revisions:
 -- ----------------------------------------------------------------------------	
-LIBRARY ieee;
-use IEEE.std_logic_1164.all;
-use IEEE.std_logic_arith.all;
-use IEEE.std_logic_unsigned.all;
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_arith.all;
+use ieee.std_logic_unsigned.all;
 
 package revisions is
-	constant MAJOR_REV : INTEGER := 1;
-	constant MINOR_REV : INTEGER := 0;
-	constant BETA_REV : INTEGER := 0;
-	constant COMPILE_REV : INTEGER := 0;
-	constant COMPILE_YEAR_STAMP : INTEGER := 23;
-	constant COMPILE_MONTH_STAMP : INTEGER := 01;
-	constant COMPILE_DAY_STAMP : INTEGER := 25;
-	constant COMPILE_HOUR_STAMP : INTEGER := 16;
+	constant major_rev : integer := 1; 
+	constant minor_rev : integer := 1;
+	constant beta_rev : integer := 1;
+	constant compile_rev : integer := 1;
+	constant compile_year_stamp : integer := 23;
+	constant compile_month_stamp : integer := 04;
+	constant compile_day_stamp : integer := 04;
+	constant compile_hour_stamp : integer := 13;
 	
-	constant MAGIC_NUM : STD_LOGIC_VECTOR(31 downto 0) := X"D8A5F009";
-   constant BOARD_ID : STD_LOGIC_VECTOR(15 downto 0) := 16d"27"; -- 5G Radio (temp)
+	constant magic_num : std_logic_vector(31 downto 0) := x"d8a5f009";
+   constant board_id : std_logic_vector(15 downto 0) := 16d"27"; -- 5g radio
 end revisions;
+
