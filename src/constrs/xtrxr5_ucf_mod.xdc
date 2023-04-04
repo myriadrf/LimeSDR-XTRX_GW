@@ -21,7 +21,7 @@ set_false_path -from [get_ports PERST]
 create_clock -period 16.000 -name usb_phy_clk [get_ports USB_CLK]
 create_clock -name cfg_mclk -period 12  [get_nets inst0_xtrx_top/cfg_mclk]
 create_clock -period 10.000 -name sys_clk [get_ports PCI_REF_CLK_p]
-create_clock -period 20.000 -name clk_vctcxo [get_ports FPGA_CLK]
+create_clock -period 38.46 -name clk_vctcxo [get_ports FPGA_CLK]
 # see AR# 63174
 create_generated_clock -name cclk -source [get_pins inst0_xtrx_top/STARTUPE2_inst/USRCCLKO] -combinational [get_pins inst0_xtrx_top/STARTUPE2_inst/USRCCLKO]
 set_clock_latency -min 0.5 [get_clocks cclk]
@@ -48,7 +48,7 @@ set_output_delay -min -3.375 -clock [get_clocks cclk]  [get_ports FPGA_CFG_CS]
 ###########################################################
 
 # system reset PCI_PERST#
-set_property IOSTANDARD LVCMOS25 [get_ports PERST]
+set_property IOSTANDARD LVCMOS33 [get_ports PERST]
 set_property PULLUP true [get_ports PERST]
 set_property PACKAGE_PIN T3 [get_ports PERST]
 
@@ -60,7 +60,7 @@ set_property PACKAGE_PIN A8 [get_ports PCI_REF_CLK_n]
 ##########################################################
 # USB PHY (1.8-3.3V) (BANK 16)
 ##########################################################
-set_property IOSTANDARD LVCMOS25 [get_ports {{USB_D[*]} USB_CLK USB_DIR USB_STP USB_NXT}]
+set_property IOSTANDARD LVCMOS33 [get_ports {{USB_D[*]} USB_CLK USB_DIR USB_STP USB_NXT}]
 
 set_property PACKAGE_PIN A14 [get_ports {USB_D[6]}]
 set_property PACKAGE_PIN A15 [get_ports {USB_D[5]}]
@@ -76,8 +76,8 @@ set_property PACKAGE_PIN B18 [get_ports USB_DIR]
 set_property PACKAGE_PIN A18 [get_ports USB_NXT]
 
 # (BANK14)
-set_property IOSTANDARD LVCMOS25 [get_ports USB_NRST]
-set_property IOSTANDARD LVCMOS25 [get_ports USB_26M]
+set_property IOSTANDARD LVCMOS33 [get_ports USB_NRST]
+set_property IOSTANDARD LVCMOS33 [get_ports USB_26M]
 
 set_property PACKAGE_PIN M18 [get_ports USB_NRST]
 set_property PACKAGE_PIN E19 [get_ports USB_26M]
@@ -147,6 +147,23 @@ set_property PACKAGE_PIN J1 [get_ports GPIO9_N]
 set_property PACKAGE_PIN K2 [get_ports GPIO11_P]
 set_property PACKAGE_PIN L2 [get_ports GPIO11_N]
 
+##########################################################
+# MISC
+##########################################################
+
+set_property PACKAGE_PIN J18 [get_ports BOM_VER[0]]
+set_property PACKAGE_PIN T18 [get_ports BOM_VER[1]]
+set_property PACKAGE_PIN V14 [get_ports BOM_VER[2]]
+set_property PACKAGE_PIN V13 [get_ports HW_VER[0]]
+set_property PACKAGE_PIN P18 [get_ports HW_VER[1]]
+set_property PACKAGE_PIN K18 [get_ports HW_VER[2]]
+
+set_property IOSTANDARD LVCMOS33 [get_ports BOM_VER[0]]
+set_property IOSTANDARD LVCMOS33 [get_ports BOM_VER[1]]
+set_property IOSTANDARD LVCMOS33 [get_ports BOM_VER[2]]
+set_property IOSTANDARD LVCMOS33 [get_ports HW_VER[0]]
+set_property IOSTANDARD LVCMOS33 [get_ports HW_VER[1]]
+set_property IOSTANDARD LVCMOS33 [get_ports HW_VER[2]]
 
 ##########################################################
 # SKY13330 & SKY13384 switches (3.3V devided to 2.5V)
@@ -179,8 +196,8 @@ set_property PACKAGE_PIN M1 [get_ports FPGA_I2C1_SCL]
 ##########################################################
 # FPGA FLASH N25Q256 (1.8-3.3V) BANK14
 ##########################################################
-set_property IOSTANDARD LVCMOS25 [get_ports {FPGA_CFG_D[*]}]
-set_property IOSTANDARD LVCMOS25 [get_ports FPGA_CFG_CS]
+set_property IOSTANDARD LVCMOS33 [get_ports {FPGA_CFG_D[*]}]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_CFG_CS]
 
 set_property PACKAGE_PIN D18 [get_ports {FPGA_CFG_D[0]}]
 set_property PACKAGE_PIN D19 [get_ports {FPGA_CFG_D[1]}]
@@ -189,16 +206,16 @@ set_property PACKAGE_PIN F18 [get_ports {FPGA_CFG_D[3]}]
 set_property PACKAGE_PIN K19 [get_ports FPGA_CFG_CS]
 
 # AUX signals
-set_property IOSTANDARD LVCMOS25 [get_ports FPGA_CLK]
-set_property IOSTANDARD LVCMOS25 [get_ports EN_TCXO]
-set_property IOSTANDARD LVCMOS25 [get_ports EXT_CLK]
-set_property IOSTANDARD LVCMOS25 [get_ports FPGA_LED1]
-set_property IOSTANDARD LVCMOS25 [get_ports GPIO13]
-set_property IOSTANDARD LVCMOS25 [get_ports GNSS_HW_S]
-set_property IOSTANDARD LVCMOS25 [get_ports GNSS_HW_R]
-set_property IOSTANDARD LVCMOS25 [get_ports GNSS_FIX]
-set_property IOSTANDARD LVCMOS25 [get_ports FPGA_LED2]
-set_property IOSTANDARD LVCMOS25 [get_ports EN_GPIO]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_CLK]
+set_property IOSTANDARD LVCMOS33 [get_ports EN_TCXO]
+set_property IOSTANDARD LVCMOS33 [get_ports EXT_CLK]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_LED1]
+set_property IOSTANDARD LVCMOS33 [get_ports GPIO13]
+set_property IOSTANDARD LVCMOS33 [get_ports GNSS_HW_S]
+set_property IOSTANDARD LVCMOS33 [get_ports GNSS_HW_R]
+set_property IOSTANDARD LVCMOS33 [get_ports GNSS_FIX]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_LED2]
+set_property IOSTANDARD LVCMOS33 [get_ports EN_GPIO]
 
 set_property PACKAGE_PIN N17 [get_ports FPGA_CLK]
 set_property PACKAGE_PIN R19 [get_ports EN_TCXO]
@@ -207,7 +224,7 @@ set_property PACKAGE_PIN N18 [get_ports FPGA_LED1]
 set_property PACKAGE_PIN T17 [get_ports GPIO13]
 set_property PACKAGE_PIN L18 [get_ports GNSS_HW_S]
 set_property PACKAGE_PIN U18 [get_ports GNSS_HW_R]
-set_property PACKAGE_PIN L18 [get_ports GNSS_FIX]
+set_property PACKAGE_PIN R18 [get_ports GNSS_FIX]
 set_property PACKAGE_PIN V19 [get_ports FPGA_LED2]
 set_property PACKAGE_PIN D17 [get_ports EN_GPIO]
 
@@ -219,8 +236,8 @@ set_property PULLDOWN true [get_ports EXT_CLK]
 
 
 # I2C BUS #2
-set_property IOSTANDARD LVCMOS25 [get_ports FPGA_I2C_SDA]
-set_property IOSTANDARD LVCMOS25 [get_ports FPGA_I2C_SCL]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_I2C_SDA]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_I2C_SCL]
 
 set_property PACKAGE_PIN U15 [get_ports FPGA_I2C_SDA]
 set_property PACKAGE_PIN U14 [get_ports FPGA_I2C_SCL]
@@ -230,11 +247,11 @@ set_property PULLUP true [get_ports FPGA_I2C_SCL]
 
 
 # SIM card (1.8V) BANK 34
-set_property IOSTANDARD LVCMOS25 [get_ports SIM_MOD]
-set_property IOSTANDARD LVCMOS25 [get_ports SIM_ENA]
-set_property IOSTANDARD LVCMOS25 [get_ports SIM_CLK]
-set_property IOSTANDARD LVCMOS25 [get_ports SIM_RST]
-set_property IOSTANDARD LVCMOS25 [get_ports SIM_DIO]
+set_property IOSTANDARD LVCMOS33 [get_ports SIM_MOD]
+set_property IOSTANDARD LVCMOS33 [get_ports SIM_ENA]
+set_property IOSTANDARD LVCMOS33 [get_ports SIM_CLK]
+set_property IOSTANDARD LVCMOS33 [get_ports SIM_RST]
+set_property IOSTANDARD LVCMOS33 [get_ports SIM_DIO]
 
 set_property PACKAGE_PIN R3 [get_ports SIM_MOD]
 set_property PACKAGE_PIN U1 [get_ports SIM_ENA]
@@ -296,20 +313,20 @@ set_property PACKAGE_PIN G19 [get_ports LMS_FCLK1]
 ## LMS constrains
 
 # LMS SPI & reset logic
-set_property IOSTANDARD LVCMOS25 [get_ports FPGA_SPI_LMS_SS]
-set_property IOSTANDARD LVCMOS25 [get_ports FPGA_SPI_MOSI]
-set_property IOSTANDARD LVCMOS25 [get_ports FPGA_SPI_MISO]
-set_property IOSTANDARD LVCMOS25 [get_ports FPGA_SPI_SCLK]
-set_property IOSTANDARD LVCMOS25 [get_ports LMS_RESET]
-set_property IOSTANDARD LVCMOS25 [get_ports LMS_CORE_LDO_EN]
-set_property IOSTANDARD LVCMOS25 [get_ports LMS_RXEN]
-set_property IOSTANDARD LVCMOS25 [get_ports LMS_TXEN]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_SPI_LMS_SS]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_SPI_MOSI]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_SPI_MISO]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_SPI_SCLK]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_RESET]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_CORE_LDO_EN]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_RXEN]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_TXEN]
 set_property PULLDOWN true [get_ports FPGA_SPI_MOSI]
 set_property PULLDOWN true [get_ports FPGA_SPI_MISO]
 
 # LML Port 1
-set_property IOSTANDARD LVCMOS25 [get_ports LMS_FCLK2]
-set_property IOSTANDARD LVCMOS25 [get_ports {{LMS_DIQ2_D[*]} LMS_TXNRX2 LMS_EN_IQSEL2 LMS_MCLK2}]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_FCLK2]
+set_property IOSTANDARD LVCMOS33 [get_ports {{LMS_DIQ2_D[*]} LMS_TXNRX2 LMS_EN_IQSEL2 LMS_MCLK2}]
 #set_property IOSTANDARD HSTL_I_18          [get_ports {lms_diq1[*] LMS_TXNRX1 LMS_EN_IQSEL1 LMS_MCLK1}]
 
 # 'if' isn't supported, so edit it manually:
@@ -322,7 +339,7 @@ set_property DRIVE 8 [get_ports {{LMS_DIQ2_D[*]} LMS_FCLK2 LMS_EN_IQSEL2}]
 #}
 
 # LML Port 2
-set_property IOSTANDARD LVCMOS25 [get_ports {{LMS_DIQ1_D[*]} LMS_TXNRX1 LMS_EN_IQSEL1 LMS_MCLK1 LMS_FCLK1}]
+set_property IOSTANDARD LVCMOS33 [get_ports {{LMS_DIQ1_D[*]} LMS_TXNRX1 LMS_EN_IQSEL1 LMS_MCLK1 LMS_FCLK1}]
 #if { $VIO_LML2_TYPE == "HSTL_II_18"} {
 #set_property IN_TERM UNTUNED_SPLIT_50 [get_ports {LMS_DIQ2_D[*] LMS_FCLK2 LMS_EN_IQSEL1}]
 #set_property INTERNAL_VREF 0.9         [get_iobanks 34]

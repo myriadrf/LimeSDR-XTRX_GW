@@ -53,89 +53,94 @@ entity LimeSDR_XTRX_top is
    );
    port (
    --PCIe ports
-   PCI_EXP_TXP     : out  std_logic_vector(1 downto 0);
-   PCI_EXP_TXN     : out  std_logic_vector(1 downto 0);
-   PCI_EXP_RXP     : in   std_logic_vector(1 downto 0);
-   PCI_EXP_RXN     : in   std_logic_vector(1 downto 0);
+   PCI_EXP_TXP      : out  std_logic_vector(1 downto 0);
+   PCI_EXP_TXN      : out  std_logic_vector(1 downto 0);
+   PCI_EXP_RXP      : in   std_logic_vector(1 downto 0);
+   PCI_EXP_RXN      : in   std_logic_vector(1 downto 0);
    --pseudo - GPIO
-   FPGA_LED1           : out  std_logic;
-   FPGA_LED2           : out  std_logic;
+   FPGA_LED1        : out  std_logic;
+   FPGA_LED2        : out  std_logic;
    OPTION           : in   std_logic;
-   PCI_REF_CLK_p       : in   std_logic;
-   PCI_REF_CLK_n       : in   std_logic;
-   PERST       : in   std_logic;
+   PCI_REF_CLK_p    : in   std_logic;
+   PCI_REF_CLK_n    : in   std_logic;
+   PERST            : in   std_logic;
    --LMS SPI               
-   FPGA_SPI_MOSI     : out  std_logic;
-   FPGA_SPI_SCLK      : out  std_logic;
-   FPGA_SPI_MISO       : in   std_logic;
-   FPGA_SPI_LMS_SS      : out  std_logic;
+   FPGA_SPI_MOSI    : out  std_logic;
+   FPGA_SPI_SCLK    : out  std_logic;
+   FPGA_SPI_MISO    : in   std_logic;
+   FPGA_SPI_LMS_SS  : out  std_logic;
    --LMS generic           
-   LMS_RESET     : out  std_logic;
-   LMS_RXEN      : out  std_logic;
-   LMS_TXEN      : out  std_logic;
-   LMS_CORE_LDO_EN   : out  std_logic;
+   LMS_RESET        : out  std_logic;
+   LMS_RXEN         : out  std_logic;
+   LMS_TXEN         : out  std_logic;
+   LMS_CORE_LDO_EN  : out  std_logic;
    --LMS port1 - TX
-   LMS_TXNRX1    : out   std_logic;
-   LMS_MCLK1     : in    std_logic;
-   LMS_FCLK1     : out   std_logic; 
-   LMS_EN_IQSEL1   : out   std_logic;
-   LMS_DIQ1_D        : out   std_logic_vector(11 downto 0);
+   LMS_TXNRX1       : out   std_logic;
+   LMS_MCLK1        : in    std_logic;
+   LMS_FCLK1        : out   std_logic; 
+   LMS_EN_IQSEL1    : out   std_logic;
+   LMS_DIQ1_D       : out   std_logic_vector(11 downto 0);
    --LMS port2 - RX
-   LMS_TXNRX2    : out   std_logic;
-   LMS_MCLK2     : in    std_logic;
-   LMS_FCLK2     : out   std_logic;
-   LMS_EN_IQSEL2   : in    std_logic;
-   LMS_DIQ2_D        : in    std_logic_vector(11 downto 0);
+   LMS_TXNRX2       : out   std_logic;
+   LMS_MCLK2        : in    std_logic;
+   LMS_FCLK2        : out   std_logic;
+   LMS_EN_IQSEL2    : in    std_logic;
+   LMS_DIQ2_D       : in    std_logic_vector(11 downto 0);
    --AUX
-   EN_TCXO         : out   std_logic;
-   EXT_CLK         : out   std_logic;      
-   EN_GPIO      : out   std_logic;           
-   FPGA_CLK : in    std_logic;
+   EN_TCXO          : out   std_logic;
+   EXT_CLK          : out   std_logic;      
+   EN_GPIO          : out   std_logic;           
+   FPGA_CLK         : in    std_logic;
+   BOM_VER          : in    std_logic_vector(2 downto 0);
+   HW_VER           : in    std_logic_vector(2 downto 0);
    --GPS
-   GNSS_1PPS         : in    std_logic;
+   GNSS_1PPS        : in    std_logic;
    GNSS_TXD         : in    std_logic;
    GNSS_RXD         : out   std_logic;
+   GNSS_HW_S        : in    std_logic; --FIX
+   GNSS_HW_R        : in    std_logic; --FIX
+   GNSS_FIX         : in    std_logic; --FIX
    --GPIO
-   PPSI_GPIO1      : inout std_logic;   
-   PPSO_GPIO2      : inout std_logic;
-   TDD_GPIO3_P     : inout std_logic;
-   TDD_GPIO3_N     : inout std_logic;
-   LED_WWAN_GPIO5  : inout std_logic;
-   LED_WLAN_GPIO6  : inout std_logic;
-   LED_WPAN_GPIO7  : inout std_logic;
-   GPIO8           : inout std_logic;
-   GPIO9_P         : inout std_logic;
-   GPIO9_N         : inout std_logic;
-   GPIO11_P        : inout std_logic;
-   GPIO11_N        : inout std_logic;
-   GPIO13          : inout std_logic;
+   PPSI_GPIO1       : inout std_logic;   
+   PPSO_GPIO2       : inout std_logic;
+   TDD_GPIO3_P      : inout std_logic;
+   TDD_GPIO3_N      : inout std_logic;
+   LED_WWAN_GPIO5   : inout std_logic;
+   LED_WLAN_GPIO6   : inout std_logic;
+   LED_WPAN_GPIO7   : inout std_logic;
+   GPIO8            : inout std_logic;
+   GPIO9_P          : inout std_logic;
+   GPIO9_N          : inout std_logic;
+   GPIO11_P         : inout std_logic;
+   GPIO11_N         : inout std_logic;
+   GPIO13           : inout std_logic;
    --I2C BUS1 (3v3: TMP108, LTC26x6, LP8758 [FPGA])
-   FPGA_I2C1_SDA        : inout std_logic;
-   FPGA_I2C1_SCL        : inout std_logic;
+   FPGA_I2C1_SDA    : inout std_logic;
+   FPGA_I2C1_SCL    : inout std_logic;
    --I2C BUS2 (vio: LP8758 [LMS])
-   FPGA_I2C_SDA        : inout std_logic;
-   FPGA_I2C_SCL        : inout std_logic;
+   FPGA_I2C_SDA     : inout std_logic;
+   FPGA_I2C_SCL     : inout std_logic;
    --TX/RX SWITCH
-   TX_SW       : out   std_logic; 
-   RX_SW3     : out   std_logic;
-   RX_SW2     : out   std_logic;
+   TX_SW            : out   std_logic; 
+   RX_SW3           : out   std_logic;
+   RX_SW2           : out   std_logic;
    --FLASH & BOOT
-   FPGA_CFG_D         : inout std_logic_vector(3 downto 0);    
-   FPGA_CFG_CS     : out   std_logic;
+   FPGA_CFG_D       : inout std_logic_vector(3 downto 0);    
+   FPGA_CFG_CS      : out   std_logic;
    --SIM
-   SIM_MOD        : out   std_logic;
-   SIM_ENA      : out   std_logic;
-   SIM_CLK         : out   std_logic;
-   SIM_RST       : out   std_logic;
-   SIM_DIO        : inout std_logic;
+   SIM_MOD          : out   std_logic;
+   SIM_ENA          : out   std_logic;
+   SIM_CLK          : out   std_logic;
+   SIM_RST          : out   std_logic;
+   SIM_DIO          : inout std_logic;
    --USB2 PHY
-   USB_D           : inout std_logic_vector(7 downto 0);
-   USB_CLK         : in    std_logic;
-   USB_NRST        : out   std_logic;
-   USB_26M         : out   std_logic;
-   USB_DIR         : in    std_logic;
-   USB_STP         : inout std_logic;
-   USB_NXT         : in    std_logic
+   USB_D            : inout std_logic_vector(7 downto 0);
+   USB_CLK          : in    std_logic;
+   USB_NRST         : out   std_logic;
+   USB_26M          : out   std_logic;
+   USB_DIR          : in    std_logic;
+   USB_STP          : inout std_logic;
+   USB_NXT          : in    std_logic
    );
 end entity LimeSDR_XTRX_top;
 
