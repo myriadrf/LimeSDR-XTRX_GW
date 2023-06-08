@@ -618,13 +618,22 @@ begin
    LMS_CORE_LDO_EN <= '1';
    
    
-   blinker_proc : process(FPGA_CLK)
+   blinker_proc_vctcxo : process(FPGA_CLK)
     variable blink_counter : unsigned(25 downto 0) := (others => '0');
    begin
     if rising_edge(FPGA_CLK) then
         blink_counter := blink_counter +1;
     end if;
         FPGA_LED1 <= blink_counter(blink_counter'LEFT);   
+   end process;
+   
+   blinker_proc_pcie : process(sys_clk)
+    variable blink_counter : unsigned(25 downto 0) := (others => '0');
+   begin
+    if rising_edge(sys_clk) then
+        blink_counter := blink_counter +1;
+    end if;
+        FPGA_LED2 <= blink_counter(blink_counter'LEFT);   
    end process;
 -- ----------------------------------------------------------------------------
 -- tdd_control instance.
