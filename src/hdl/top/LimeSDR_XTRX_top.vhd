@@ -618,10 +618,10 @@ begin
    LMS_CORE_LDO_EN <= '1';
    
    
-   blinker_proc : process(sys_clk)
-    variable blink_counter : unsigned(30 downto 0) := (others => '0');
+   blinker_proc : process(FPGA_CLK)
+    variable blink_counter : unsigned(25 downto 0) := (others => '0');
    begin
-    if rising_edge(sys_clk) then
+    if rising_edge(FPGA_CLK) then
         blink_counter := blink_counter +1;
     end if;
         FPGA_LED1 <= blink_counter(blink_counter'LEFT);   
