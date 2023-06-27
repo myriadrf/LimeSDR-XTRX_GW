@@ -33,11 +33,11 @@ entity LimeSDR_XTRX_top is
                                                    -- this function remains unused and may be disabled to save resources
                                                    -- SET THIS TO TRUE, IF 128BIT bus is used for RX
       -- Host related
-      g_HOST2FPGA_S0_0_SIZE   : integer := 4096;   -- Stream, Host->FPGA, TX FIFO size in bytes, 
-      g_HOST2FPGA_S0_1_SIZE   : integer := 4096;   -- Stream, Host->FPGA, WFM FIFO size in bytes
-      g_FPGA2HOST_S0_0_SIZE   : integer := 8192;   -- Stream, FPGA->Host, FIFO size in bytes
-      g_HOST2FPGA_C0_0_SIZE   : integer := 1024;   -- Control, Host->FPGA, FIFO size in bytes
-      g_FPGA2HOST_C0_0_SIZE   : integer := 1024;   -- Control, FPGA->Host, FIFO size in bytes
+--      g_HOST2FPGA_S0_0_SIZE   : integer := 4096;   -- Stream, Host->FPGA, TX FIFO size in bytes, 
+--      g_HOST2FPGA_S0_1_SIZE   : integer := 4096;   -- Stream, Host->FPGA, WFM FIFO size in bytes
+--      g_FPGA2HOST_S0_0_SIZE   : integer := 8192;   -- Stream, FPGA->Host, FIFO size in bytes
+--      g_HOST2FPGA_C0_0_SIZE   : integer := 1024;   -- Control, Host->FPGA, FIFO size in bytes
+--      g_FPGA2HOST_C0_0_SIZE   : integer := 1024;   -- Control, FPGA->Host, FIFO size in bytes
       
       -- Internal configuration memory 
       g_FPGACFG_START_ADDR    : integer := 0;
@@ -49,14 +49,29 @@ entity LimeSDR_XTRX_top is
       -- TX interface 
       g_TX_N_BUFF             : integer := 4;      -- N 4KB buffers in TX interface (2 OR 4)
       g_TX_PCT_SIZE           : integer := 4096;   -- TX packet size in bytes
-      g_TX_IN_PCT_HDR_SIZE    : integer := 16
+      g_TX_IN_PCT_HDR_SIZE    : integer := 16;
+      -- Aurora parameters
+      -- Control channel                                                                        
+      g_AXIS_CTRL_DWIDTH         : integer := 32;                                              
+      g_S_AXIS_CTRL_BUFFER_WORDS : integer := 16;                                               
+      g_M_AXIS_CTRL_BUFFER_WORDS : integer := 16;                                               
+      --Data chanel                                                                             
+      g_AXIS_DMA_DWIDTH          : integer := 128;                                              
+      g_S_AXIS_DMA_BUFFER_WORDS  : integer := 512;                                              
+      g_S_AXIS_DMA_TLAST         : string := "False"; --Set to "True" if tlast signal is present
+      g_M_AXIS_DMA_BUFFER_WORDS  : integer := 512;                                              
+      --Aurora                                                                                  
+      g_GT_LANES                 : integer := 1;                                                
+      g_GT_RXTX_DWIDTH           : integer := 32;                                               
+      g_GT_RX_BUFFER_WORDS       : integer := 2048;                                             
+      g_GT_TX_BUFFER_WORDS       : integer := 2048                                              
    );
    port (
    --PCIe ports
-   PCI_EXP_TXP      : out  std_logic_vector(1 downto 0);
-   PCI_EXP_TXN      : out  std_logic_vector(1 downto 0);
-   PCI_EXP_RXP      : in   std_logic_vector(1 downto 0);
-   PCI_EXP_RXN      : in   std_logic_vector(1 downto 0);
+   PCI_EXP_TXP      : out  std_logic_vector(0 downto 0);
+   PCI_EXP_TXN      : out  std_logic_vector(0 downto 0);
+   PCI_EXP_RXP      : in   std_logic_vector(0 downto 0);
+   PCI_EXP_RXN      : in   std_logic_vector(0 downto 0);
    --pseudo - GPIO
    FPGA_LED1        : out  std_logic;
    FPGA_LED2        : out  std_logic;
@@ -150,17 +165,19 @@ architecture Structural of LimeSDR_XTRX_top is
 
 constant c_S0_DATA_WIDTH            : integer := 32;     -- Stream data width
 constant c_C0_DATA_WIDTH            : integer := 32;     -- Control data width
-constant c_H2F_S0_0_RWIDTH          : integer := 128;    -- Host->FPGA stream, FIFO rd width, FIFO number - 0
-constant c_H2F_S0_1_RWIDTH          : integer := 64;     -- Host->FPGA stream, FIFO rd width, FIFO number - 1
-constant c_F2H_S0_WWIDTH            : integer := 64;     -- FPGA->Host stream, FIFO wr width
+constant c_H2F_S0_0_RWIDTH          : integer := g_AXIS_DMA_DWIDTH;    -- Host->FPGA stream, FIFO rd width, FIFO number - 0
+constant c_F2H_S0_WWIDTH            : integer := g_AXIS_DMA_DWIDTH;     -- FPGA->Host stream, FIFO wr width
 constant c_H2F_C0_RWIDTH            : integer := 32;     -- Host->FPGA control, rd width
 constant c_F2H_C0_WWIDTH            : integer := 32;     -- FPGA->Host control, wr width 
 
-constant c_H2F_S0_0_RDUSEDW_WIDTH: integer := FIFO_WORDS_TO_Nbits(g_HOST2FPGA_S0_0_SIZE/(c_H2F_S0_0_RWIDTH/8),true);
-constant c_H2F_S0_1_RDUSEDW_WIDTH: integer := FIFO_WORDS_TO_Nbits(g_HOST2FPGA_S0_1_SIZE/(c_H2F_S0_1_RWIDTH/8),true);
-constant c_F2H_S0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_FPGA2HOST_S0_0_SIZE/(c_F2H_S0_WWIDTH/8),true);
-constant c_H2F_C0_RDUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_HOST2FPGA_C0_0_SIZE/(c_H2F_C0_RWIDTH/8),true);
-constant c_F2H_C0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_FPGA2HOST_C0_0_SIZE/(c_F2H_C0_WWIDTH/8),true);
+--constant c_H2F_S0_0_RDUSEDW_WIDTH: integer := FIFO_WORDS_TO_Nbits(g_HOST2FPGA_S0_0_SIZE/(c_H2F_S0_0_RWIDTH/8),true);
+--constant c_F2H_S0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_FPGA2HOST_S0_0_SIZE/(c_F2H_S0_WWIDTH/8),true);
+--constant c_H2F_C0_RDUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_HOST2FPGA_C0_0_SIZE/(c_H2F_C0_RWIDTH/8),true);
+--constant c_F2H_C0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_FPGA2HOST_C0_0_SIZE/(c_F2H_C0_WWIDTH/8),true);
+constant c_H2F_S0_0_RDUSEDW_WIDTH: integer := FIFO_WORDS_TO_Nbits(g_S_AXIS_DMA_BUFFER_WORDS,true);
+constant c_F2H_S0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_M_AXIS_DMA_BUFFER_WORDS,true);
+--constant c_H2F_C0_RDUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits( aaa ),true);
+--constant c_F2H_C0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits( aaa ),true);
 
 signal sys_clk      : std_logic;
 signal global_rst_n : std_logic;
@@ -175,7 +192,7 @@ signal      inst0_H2F_C0_rdata              :  std_logic_vector(c_H2F_C0_RWIDTH-
 signal      inst0_H2F_C0_rempty             :  std_logic;
       --Control endpoint FIFO (FPGA->Host)
 signal      inst0_F2H_C0_wclk               :  std_logic;
-signal      inst0_F2H_C0_aclrn              :  std_logic;
+signal      inst0_F2H_C0_aclr              :  std_logic;
 signal      inst0_F2H_C0_wr                 :  std_logic;
 signal      inst0_F2H_C0_wdata              :  std_logic_vector(c_F2H_C0_WWIDTH-1 downto 0);
 signal      inst0_F2H_C0_wfull              :  std_logic;
@@ -184,7 +201,7 @@ signal      inst0_s0_dma_en                 :  std_logic;
 signal      inst0_s0_rdclk                  :  std_logic;
 signal      inst0_s0_raclrn                 :  std_logic;
 signal      inst0_s0_rd                     :  std_logic;
-signal      inst0_s0_rdata                  :  std_logic_vector(127 downto 0);
+signal      inst0_s0_rdata                  :  std_logic_vector(g_AXIS_DMA_DWIDTH-1 downto 0);
 signal      inst0_s0_rempty                 :  std_logic;
 signal      inst0_s0_rdusedw                :  std_logic_vector(c_H2F_S0_0_RDUSEDW_WIDTH-1 downto 0);
        --Stream endpoint FIFO (FPGA->Host)
@@ -192,8 +209,12 @@ signal      inst0_s0_wclk                   :  std_logic;
 signal      inst0_s0_wfull                  :  std_logic;
 signal      inst0_s0_waclrn                 :  std_logic;
 signal      inst0_s0_wr                     :  std_logic;
-signal      inst0_s0_wdata                  :  std_logic_vector(63 downto 0);           
+signal      inst0_s0_wdata                  :  std_logic_vector(g_AXIS_DMA_DWIDTH-1 downto 0);           
 signal      inst0_s0_wrusedw                :  std_logic_vector(c_F2H_S0_WRUSEDW_WIDTH-1 downto 0);
+       -- Aurora clocks
+signal      inst0_init_clk                  : std_logic;
+signal      inst0_init_clk_locked           : std_logic;
+signal      inst0_gt_refclk                 : std_logic;
                 
 --cpu
 signal      inst1_spi_0_MISO                : std_logic;
@@ -253,77 +274,72 @@ begin
 
    --placeholder assignment
    global_rst_n <= PERST;
-
-   inst0 : entity work.pcie_top
-  generic map(
-     g_DEV_FAMILY               => g_DEV_FAMILY,
-     g_S0_DATA_WIDTH            => c_S0_DATA_WIDTH,
-     g_C0_DATA_WIDTH            => c_C0_DATA_WIDTH,
-     -- Stream (Host->FPGA) 
-     g_H2F_S0_0_RDUSEDW_WIDTH   => c_H2F_S0_0_RDUSEDW_WIDTH,
-     g_H2F_S0_0_RWIDTH          => c_H2F_S0_0_RWIDTH,
-     g_H2F_S0_1_RDUSEDW_WIDTH   => c_H2F_S0_1_RDUSEDW_WIDTH,
-     g_H2F_S0_1_RWIDTH          => c_H2F_S0_1_RWIDTH,
-     -- Stream (FPGA->Host)
-     g_F2H_S0_WRUSEDW_WIDTH     => c_F2H_S0_WRUSEDW_WIDTH,
-     g_F2H_S0_WWIDTH            => c_F2H_S0_WWIDTH,
-     -- Control (Host->FPGA)
-     g_H2F_C0_RDUSEDW_WIDTH     => c_H2F_C0_RDUSEDW_WIDTH,
-     g_H2F_C0_RWIDTH            => c_H2F_C0_RWIDTH,
-     -- Control (FPGA->Host)
-     g_F2H_C0_WRUSEDW_WIDTH     => c_F2H_C0_WRUSEDW_WIDTH,
-     g_F2H_C0_WWIDTH            => c_F2H_C0_WWIDTH 
-  )
-      port map (
-                clk              => sys_clk     ,
-                reset_n          => global_rst_n,
-                
-                pcie_perstn      => PERST  ,
-                pcie_refclk_p    => PCI_REF_CLK_p  ,
-                pcie_refclk_n    => PCI_REF_CLK_n  ,
-                pcie_rx_p        => pci_exp_rxp,
-                pcie_rx_n        => pci_exp_rxn,
-                pcie_tx_p        => pci_exp_txp,
-                pcie_tx_n        => pci_exp_txn,
-                
-                H2F_S0_sel       => '0',
-                
-                H2F_S0_dma_en    => inst0_s0_dma_en ,
-                H2F_S0_0_rdclk   => inst0_s0_rdclk  ,
-                H2F_S0_0_aclrn   => inst0_s0_raclrn ,
-                H2F_S0_0_rd      => inst0_s0_rd     ,
-                H2F_S0_0_rdata   => inst0_s0_rdata  ,
-                H2F_S0_0_rempty  => inst0_s0_rempty ,
-                H2F_S0_0_rdusedw => inst0_s0_rdusedw,
-                
-                H2F_S0_1_rdclk   => '0'  ,--H2F_S0_1_rdclk,
-                H2F_S0_1_aclrn   => '0'  ,--H2F_S0_1_aclrn,
-                H2F_S0_1_rd      => '0'  ,--H2F_S0_1_rd,
-                H2F_S0_1_rdata   => open ,--H2F_S0_1_rdata,
-                H2F_S0_1_rempty  => open ,--H2F_S0_1_rempty,
-                H2F_S0_1_rdusedw => open ,--H2F_S0_1_rdusedw,
-                
-                F2H_S0_wclk      => inst0_s0_wclk   ,
-                F2H_S0_aclrn     => inst0_s0_waclrn ,
-                F2H_S0_wr        => inst0_s0_wr     ,
-                F2H_S0_wdata     => inst0_s0_wdata  ,
-                F2H_S0_wfull     => inst0_s0_wfull  ,
-                F2H_S0_wrusedw   => inst0_s0_wrusedw,
-                
-                H2F_C0_rdclk     => inst0_H2F_C0_rdclk     ,
-                H2F_C0_aclrn     => global_rst_n           ,
-                H2F_C0_rd        => inst0_H2F_C0_rd        ,
-                H2F_C0_rdata     => inst0_H2F_C0_rdata     ,
-                H2F_C0_rempty    => inst0_H2F_C0_rempty    ,
-                F2H_C0_wclk      => inst0_F2H_C0_wclk      ,
-                F2H_C0_aclrn     => not inst0_F2H_C0_aclrn ,
-                F2H_C0_wr        => inst0_F2H_C0_wr        ,
-                F2H_C0_wdata     => inst0_F2H_C0_wdata     ,
-                F2H_C0_wfull     => inst0_F2H_C0_wfull     ,
-                
-                S0_rx_en         => '0',--S0_rx_en,
-                F2H_S0_open      => open--F2H_S0_open
+   
+   IBUFDS_inst : IBUFDS_GTE2
+--   generic map (
+--      DIFF_TERM => FALSE, -- Differential Termination 
+--      IBUF_LOW_PWR => TRUE, -- Low power (TRUE) vs. performance (FALSE) setting for referenced I/O standards
+--      IOSTANDARD => "DEFAULT")
+   port map (
+      O => inst0_gt_refclk,  -- Buffer output
+      I => PCI_REF_CLK_p,  -- Diff_p buffer input (connect directly to top-level port)
+      IB => PCI_REF_CLK_n -- Diff_n buffer input (connect directly to top-level port)
    );
+   
+   inst0 : entity work.gt_channel_top
+   generic map(
+      -- Control channel
+      g_AXIS_CTRL_DWIDTH         => g_AXIS_CTRL_DWIDTH        ,
+      g_S_AXIS_CTRL_BUFFER_WORDS => g_S_AXIS_CTRL_BUFFER_WORDS,
+      g_M_AXIS_CTRL_BUFFER_WORDS => g_M_AXIS_CTRL_BUFFER_WORDS,
+      --Data chanel
+      g_AXIS_DMA_DWIDTH          => g_AXIS_DMA_DWIDTH        ,
+      g_S_AXIS_DMA_BUFFER_WORDS  => g_S_AXIS_DMA_BUFFER_WORDS,
+      g_S_AXIS_DMA_TLAST         => g_S_AXIS_DMA_TLAST       ,
+      g_M_AXIS_DMA_BUFFER_WORDS  => g_M_AXIS_DMA_BUFFER_WORDS,
+      --Aurora
+      g_GT_LANES                 => g_GT_LANES          ,
+      g_GT_RXTX_DWIDTH           => g_GT_RXTX_DWIDTH    ,
+      g_GT_RX_BUFFER_WORDS       => g_GT_RX_BUFFER_WORDS,
+      g_GT_TX_BUFFER_WORDS       => g_GT_TX_BUFFER_WORDS
+   )
+   port map(
+      clk_125              => inst0_init_clk ,
+      reset_n              => inst0_init_clk_locked ,
+      -- Control RX
+      s_axis_ctrl_clk      => inst0_F2H_C0_wclk,
+      s_axis_ctrl_aresetn  => not inst0_F2H_C0_aclr,
+      s_axis_ctrl_wr       => inst0_F2H_C0_wr,
+      s_axis_ctrl_wrfull   => inst0_F2H_C0_wfull, 
+      s_axis_ctrl_wdata    => inst0_F2H_C0_wdata,
+      --Control TX            
+      m_axis_ctrl_clk      => inst0_H2F_C0_rdclk,
+      m_axis_ctrl_rempty   => inst0_H2F_C0_rempty, 
+      m_axis_ctrl_rd       => inst0_H2F_C0_rd,
+      m_axis_ctrl_rdata    => inst0_H2F_C0_rdata,
+      --DMA RX                
+      s_axis_dma_clk       => inst0_s0_wclk,
+      s_axis_dma_aresetn   => inst0_s0_waclrn,
+      s_axis_dma_tvalid    => inst0_s0_wr,
+      s_axis_dma_tready    => open, --this port is unused
+      s_axis_dma_tdata     => inst0_s0_wdata,
+      s_axis_dma_tlast     => '0',
+      s_axis_dma_wrusedw   => inst0_s0_wrusedw,
+      --DMA TX                
+      m_axis_dma_clk       => inst0_s0_rdclk,
+      m_axis_dma_aresetn   => inst0_s0_raclrn,
+      m_axis_dma_tvalid    => inst0_s0_rempty,
+      m_axis_dma_tready    => inst0_s0_rd,
+      m_axis_dma_tdata     => inst0_s0_rdata,
+      m_axis_dma_tlast     => open,
+      -- GT transceivers      
+      gt_refclk            => inst0_gt_refclk,
+      gt_rxp               => pci_exp_rxp(0),
+      gt_rxn               => pci_exp_rxn(0),
+      gt_txp               => pci_exp_txp(0),
+      gt_txn               => pci_exp_txn(0)
+   );
+
    
    inst0_s0_rdclk     <= inst1_lms1_txpll_c1;
    inst0_s0_wclk      <= inst1_lms1_rxpll_c1;
@@ -352,7 +368,7 @@ begin
       exfifo_of_d                => inst0_F2H_C0_wdata, 
       exfifo_of_wr               => inst0_F2H_C0_wr, 
       exfifo_of_wrfull           => inst0_F2H_C0_wfull,
-      exfifo_of_rst              => inst0_F2H_C0_aclrn, 
+      exfifo_of_rst              => inst0_F2H_C0_aclr, 
       -- SPI 0 
       spi_0_MISO                 => inst1_spi_0_MISO,
       spi_0_MOSI                 => inst1_spi_0_MOSI,
@@ -464,6 +480,10 @@ begin
       rcnfg_from_axim            => inst1_pll_from_axim, 
       rcnfg_to_axim              => inst1_rcnfg_to_axim,
       rcnfg_sel                  => inst1_pll_axi_sel, 
+      -- Aurora init clk gen        
+      vctcxo_in                  => FPGA_CLK,   
+      aurora_init_clk_out        => inst0_init_clk,   
+      aurora_init_clk_locked     => inst0_init_clk_locked,   
       -- pllcfg ports
       from_pllcfg                => inst1_from_pllcfg,
       to_pllcfg                  => inst1_to_pllcfg

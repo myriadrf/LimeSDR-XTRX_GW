@@ -56,6 +56,12 @@ set_property PACKAGE_PIN T3 [get_ports PERST]
 set_property PACKAGE_PIN B8 [get_ports PCI_REF_CLK_p]
 set_property PACKAGE_PIN A8 [get_ports PCI_REF_CLK_n]
 
+set_property PACKAGE_PIN A6 [get_ports PCI_EXP_RXN[0]]
+set_property PACKAGE_PIN B6 [get_ports PCI_EXP_RXP[0]]
+
+set_property PACKAGE_PIN A2 [get_ports PCI_EXP_TXN[0]]
+set_property PACKAGE_PIN B2 [get_ports PCI_EXP_TXP[0]]
+
 
 ##########################################################
 # USB PHY (1.8-3.3V) (BANK 16)

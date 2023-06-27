@@ -67,6 +67,10 @@ entity pll_top is
       rcnfg_from_axim               : in  t_FROM_AXIM_32x32;
       rcnfg_to_axim                 : out t_TO_AXIM_32x32;
       rcnfg_sel                     : in  std_logic_vector(3 downto 0);
+      -- Aurora init clk gen
+      vctcxo_in                     : in  std_logic;
+      aurora_init_clk_out           : out std_logic;
+      aurora_init_clk_locked        : out std_logic;
       -- pllcfg ports
       to_pllcfg                     : out t_TO_PLLCFG;
       from_pllcfg                   : in  t_FROM_PLLCFG
