@@ -313,6 +313,18 @@ begin
         
       );
 -- ----------------------------------------------------------------------------
+-- Aurora Init clock gen
+-- ----------------------------------------------------------------------------
+
+   inst5_aurora_init_pll : entity work.aurora_init_pll
+   port map(
+   clk_in1   => vctcxo_in,
+   clk_out1  => aurora_init_clk_out,
+   locked    => aurora_init_clk_locked   
+   );
+          
+      
+-- ----------------------------------------------------------------------------
 -- Output ports
 -- ----------------------------------------------------------------------------  
 lms1_txpll_locked    <= inst0_pll_locked;

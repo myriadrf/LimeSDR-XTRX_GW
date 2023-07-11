@@ -215,6 +215,7 @@ signal      inst0_s0_wrusedw                :  std_logic_vector(c_F2H_S0_WRUSEDW
 signal      inst0_init_clk                  : std_logic;
 signal      inst0_init_clk_locked           : std_logic;
 signal      inst0_gt_refclk                 : std_logic;
+signal      inst0_aurora_user_clk           : std_logic;
                 
 --cpu
 signal      inst1_spi_0_MISO                : std_logic;
@@ -306,6 +307,7 @@ begin
    port map(
       clk_125              => inst0_init_clk ,
       reset_n              => inst0_init_clk_locked ,
+      user_clk_out         => inst0_aurora_user_clk,
       -- Control RX
       s_axis_ctrl_clk      => inst0_F2H_C0_wclk,
       s_axis_ctrl_aresetn  => not inst0_F2H_C0_aclr,
@@ -488,7 +490,7 @@ begin
       from_pllcfg                => inst1_from_pllcfg,
       to_pllcfg                  => inst1_to_pllcfg
    );
-   
+   sys_clk <= inst0_init_clk;
    
 -- ----------------------------------------------------------------------------
 -- rxtx_top instance.
@@ -638,10 +640,10 @@ begin
    LMS_CORE_LDO_EN <= '1';
    
    
-   blinker_proc_vctcxo : process(FPGA_CLK)
+   blinker_proc_aurora_userclk : process(inst0_aurora_user_clk)
     variable blink_counter : unsigned(25 downto 0) := (others => '0');
    begin
-    if rising_edge(FPGA_CLK) then
+    if rising_edge(inst0_aurora_user_clk) then
         blink_counter := blink_counter +1;
     end if;
         FPGA_LED1 <= blink_counter(blink_counter'LEFT);   

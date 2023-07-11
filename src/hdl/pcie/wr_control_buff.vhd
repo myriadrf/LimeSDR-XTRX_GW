@@ -13,7 +13,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-use work.litepcie_pkg.all;
 use work.FIFO_PACK.all;
 
 -- ----------------------------------------------------------------------------
@@ -23,14 +22,15 @@ entity wr_control_buff is
    generic(
       g_DEV_FAMILY         : string := "Cyclone V GX";
       g_BUFF_RWIDTH        : integer := 32;
-      g_BUFF_RDUSEDW_WIDTH : integer := 8      
+      g_BUFF_RDUSEDW_WIDTH : integer := 8;
+      g_CNTRL_DATA_WIDTH   : integer := 512      
    );
    port (
       clk            : in std_logic;
       reset_n        : in std_logic;
       -- Control endpoint
       cntrl_valid    : in  std_logic;
-      cntrl_data     : in  std_logic_vector(c_CNTRL_DATA_WIDTH-1 downto 0);
+      cntrl_data     : in  std_logic_vector(g_CNTRL_DATA_WIDTH-1 downto 0);
       cntrl_ready    : out std_logic;
       -- Control Buffer FIFO
       buff_rdclk     : in  std_logic;
@@ -71,7 +71,7 @@ begin
 -- ----------------------------------------------------------------------------
    inst0_shift_reg : entity work.shift_reg
    generic map(
-      g_IN_WIDTH   => c_CNTRL_DATA_WIDTH,
+      g_IN_WIDTH   => g_CNTRL_DATA_WIDTH,
       g_OUT_WIDTH  => g_BUFF_RWIDTH
    )
    port map(

@@ -13,7 +13,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-use work.litepcie_pkg.all;
 use work.FIFO_PACK.all;
 
 -- ----------------------------------------------------------------------------
@@ -22,6 +21,7 @@ use work.FIFO_PACK.all;
 entity rd_control_buff is
    generic(
       g_DEV_FAMILY         : string := "Cyclone V GX";
+      g_CNTRL_DATA_WIDTH   : integer := 512;
       g_BUFF_WRWIDTH       : integer := 32;
       g_BUFF_WRUSEDW_WIDTH : integer := 8      
    );
@@ -30,7 +30,7 @@ entity rd_control_buff is
       reset_n        : in  std_logic;
       -- Control endpoint
       cntrl_valid    : out std_logic;
-      cntrl_data     : out std_logic_vector(c_CNTRL_DATA_WIDTH-1 downto 0);
+      cntrl_data     : out std_logic_vector(g_CNTRL_DATA_WIDTH-1 downto 0);
       cntrl_ready    : in  std_logic;
       -- Control Buffer FIFO
       buff_wrdclk    : in  std_logic;
@@ -93,7 +93,7 @@ begin
    inst1_resize_fifoword : entity work.resize_fifoword
    generic map(
       g_IN_WORD_WIDTH   => c_INST0_RDWIDTH,
-      g_OUT_WORD_WIDTH  => c_CNTRL_DATA_WIDTH
+      g_OUT_WORD_WIDTH  => g_CNTRL_DATA_WIDTH
    )
    port map(
       clk         => clk,
