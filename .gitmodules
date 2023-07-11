@@ -1,3 +1,3 @@
 [submodule "limeip_hdl"]
-	path = limeip_hdl
+	path = src/limeip_hdl
 	url = https://gitlab.com/myriadrf/limeip_hdl.git
