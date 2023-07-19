@@ -39,7 +39,7 @@ set LIME_IP {
 # Constraints
 # #################################################################
 
-set CONSTR_DIR src/constr
+set CONSTR_DIR src/constrs
 
 # #################################################################
 # IP files

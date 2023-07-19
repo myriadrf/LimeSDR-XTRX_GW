@@ -24,13 +24,13 @@ source ./config.tcl
 # #################################################################
 # Restore IP
 # #################################################################
-# foreach dir $IP_TCL_DIRS {
-   # foreach file [glob $dir/*.tcl] {
-      # source $file
-   # }
-# }
+foreach dir $IP_TCL_DIRS {
+   foreach file [glob $dir/*.tcl] {
+      source $file
+   }
+}
 
-# generate_target all [get_ips -exclude_bd_ips]
+generate_target all [get_ips -exclude_bd_ips]
 
 # #################################################################
 # Restore Block designs
@@ -71,10 +71,10 @@ foreach file $HDL_FILES {
    add_files -quiet $file
 }
 
-# # Add LimeIP modules
-# foreach module $LIME_IP {
-   # source [file join [file dirname [info script]] "$LIME_IP_DIR/$module/add_module.tcl"] 
-# }
+# Add LimeIP modules
+foreach module $LIME_IP {
+   source [file join [file dirname [info script]] "$LIME_IP_DIR/$module/add_module.tcl"] 
+}
 
 # Set VHDL2008 standart for VHDL files
 set_property file_type {VHDL 2008} [get_files -filter {FILE_TYPE == VHDL}]
