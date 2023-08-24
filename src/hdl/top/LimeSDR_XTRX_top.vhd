@@ -625,5 +625,6 @@ begin
    
    rx_switch_1       <= rx_switches(0);
    rx_switch_2       <= rx_switches(1);
+   en_smsigio        <= '0';
 
 end architecture Structural;
