@@ -83,8 +83,11 @@ set_property file_type {VHDL 2008} [get_files -filter {FILE_TYPE == VHDL}]
 # #################################################################
 # Add constraints
 # #################################################################
-add_files -fileset constrs_1 -norecurse -quiet [glob -nocomplain $CONSTR_DIR/*.xdc]
-add_files -fileset constrs_1 -norecurse -quiet [glob -nocomplain $CONSTR_DIR/*.tcl]
+# Add separate files
+foreach file $CONSTR_FILES {
+   add_files -fileset constrs_1 $file
+   reorder_files -fileset constrs_1 -back [get_files $file]
+}
 
 
 

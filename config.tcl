@@ -38,8 +38,14 @@ set LIME_IP {
 # #################################################################
 # Constraints
 # #################################################################
-
-set CONSTR_DIR src/constrs
+# NOTE: file order is important here. Constraints will be reordered
+#       in project in same order as in this list.
+set CONSTR_FILES {
+   src/constr/A_xtrxr5_ucf_mod.xdc
+   src/constr/B_litepcie_constrs.xdc
+   src/constr/C_lms7_timing.xdc
+   src/constr/D_constrst.xdc
+}
 
 # #################################################################
 # IP files
