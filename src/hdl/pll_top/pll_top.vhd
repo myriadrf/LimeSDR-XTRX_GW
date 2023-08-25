@@ -69,6 +69,7 @@ entity pll_top is
       rcnfg_sel                     : in  std_logic_vector(3 downto 0);
       -- Aurora init clk gen
       vctcxo_in                     : in  std_logic;
+      aurora_init_clk_reset_n       : in  std_logic;
       aurora_init_clk_out           : out std_logic;
       aurora_init_clk_locked        : out std_logic;
       -- pllcfg ports
@@ -319,6 +320,7 @@ begin
    inst5_aurora_init_pll : entity work.aurora_init_pll
    port map(
    clk_in1   => vctcxo_in,
+   resetn    => aurora_init_clk_reset_n,
    clk_out1  => aurora_init_clk_out,
    locked    => aurora_init_clk_locked   
    );

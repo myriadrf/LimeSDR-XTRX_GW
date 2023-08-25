@@ -79,6 +79,8 @@ entity LimeSDR_XTRX_top is
    PCI_REF_CLK_p    : in   std_logic;
    PCI_REF_CLK_n    : in   std_logic;
    PERST            : in   std_logic;
+   PCIE_RESERVED    : out  std_logic;
+   PCIE_W_DISABLE2  : out  std_logic;
    --LMS SPI               
    FPGA_SPI_MOSI    : out  std_logic;
    FPGA_SPI_SCLK    : out  std_logic;
@@ -104,7 +106,7 @@ entity LimeSDR_XTRX_top is
    --AUX
    EN_TCXO          : out   std_logic;
    EXT_CLK          : out   std_logic;      
-   EN_GPIO          : out   std_logic;           
+   EN_GPIO          : out   std_logic;  -- '0' to disconnect CLK_OUT AND GPIO8          
    FPGA_CLK         : in    std_logic;
    BOM_VER          : in    std_logic_vector(2 downto 0);
    HW_VER           : in    std_logic_vector(2 downto 0);
@@ -117,12 +119,12 @@ entity LimeSDR_XTRX_top is
    GNSS_FIX         : in    std_logic; --FIX
    --GPIO
    PPSI_GPIO1       : inout std_logic;   
-   PPSO_GPIO2       : inout std_logic;
+   PPSO_GPIO2       : out   std_logic;
    TDD_GPIO3_P      : inout std_logic;
    TDD_GPIO3_N      : inout std_logic;
    LED_WWAN_GPIO5   : inout std_logic;
    LED_WLAN_GPIO6   : inout std_logic;
-   LED_WPAN_GPIO7   : inout std_logic;
+   LED_WPAN_GPIO7   : out   std_logic;
    GPIO8            : inout std_logic;
    GPIO9_P          : inout std_logic;
    GPIO9_N          : inout std_logic;
@@ -216,6 +218,7 @@ signal      inst0_init_clk                  : std_logic;
 signal      inst0_init_clk_locked           : std_logic;
 signal      inst0_gt_refclk                 : std_logic;
 signal      inst0_aurora_user_clk           : std_logic;
+signal      inst0_gt_lane_up            : std_logic;
                 
 --cpu
 signal      inst1_spi_0_MISO                : std_logic;
@@ -270,8 +273,21 @@ signal      inst4_rx_smpl_cmp_start         : std_logic;
 signal      inst4_rx_smpl_cmp_cnt           : std_logic_vector(15 downto 0);
 signal      inst4_lms_reset                 : std_logic;
 
+signal ila_aurora_gt_reset_out : std_logic;
+signal ila_aurora_reset_out    : std_logic;
+
 
 begin
+
+
+ila_0_inst : entity work.ila_0
+   port map (
+      clk      => inst0_init_clk,
+      probe0   => inst0_init_clk_locked,  
+      probe1   => NOT TDD_GPIO3_P, 
+      probe2   => ila_aurora_gt_reset_out, 
+      probe3   => ila_aurora_reset_out
+);
 
    --placeholder assignment
    global_rst_n <= PERST;
@@ -289,6 +305,7 @@ begin
    
    inst0 : entity work.gt_channel_top
    generic map(
+      g_GT_TYPE                  => "GTP", 
       -- Control channel
       g_AXIS_CTRL_DWIDTH         => g_AXIS_CTRL_DWIDTH        ,
       g_S_AXIS_CTRL_BUFFER_WORDS => g_S_AXIS_CTRL_BUFFER_WORDS,
@@ -336,11 +353,18 @@ begin
       m_axis_dma_tlast     => open,
       -- GT transceivers      
       gt_refclk            => inst0_gt_refclk,
+      gt_soft_reset_n      => NOT TDD_GPIO3_P,
+      aurora_gt_reset_out  => ila_aurora_gt_reset_out,
+      aurora_reset_out     => ila_aurora_reset_out,
+      gt_lane_up           => inst0_gt_lane_up,
       gt_rxp               => pci_exp_rxp(0),
       gt_rxn               => pci_exp_rxn(0),
       gt_txp               => pci_exp_txp(0),
       gt_txn               => pci_exp_txn(0)
    );
+   
+   PPSO_GPIO2       <= ila_aurora_gt_reset_out;
+   LED_WPAN_GPIO7   <= ila_aurora_reset_out;
 
    
    inst0_s0_rdclk     <= inst1_lms1_txpll_c1;
@@ -483,7 +507,8 @@ begin
       rcnfg_to_axim              => inst1_rcnfg_to_axim,
       rcnfg_sel                  => inst1_pll_axi_sel, 
       -- Aurora init clk gen        
-      vctcxo_in                  => FPGA_CLK,   
+      vctcxo_in                  => FPGA_CLK, 
+      aurora_init_clk_reset_n    => '1',  
       aurora_init_clk_out        => inst0_init_clk,   
       aurora_init_clk_locked     => inst0_init_clk_locked,   
       -- pllcfg ports
@@ -679,5 +704,11 @@ begin
    
    RX_SW3       <= rx_switches(0);
    RX_SW2       <= rx_switches(1);
+   
+   PCIE_RESERVED   <= NOT inst0_gt_lane_up;
+   PCIE_W_DISABLE2 <= NOT TDD_GPIO3_P;
+   
+   --'0' to disconnect CLK_OUT AND GPIO8
+   EN_GPIO         <= '0';
 
 end architecture Structural;

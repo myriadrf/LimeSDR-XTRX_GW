@@ -15,7 +15,7 @@ if { [string first $scripts_vivado_version $current_vivado_version] == -1 } {
 ##################################################################
 
 # To test this script, run the following commands from Vivado Tcl console:
-# source aurora_init_pll.tcl
+# source ila_0.tcl
 # If there is no project opened, this script will create a
 # project, but make sure you do not have an existing project
 # <./LimeSDR-XTRX-Aurora/LimeSDR-XTRX-Aurora.xpr> in the current working folder.
@@ -34,7 +34,7 @@ if { $list_projs eq "" } {
 set bCheckIPs 1
 set bCheckIPsPassed 1
 if { $bCheckIPs == 1 } {
-  set list_check_ips { xilinx.com:ip:clk_wiz:6.0 }
+  set list_check_ips { xilinx.com:ip:ila:6.2 }
   set list_ips_missing ""
   common::send_msg_id "IPS_TCL-1001" "INFO" "Checking if the following IPs exist in the project's IP catalog: $list_check_ips ."
 
@@ -57,42 +57,19 @@ if { $bCheckIPsPassed != 1 } {
 }
 
 ##################################################################
-# CREATE IP aurora_init_pll
+# CREATE IP ila_0
 ##################################################################
 
-set aurora_init_pll [create_ip -name clk_wiz -vendor xilinx.com -library ip -version 6.0 -module_name aurora_init_pll]
+set ila_0 [create_ip -name ila -vendor xilinx.com -library ip -version 6.2 -module_name ila_0]
 
 set_property -dict { 
-  CONFIG.PRIMITIVE {PLL}
-  CONFIG.USE_PHASE_ALIGNMENT {true}
-  CONFIG.PRIM_IN_FREQ {26}
-  CONFIG.SECONDARY_SOURCE {Single_ended_clock_capable_pin}
-  CONFIG.CLKIN1_JITTER_PS {384.61}
-  CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {130}
-  CONFIG.PRIM_SOURCE {Single_ended_clock_capable_pin}
-  CONFIG.CLKOUT1_DRIVES {BUFG}
-  CONFIG.CLKOUT2_DRIVES {BUFG}
-  CONFIG.CLKOUT3_DRIVES {BUFG}
-  CONFIG.CLKOUT4_DRIVES {BUFG}
-  CONFIG.CLKOUT5_DRIVES {BUFG}
-  CONFIG.CLKOUT6_DRIVES {BUFG}
-  CONFIG.CLKOUT7_DRIVES {BUFG}
-  CONFIG.USE_RESET {true}
-  CONFIG.RESET_PORT {resetn}
-  CONFIG.MMCM_BANDWIDTH {OPTIMIZED}
-  CONFIG.MMCM_CLKFBOUT_MULT_F {35}
-  CONFIG.MMCM_CLKIN1_PERIOD {38.462}
-  CONFIG.MMCM_CLKIN2_PERIOD {10.0}
-  CONFIG.MMCM_COMPENSATION {ZHOLD}
-  CONFIG.MMCM_CLKOUT0_DIVIDE_F {7}
-  CONFIG.RESET_TYPE {ACTIVE_LOW}
-  CONFIG.CLKOUT1_JITTER {230.599}
-  CONFIG.CLKOUT1_PHASE_ERROR {242.372}
-} [get_ips aurora_init_pll]
+  CONFIG.C_DATA_DEPTH {1024}
+  CONFIG.C_NUM_OF_PROBES {4}
+} [get_ips ila_0]
 
 set_property -dict { 
   GENERATE_SYNTH_CHECKPOINT {1}
-} $aurora_init_pll
+} $ila_0
 
 ##################################################################
 
