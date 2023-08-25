@@ -62,6 +62,12 @@ set_property PACKAGE_PIN B6 [get_ports PCI_EXP_RXP[0]]
 set_property PACKAGE_PIN A2 [get_ports PCI_EXP_TXN[0]]
 set_property PACKAGE_PIN B2 [get_ports PCI_EXP_TXP[0]]
 
+set_property PACKAGE_PIN V7 [get_ports PCIE_RESERVED]
+set_property IOSTANDARD LVCMOS33 [get_ports PCIE_RESERVED]
+
+set_property PACKAGE_PIN W3 [get_ports PCIE_W_DISABLE2]
+set_property IOSTANDARD LVCMOS33 [get_ports PCIE_W_DISABLE2]
+
 
 ##########################################################
 # USB PHY (1.8-3.3V) (BANK 16)

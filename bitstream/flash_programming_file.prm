@@ -8,4 +8,4 @@ Start Address      0x00000000
 End Address        0x01FFFFFF
 
 Addr1         Addr2         Date                    File(s)
-0x00000000    0x001975FB    Jul 11 09:58:32 2023    C:/Work/LimeSDR-XTRX-Aurora/LimeSDR-XTRX/LimeSDR-XTRX.runs/impl_1/LimeSDR_XTRX_top.bit
+0x00000000    0x0019745B    Aug 25 16:10:47 2023    D:/work_dir/LimeSDR-XTRX/limesdr-xtrx/projects/LimeSDR-XTRX-Aurora/LimeSDR-XTRX-Aurora.runs/impl_1/LimeSDR_XTRX_top.bit
