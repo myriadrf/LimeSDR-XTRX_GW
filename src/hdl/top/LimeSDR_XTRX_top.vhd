@@ -206,6 +206,8 @@ signal      inst0_s0_rd                     :  std_logic;
 signal      inst0_s0_rdata                  :  std_logic_vector(g_AXIS_DMA_DWIDTH-1 downto 0);
 signal      inst0_s0_rempty                 :  std_logic;
 signal      inst0_s0_rdusedw                :  std_logic_vector(c_H2F_S0_0_RDUSEDW_WIDTH-1 downto 0);
+signal      inst0_m_axis_dma_tvalid         :  std_logic;
+signal      inst0_m_axis_dma_tdata          :  std_logic_vector(g_AXIS_DMA_DWIDTH-1 downto 0);
        --Stream endpoint FIFO (FPGA->Host)
 signal      inst0_s0_wclk                   :  std_logic;
 signal      inst0_s0_wfull                  :  std_logic;
@@ -305,6 +307,7 @@ ila_0_inst : entity work.ila_0
    
    inst0 : entity work.gt_channel_top
    generic map(
+      g_DEBUG                    => "TRUE",
       g_GT_TYPE                  => "GTP", 
       -- Control channel
       g_AXIS_CTRL_DWIDTH         => g_AXIS_CTRL_DWIDTH        ,
@@ -347,9 +350,9 @@ ila_0_inst : entity work.ila_0
       --DMA TX                
       m_axis_dma_clk       => inst0_s0_rdclk,
       m_axis_dma_aresetn   => inst0_s0_raclrn,
-      m_axis_dma_tvalid    => inst0_s0_rempty,
+      m_axis_dma_tvalid    => inst0_m_axis_dma_tvalid,
       m_axis_dma_tready    => inst0_s0_rd,
-      m_axis_dma_tdata     => inst0_s0_rdata,
+      m_axis_dma_tdata     => inst0_m_axis_dma_tdata,
       m_axis_dma_tlast     => open,
       -- GT transceivers      
       gt_refclk            => inst0_gt_refclk,
@@ -362,6 +365,18 @@ ila_0_inst : entity work.ila_0
       gt_txp               => pci_exp_txp(0),
       gt_txn               => pci_exp_txn(0)
    );
+   
+   process(inst0_s0_rdclk)
+   begin 
+      if rising_edge(inst0_s0_rdclk) then
+         if inst0_s0_rd = '1' AND inst0_m_axis_dma_tvalid = '1' then
+            inst0_s0_rdata <= inst0_m_axis_dma_tdata;
+         else 
+            inst0_s0_rdata <= inst0_s0_rdata;
+         end if;
+      end if;
+   end process;
+         
    
    PPSO_GPIO2       <= ila_aurora_gt_reset_out;
    LED_WPAN_GPIO7   <= ila_aurora_reset_out;
@@ -562,7 +577,7 @@ ila_0_inst : entity work.ila_0
       tx_in_pct_reset_n_req   => inst0_s0_raclrn,
       tx_in_pct_rdreq         => inst0_s0_rd,
       tx_in_pct_data          => inst0_s0_rdata,
-      tx_in_pct_rdempty       => inst0_s0_rempty,
+      tx_in_pct_rdempty       => NOT inst0_m_axis_dma_tvalid, --inst0_s0_rempty,
       tx_in_pct_rdusedw       => inst0_s0_rdusedw,     
       -- RX path
       rx_clk                  => inst1_lms1_rxpll_c1,
@@ -580,7 +595,7 @@ ila_0_inst : entity work.ila_0
       rx_smpl_nr_cnt_en       => inst3_rx_smpl_cnt_en,
       
       ext_rx_en => '0',--dpd_tx_en,   
-      tx_dma_en => inst0_s0_dma_en
+      tx_dma_en => inst0_gt_lane_up --inst0_s0_dma_en
    );   
 
 -- ----------------------------------------------------------------------------
