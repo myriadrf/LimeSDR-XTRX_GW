@@ -63,8 +63,8 @@ entity LimeSDR_XTRX_top is
       --Aurora                                                                                  
       g_GT_LANES                 : integer := 1;                                                
       g_GT_RXTX_DWIDTH           : integer := 32;                                               
-      g_GT_RX_BUFFER_WORDS       : integer := 2048;                                             
-      g_GT_TX_BUFFER_WORDS       : integer := 2048                                              
+      g_GT_RX_BUFFER_WORDS       : integer := 64;                                             
+      g_GT_TX_BUFFER_WORDS       : integer := 256                                              
    );
    port (
    --PCIe ports
@@ -212,6 +212,7 @@ signal      inst0_m_axis_dma_tdata          :  std_logic_vector(g_AXIS_DMA_DWIDT
 signal      inst0_s0_wclk                   :  std_logic;
 signal      inst0_s0_wfull                  :  std_logic;
 signal      inst0_s0_waclrn                 :  std_logic;
+signal      inst0_s0_waclrn_reg             :  std_logic;
 signal      inst0_s0_wr                     :  std_logic;
 signal      inst0_s0_wdata                  :  std_logic_vector(g_AXIS_DMA_DWIDTH-1 downto 0);           
 signal      inst0_s0_wrusedw                :  std_logic_vector(c_F2H_S0_WRUSEDW_WIDTH-1 downto 0);
@@ -277,6 +278,8 @@ signal      inst4_lms_reset                 : std_logic;
 
 signal ila_aurora_gt_reset_out : std_logic;
 signal ila_aurora_reset_out    : std_logic;
+
+signal gt_soft_reset_n_pulse   : std_logic;
 
 
 begin
@@ -365,6 +368,21 @@ ila_0_inst : entity work.ila_0
       gt_txp               => pci_exp_txp(0),
       gt_txn               => pci_exp_txn(0)
    );
+   
+   process(inst0_init_clk, inst0_init_clk_locked)
+   begin 
+      if inst0_init_clk_locked = '0' then 
+         gt_soft_reset_n_pulse   <= '1';
+         inst0_s0_waclrn_reg     <= '0';
+      elsif rising_edge(inst0_init_clk) then
+         inst0_s0_waclrn_reg <= inst0_s0_waclrn;
+         if inst0_s0_waclrn_reg = '1' AND inst0_s0_waclrn = '0' then 
+            gt_soft_reset_n_pulse <= '0';
+         else 
+            gt_soft_reset_n_pulse <= '1';
+         end if;
+      end if;
+   end process;
    
    process(inst0_s0_rdclk)
    begin 
