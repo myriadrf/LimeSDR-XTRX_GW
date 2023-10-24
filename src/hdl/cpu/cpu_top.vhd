@@ -16,6 +16,7 @@ use ieee.numeric_std.all;
 use work.fpgacfg_pkg.all;
 use work.pllcfg_pkg.all;
 use work.tstcfg_pkg.all;
+use work.periphcfg_pkg.all;
 use work.memcfg_pkg.all;
 use work.axi_pkg.all;
 
@@ -30,7 +31,7 @@ entity cpu_top is
         TSTCFG_START_ADDR    : integer := 96;
         TXTSPCFG_START_ADDR  : integer := 128;
         RXTSPCFG_START_ADDR  : integer := 160;
-        --      PERIPHCFG_START_ADDR : integer := 192;
+        PERIPHCFG_START_ADDR : integer := 192;
         MEMCFG_START_ADDR    : integer := 65504
     );
     port (
@@ -88,6 +89,8 @@ entity cpu_top is
         to_pllcfg            : in     t_TO_PLLCFG;
         from_tstcfg          : out    t_FROM_TSTCFG;
         to_tstcfg            : in     t_TO_TSTCFG;
+        to_periphcfg         : in     t_TO_PERIPHCFG;
+        from_periphcfg       : out    t_FROM_PERIPHCFG;
         to_memcfg            : in     t_TO_MEMCFG;
         from_memcfg          : out    t_FROM_MEMCFG;
 
@@ -417,6 +420,8 @@ begin
             from_pllcfg          => from_pllcfg,
             to_tstcfg            => to_tstcfg,
             from_tstcfg          => from_tstcfg,
+            to_periphcfg         => to_periphcfg,
+            from_periphcfg       => from_periphcfg,
             to_memcfg            => to_memcfg,
             from_memcfg          => from_memcfg
         );

@@ -17,6 +17,7 @@ use work.FIFO_PACK.all;
 use work.fpgacfg_pkg.all;
 use work.pllcfg_pkg.all;
 use work.tstcfg_pkg.all;
+use work.periphcfg_pkg.all;
 use work.memcfg_pkg.all;
 use work.axi_pkg.all;
 
@@ -235,6 +236,8 @@ signal      inst1_from_pllcfg               : t_FROM_PLLCFG;
 signal      inst1_to_pllcfg                 : t_TO_PLLCFG;
 signal      inst1_from_tstcfg               : t_FROM_TSTCFG;
 signal      inst1_to_tstcfg                 : t_TO_TSTCFG;
+signal      inst1_from_periphcfg            : t_FROM_PERIPHCFG;
+signal      inst1_to_periphcfg              : t_TO_PERIPHCFG;
 signal      inst1_to_memcfg                 : t_TO_MEMCFG;
 signal      inst1_from_memcfg               : t_FROM_MEMCFG;
 signal      inst1_pll_from_axim             : t_FROM_AXIM_32x32;
@@ -471,7 +474,8 @@ ila_0_inst : entity work.ila_0
       to_pllcfg                  => inst1_to_pllcfg,
       from_tstcfg                => inst1_from_tstcfg,
       to_tstcfg                  => inst1_to_tstcfg,
-      
+      to_periphcfg               => inst1_to_periphcfg,
+      from_periphcfg             => inst1_from_periphcfg,
       to_memcfg                  => inst1_to_memcfg,
       from_memcfg                => inst1_from_memcfg,
       smpl_cmp_en                => inst1_smpl_cmp_en, 
@@ -691,9 +695,11 @@ ila_0_inst : entity work.ila_0
    inst1_smpl_cmp_status(1)   <= inst4_rx_smpl_cmp_err ;
    
    
-   LMS_RESET <= inst4_lms_reset and inst1_xtrx_ctrl_gpio(0);--inst1_lms_reset_cpu; -- reset is active low, so any module can reset the LMS
-   en_tcxo    <= inst1_xtrx_ctrl_gpio(1);--'1'; --tcxo enabled
-   ext_clk    <= inst1_xtrx_ctrl_gpio(3);--'0'; --internal clock used
+   LMS_RESET   <= inst4_lms_reset and inst1_xtrx_ctrl_gpio(0);--inst1_lms_reset_cpu; -- reset is active low, so any module can reset the LMS
+   -- By default en_tcxo is controlled from SPI periphcfg regs and TCXO is disabled - '0'
+   en_tcxo     <= inst1_xtrx_ctrl_gpio(1) when inst1_from_periphcfg.PERIPH_OUTPUT_OVRD_1(0)='0' else inst1_from_periphcfg.PERIPH_OUTPUT_VAL_1(0);
+   -- By default ext_clk is controlled from SPI periphcfg regs and external clock used - '1'   
+   ext_clk     <= inst1_xtrx_ctrl_gpio(3) when inst1_from_periphcfg.PERIPH_OUTPUT_OVRD_1(1)='0' else inst1_from_periphcfg.PERIPH_OUTPUT_VAL_1(1); 
 
    LMS_CORE_LDO_EN <= '1';
    
