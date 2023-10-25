@@ -215,7 +215,7 @@ begin
          mem(21)  <= "0000000000000000";  --  0 free, (Reserved LMS control)
          mem(22)  <= "0000000000000000";  --  0 free, (Reserved LMS control)
          mem(23)  <= "0010001101000000";  --  0 free, (Reserved), GPIO[6:0]
-         mem(24)  <= "0000000000000000";  -- 15 free, Reserved[15:1],  TX_HI_FREQ_MODE
+         mem(24)  <= "0000000000000011";  -- 15 free, Reserved[15:4],  CORE_LDO_EN, EXT_CLK, TCXO_EN, LMS_RESET
          mem(25)  <= "0001000000000000";  -- 16 free, RX_PACKET_SIZE
          mem(26)  <= "0000000000000000";  --  0 free, Reserved[15:8],FPGA_LED2_G,FPGA_LED2_R,FPGA_LED2_OVRD,Reserved,FPGA_LED1_G,FPGA_LED1_R,FPGA_LED1_OVRD
          mem(27)  <= "0000000000000000";  --  0 free, Reserved[15:0]
@@ -301,7 +301,11 @@ begin
       from_fpgacfg.LMS2_RXEN           <= mem(19)(14);
       from_fpgacfg.LMS_TXRXEN_INV      <= mem(19)(15);
       from_fpgacfg.GPIO                <= mem(23)(15 downto  0);
-      from_fpgacfg.TX_HI_FREQ_MODE     <= mem(24)(0);
+      from_fpgacfg.TX_HI_FREQ_MODE     <= '0';--mem(24)(0);
+      from_fpgacfg.LMS_RST             <= mem(24)(0);
+      from_fpgacfg.TCXO_EN             <= mem(24)(1);
+      from_fpgacfg.EXT_CLK             <= mem(24)(2);
+      from_fpgacfg.CORE_LDO_EN         <= mem(24)(3);
       from_fpgacfg.RX_PACKET_SIZE      <= mem(25); -- Related to RX_PACKET_SAMPLES
       
       from_fpgacfg.FPGA_LED1_CTRL      <= mem(26)(2 downto 0);

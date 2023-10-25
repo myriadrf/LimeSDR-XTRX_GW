@@ -215,7 +215,6 @@ signal      inst1_pll_axi_resetn_out        : std_logic_vector(0 downto 0);
 signal      inst1_smpl_cmp_en               : std_logic_vector(0 downto 0);
 signal      inst1_smpl_cmp_status           : std_logic_vector(1 downto 0);
 signal      inst1_lms_reset_cpu             : std_logic;
-signal      inst1_xtrx_ctrl_gpio            : std_logic_vector(3 downto 0);
 --rxtx_top
 signal      inst3_rx_smpl_cnt_en            : std_logic;
 ----tx interface
@@ -400,8 +399,7 @@ begin
       to_memcfg                  => inst1_to_memcfg,
       from_memcfg                => inst1_from_memcfg,
       smpl_cmp_en                => inst1_smpl_cmp_en, 
-      smpl_cmp_status            => inst1_smpl_cmp_status,
-      xtrx_ctrl_gpio             => inst1_xtrx_ctrl_gpio
+      smpl_cmp_status            => inst1_smpl_cmp_status
    );
    
    inst1_spi_0_MISO  <= FPGA_SPI_MISO;
@@ -611,11 +609,11 @@ begin
    inst1_smpl_cmp_status(1)   <= inst4_rx_smpl_cmp_err ;
    
    
-   LMS_RESET <= inst4_lms_reset and inst1_xtrx_ctrl_gpio(0);--inst1_lms_reset_cpu; -- reset is active low, so any module can reset the LMS
-   en_tcxo    <= inst1_xtrx_ctrl_gpio(1);--'1'; --tcxo enabled
-   ext_clk    <= inst1_xtrx_ctrl_gpio(3);--'0'; --internal clock used
+   LMS_RESET <= inst4_lms_reset and inst1_from_fpgacfg.LMS_RST;--inst1_lms_reset_cpu; -- reset is active low, so any module can reset the LMS
+   en_tcxo    <= inst1_from_fpgacfg.TCXO_EN;--'1'; --tcxo enabled
+   ext_clk    <= inst1_from_fpgacfg.EXT_CLK;--'0'; --internal clock used
 
-   LMS_CORE_LDO_EN <= '1';
+   LMS_CORE_LDO_EN <= inst1_from_fpgacfg.CORE_LDO_EN;
    
    
    blinker_proc_vctcxo : process(FPGA_CLK)

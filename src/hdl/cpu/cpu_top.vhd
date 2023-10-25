@@ -61,7 +61,6 @@ entity cpu_top is
         -- Genral purpose I/O
         gpi                  : in     std_logic_vector(7 downto 0);
         gpo                  : out    std_logic_vector(7 downto 0);
-        xtrx_ctrl_gpio       : out STD_LOGIC_VECTOR (3 downto 0);
         -- VCTCXO tamer control
         vctcxo_tune_en       : in     std_logic;
         vctcxo_irq           : in     std_logic;
@@ -241,8 +240,7 @@ architecture arch of cpu_top is
             extm_0_axi_sel_tri_o       : out STD_LOGIC_VECTOR ( 3 downto 0 );
             smpl_cmp_en_tri_o          : out STD_LOGIC_VECTOR ( 0 downto 0 );
             smpl_cmp_status_tri_i      : in STD_LOGIC_VECTOR ( 1 downto 0 );
-            vctcxo_tamer_0_ctrl_tri_i  : in STD_LOGIC_VECTOR ( 3 downto 0 );
-            xtrx_ctrl_gpio_tri_o       : out STD_LOGIC_VECTOR (3 downto 0)
+            vctcxo_tamer_0_ctrl_tri_i  : in STD_LOGIC_VECTOR ( 3 downto 0 )
 
         );
     end component;
@@ -288,7 +286,6 @@ begin
             fifo_write_0_wr_en       => exfifo_of_wr,
             gpio_0_tri_i             => gpi,
             gpio_1_tri_o             => gpo,
-            xtrx_ctrl_gpio_tri_o     => xtrx_ctrl_gpio,
             --
             I2C_1_scl_i              => i2c_1_scl        ,
             I2C_1_scl_o              => inst0_i2c_1_scl_o,
