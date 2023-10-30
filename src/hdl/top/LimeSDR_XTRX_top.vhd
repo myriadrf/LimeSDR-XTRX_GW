@@ -123,7 +123,7 @@ entity LimeSDR_XTRX_top is
    PPSO_GPIO2       : out   std_logic;
    TDD_GPIO3_P      : inout std_logic;
    TDD_GPIO3_N      : inout std_logic;
-   LED_WWAN_GPIO5   : inout std_logic;
+   LED_WWAN_GPIO5   : in    std_logic;
    LED_WLAN_GPIO6   : inout std_logic;
    LED_WPAN_GPIO7   : out   std_logic;
    GPIO8            : inout std_logic;
@@ -231,6 +231,7 @@ signal      inst1_spi_0_SCLK                : std_logic;
 signal      inst1_spi_0_SS_n                : std_logic_vector(1 downto 0);
 signal      inst1_pll_rst                   : std_logic_vector(1 downto 0);
 signal      inst1_from_fpgacfg              : t_FROM_FPGACFG;
+signal      inst1_from_fpgacfg_mod          : t_FROM_FPGACFG;
 signal      inst1_to_fpgacfg                : t_TO_FPGACFG;
 signal      inst1_from_pllcfg               : t_FROM_PLLCFG;
 signal      inst1_to_pllcfg                 : t_TO_PLLCFG;
@@ -483,6 +484,12 @@ ila_0_inst : entity work.ila_0
       xtrx_ctrl_gpio             => inst1_xtrx_ctrl_gpio
    );
    
+   process(all)
+   begin 
+      inst1_from_fpgacfg_mod        <= inst1_from_fpgacfg;
+      inst1_from_fpgacfg_mod.rx_en  <= inst1_from_fpgacfg.rx_en AND LED_WWAN_GPIO5;
+   end process;
+   
    inst1_spi_0_MISO  <= FPGA_SPI_MISO;
    FPGA_SPI_MOSI       <= inst1_spi_0_MOSI;
    FPGA_SPI_SCLK        <= inst1_spi_0_SCLK;
@@ -518,8 +525,8 @@ ila_0_inst : entity work.ila_0
       lms1_txpll_inclk           => LMS_MCLK1,
       lms1_txpll_reconfig_clk    => sys_clk,
       lms1_txpll_logic_reset_n   => not inst1_pll_rst(0),
-      lms1_txpll_clk_ena         => inst1_from_fpgacfg.CLK_ENA(1 downto 0),
-      lms1_txpll_drct_clk_en     => inst1_from_fpgacfg.drct_clk_en(0) & inst1_from_fpgacfg.drct_clk_en(0),
+      lms1_txpll_clk_ena         => inst1_from_fpgacfg_mod.CLK_ENA(1 downto 0),
+      lms1_txpll_drct_clk_en     => inst1_from_fpgacfg_mod.drct_clk_en(0) & inst1_from_fpgacfg_mod.drct_clk_en(0),
       lms1_txpll_c0              => LMS_FCLK1,
       lms1_txpll_c1              => inst1_lms1_txpll_c1,
       lms1_txpll_locked          => inst1_lms1_txpll_locked,
@@ -527,8 +534,8 @@ ila_0_inst : entity work.ila_0
       lms1_rxpll_inclk           => LMS_MCLK2,
       lms1_rxpll_reconfig_clk    => sys_clk,
       lms1_rxpll_logic_reset_n   => not inst1_pll_rst(1),
-      lms1_rxpll_clk_ena         => inst1_from_fpgacfg.CLK_ENA(3 downto 2),
-      lms1_rxpll_drct_clk_en     => inst1_from_fpgacfg.drct_clk_en(1) & inst1_from_fpgacfg.drct_clk_en(1),
+      lms1_rxpll_clk_ena         => inst1_from_fpgacfg_mod.CLK_ENA(3 downto 2),
+      lms1_rxpll_drct_clk_en     => inst1_from_fpgacfg_mod.drct_clk_en(1) & inst1_from_fpgacfg_mod.drct_clk_en(1),
       lms1_rxpll_c0              => LMS_FCLK2,
       lms1_rxpll_c1              => inst1_lms1_rxpll_c1,
       lms1_rxpll_locked          => inst1_lms1_rxpll_locked,
@@ -580,7 +587,7 @@ ila_0_inst : entity work.ila_0
    )
    port map(        
       sys_clk                 => sys_clk,                                     
-      from_fpgacfg            => inst1_from_fpgacfg,
+      from_fpgacfg            => inst1_from_fpgacfg_mod,
       to_fpgacfg              => inst1_to_fpgacfg,
       from_tstcfg             => inst1_from_tstcfg, 
       to_tstcfg               => inst1_to_tstcfg,      
@@ -637,7 +644,7 @@ ila_0_inst : entity work.ila_0
    )
       port map (
                 -- Configuration registers
-                from_fpgacfg       => inst1_from_fpgacfg,
+                from_fpgacfg       => inst1_from_fpgacfg_mod,
                 from_tstcfg        => inst1_from_tstcfg,
                 from_memcfg        => inst1_from_memcfg,
                 -- Memory module reset
@@ -665,7 +672,7 @@ ila_0_inst : entity work.ila_0
                 -- Internal TX ports
                 tx_reset_n         => inst1_lms1_txpll_locked,
                 tx_fifo_0_wrclk    => inst1_lms1_txpll_c1,
-                tx_fifo_0_reset_n  => inst1_from_fpgacfg.rx_en,
+                tx_fifo_0_reset_n  => inst1_from_fpgacfg_mod.rx_en,
                 tx_fifo_0_wrreq    => inst3_tx_samplefifo_wrreq,
                 tx_fifo_0_data     => inst3_tx_samplefifo_data,
                 tx_fifo_0_wrfull   => inst3_tx_samplefifo_wrfull,
@@ -727,14 +734,14 @@ ila_0_inst : entity work.ila_0
 -- ----------------------------------------------------------------------------    
     inst5_tdd_control : entity work.tdd_control
       port map (
-                MANUAL_VALUE       => inst1_from_fpgacfg.tdd_manual,
-                AUTO_ENABLE        => inst1_from_fpgacfg.tdd_auto_en,
+                MANUAL_VALUE       => inst1_from_fpgacfg_mod.tdd_manual,
+                AUTO_ENABLE        => inst1_from_fpgacfg_mod.tdd_auto_en,
                 AUTO_IN            => inst4_txant_en,
-                AUTO_INVERT        => inst1_from_fpgacfg.tdd_invert,
+                AUTO_INVERT        => inst1_from_fpgacfg_mod.tdd_invert,
                 --
-                RX_RF_SW_IN        => inst1_from_fpgacfg.rx_rf_sw,
-                TX_RF_SW_IN        => inst1_from_fpgacfg.tx_rf_sw,
-                RF_SW_AUTO_ENANBLE => inst1_from_fpgacfg.rf_sw_auto_en,
+                RX_RF_SW_IN        => inst1_from_fpgacfg_mod.rx_rf_sw,
+                TX_RF_SW_IN        => inst1_from_fpgacfg_mod.tx_rf_sw,
+                RF_SW_AUTO_ENANBLE => inst1_from_fpgacfg_mod.rf_sw_auto_en,
                 --
                 TDD_OUT            => TDD_GPIO3_N, --This GPIO is used for TDD control
                 RX_RF_SW_OUT       => rx_switches,
