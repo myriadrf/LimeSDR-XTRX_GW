@@ -336,8 +336,23 @@ set_property SLEW FAST [get_ports [list {LMS_DIQ1_D[11]}]]
 
 set_property SLEW FAST [get_ports LMS_EN_IQSEL1]
 
-set_property DRIVE 16 [get_ports {LMS_DIQ1_D[*]}]
+set_property DRIVE  4 [get_ports [list {LMS_DIQ1_D[0]}]]
+set_property DRIVE 16 [get_ports [list {LMS_DIQ1_D[1]}]]
+set_property DRIVE  4 [get_ports [list {LMS_DIQ1_D[2]}]]
+set_property DRIVE  4 [get_ports [list {LMS_DIQ1_D[3]}]]
+set_property DRIVE  4 [get_ports [list {LMS_DIQ1_D[4]}]]
+set_property DRIVE  4 [get_ports [list {LMS_DIQ1_D[5]}]]
+set_property DRIVE  4 [get_ports [list {LMS_DIQ1_D[6]}]]
+set_property DRIVE 16 [get_ports [list {LMS_DIQ1_D[7]}]]
+set_property DRIVE 16 [get_ports [list {LMS_DIQ1_D[8]}]]
+set_property DRIVE  4 [get_ports [list {LMS_DIQ1_D[9]}]]
+set_property DRIVE  4 [get_ports [list {LMS_DIQ1_D[10]}]]
+set_property DRIVE 16 [get_ports [list {LMS_DIQ1_D[11]}]]
+
 set_property DRIVE 16 [get_ports LMS_EN_IQSEL1]
+
+#set_property DRIVE 16 [get_ports {LMS_DIQ1_D[*]}]
+#set_property DRIVE 16 [get_ports LMS_EN_IQSEL1]
 
 
 ## LMS constrains
