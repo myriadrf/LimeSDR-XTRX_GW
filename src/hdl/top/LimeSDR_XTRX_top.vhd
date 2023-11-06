@@ -285,6 +285,8 @@ signal ila_aurora_reset_out    : std_logic;
 
 signal gt_soft_reset_n_pulse   : std_logic;
 
+signal rx_en_ext               : std_logic_vector(2 downto 0);
+
 
 begin
 
@@ -484,10 +486,19 @@ ila_0_inst : entity work.ila_0
       xtrx_ctrl_gpio             => inst1_xtrx_ctrl_gpio
    );
    
+   process(sys_clk, LED_WWAN_GPIO5)
+   begin 
+      if LED_WWAN_GPIO5 = '0' then 
+         rx_en_ext <= (others=>'0');
+      elsif rising_edge(sys_clk) then 
+         rx_en_ext <= rx_en_ext(1 downto 0) & '1';
+      end if;
+   end process;
+   
    process(all)
    begin 
       inst1_from_fpgacfg_mod        <= inst1_from_fpgacfg;
-      inst1_from_fpgacfg_mod.rx_en  <= inst1_from_fpgacfg.rx_en AND LED_WWAN_GPIO5;
+      inst1_from_fpgacfg_mod.rx_en  <= inst1_from_fpgacfg.rx_en AND rx_en_ext(2);
    end process;
    
    inst1_spi_0_MISO  <= FPGA_SPI_MISO;
