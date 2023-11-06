@@ -679,7 +679,7 @@ ila_0_inst : entity work.ila_0
                 RESET              => inst4_lms_reset,
                 TXEN               => LMS_TXEN,
                 RXEN               => LMS_RXEN,
-                CORE_LDO_EN        => open,
+                CORE_LDO_EN        => LMS_CORE_LDO_EN,
                 -- Internal TX ports
                 tx_reset_n         => inst1_lms1_txpll_locked,
                 tx_fifo_0_wrclk    => inst1_lms1_txpll_c1,
@@ -718,8 +718,6 @@ ila_0_inst : entity work.ila_0
    en_tcxo     <= inst1_xtrx_ctrl_gpio(1) when inst1_from_periphcfg.PERIPH_OUTPUT_OVRD_1(0)='0' else inst1_from_periphcfg.PERIPH_OUTPUT_VAL_1(0);
    -- By default ext_clk is controlled from SPI periphcfg regs and external clock used - '1'   
    ext_clk     <= inst1_xtrx_ctrl_gpio(3) when inst1_from_periphcfg.PERIPH_OUTPUT_OVRD_1(1)='0' else inst1_from_periphcfg.PERIPH_OUTPUT_VAL_1(1); 
-
-   LMS_CORE_LDO_EN <= '1';
    
    
    blinker_proc_aurora_userclk : process(inst0_aurora_user_clk)
