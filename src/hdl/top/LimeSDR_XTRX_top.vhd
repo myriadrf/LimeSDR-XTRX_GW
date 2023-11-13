@@ -65,7 +65,7 @@ entity LimeSDR_XTRX_top is
       g_GT_LANES                 : integer := 1;                                                
       g_GT_RXTX_DWIDTH           : integer := 32;                                               
       g_GT_RX_BUFFER_WORDS       : integer := 64;                                             
-      g_GT_TX_BUFFER_WORDS       : integer := 256                                              
+      g_GT_TX_BUFFER_WORDS       : integer := 32                                              
    );
    port (
    --PCIe ports
@@ -350,7 +350,7 @@ ila_0_inst : entity work.ila_0
       m_axis_ctrl_rdata    => inst0_H2F_C0_rdata,
       --DMA RX                
       s_axis_dma_clk       => inst0_s0_wclk,
-      s_axis_dma_aresetn   => inst0_s0_waclrn,
+      s_axis_dma_aresetn   => inst1_from_fpgacfg.rx_en, --inst0_s0_waclrn,
       s_axis_dma_tvalid    => inst0_s0_wr,
       s_axis_dma_tready    => open, --this port is unused
       s_axis_dma_tdata     => inst0_s0_wdata,
