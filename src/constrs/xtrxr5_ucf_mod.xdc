@@ -21,7 +21,7 @@ set_false_path -from [get_ports PERST]
 create_clock -period 16.000 -name usb_phy_clk [get_ports USB_CLK]
 create_clock -name cfg_mclk -period 12  [get_nets inst0_xtrx_top/cfg_mclk]
 create_clock -period 10.000 -name sys_clk [get_ports PCI_REF_CLK_p]
-create_clock -period 38.46 -name clk_vctcxo [get_ports FPGA_CLK]
+create_clock -period 38.46 -name FPGA_CLK [get_ports FPGA_CLK]
 # see AR# 63174
 create_generated_clock -name cclk -source [get_pins inst0_xtrx_top/STARTUPE2_inst/USRCCLKO] -combinational [get_pins inst0_xtrx_top/STARTUPE2_inst/USRCCLKO]
 set_clock_latency -min 0.5 [get_clocks cclk]
@@ -55,6 +55,18 @@ set_property PACKAGE_PIN T3 [get_ports PERST]
 # PCI_REF_CLK
 set_property PACKAGE_PIN B8 [get_ports PCI_REF_CLK_p]
 set_property PACKAGE_PIN A8 [get_ports PCI_REF_CLK_n]
+
+set_property PACKAGE_PIN A6 [get_ports PCI_EXP_RXN[0]]
+set_property PACKAGE_PIN B6 [get_ports PCI_EXP_RXP[0]]
+
+set_property PACKAGE_PIN A2 [get_ports PCI_EXP_TXN[0]]
+set_property PACKAGE_PIN B2 [get_ports PCI_EXP_TXP[0]]
+
+set_property PACKAGE_PIN V7 [get_ports PCIE_RESERVED]
+set_property IOSTANDARD LVCMOS33 [get_ports PCIE_RESERVED]
+
+set_property PACKAGE_PIN W3 [get_ports PCIE_W_DISABLE2]
+set_property IOSTANDARD LVCMOS33 [get_ports PCIE_W_DISABLE2]
 
 
 ##########################################################
@@ -292,22 +304,74 @@ set_property PACKAGE_PIN W6 [get_ports LMS_FCLK2]
 #
 # DIQ1 BANK14
 #
-set_property PACKAGE_PIN J17 [get_ports {LMS_DIQ1_D[0]}]
-set_property PACKAGE_PIN H17 [get_ports {LMS_DIQ1_D[1]}]
-set_property PACKAGE_PIN H19 [get_ports {LMS_DIQ1_D[2]}]
-set_property PACKAGE_PIN K17 [get_ports {LMS_DIQ1_D[3]}]
-set_property PACKAGE_PIN G17 [get_ports {LMS_DIQ1_D[4]}]
-set_property PACKAGE_PIN V16 [get_ports {LMS_DIQ1_D[5]}]
-set_property PACKAGE_PIN J19 [get_ports {LMS_DIQ1_D[6]}]
-set_property PACKAGE_PIN M19 [get_ports {LMS_DIQ1_D[7]}]
-set_property PACKAGE_PIN P17 [get_ports {LMS_DIQ1_D[8]}]
-set_property PACKAGE_PIN N19 [get_ports {LMS_DIQ1_D[9]}]
-set_property PACKAGE_PIN U17 [get_ports {LMS_DIQ1_D[10]}]
-set_property PACKAGE_PIN U16 [get_ports {LMS_DIQ1_D[11]}]
+set_property PACKAGE_PIN J17 [get_ports LMS_DIQ1_D[0]]
+set_property PACKAGE_PIN H17 [get_ports LMS_DIQ1_D[1]]
+set_property PACKAGE_PIN H19 [get_ports LMS_DIQ1_D[2]]
+set_property PACKAGE_PIN K17 [get_ports LMS_DIQ1_D[3]]
+set_property PACKAGE_PIN G17 [get_ports LMS_DIQ1_D[4]]
+set_property PACKAGE_PIN V16 [get_ports LMS_DIQ1_D[5]]
+set_property PACKAGE_PIN J19 [get_ports LMS_DIQ1_D[6]]
+set_property PACKAGE_PIN M19 [get_ports LMS_DIQ1_D[7]]
+set_property PACKAGE_PIN P17 [get_ports LMS_DIQ1_D[8]]
+set_property PACKAGE_PIN N19 [get_ports LMS_DIQ1_D[9]]
+set_property PACKAGE_PIN U17 [get_ports LMS_DIQ1_D[10]]
+set_property PACKAGE_PIN U16 [get_ports LMS_DIQ1_D[11]]
 set_property PACKAGE_PIN V15 [get_ports LMS_TXNRX1]
 set_property PACKAGE_PIN P19 [get_ports LMS_EN_IQSEL1]
 set_property PACKAGE_PIN L17 [get_ports LMS_MCLK1]
 set_property PACKAGE_PIN G19 [get_ports LMS_FCLK1]
+
+
+set_property SLEW SLOW [get_ports LMS_DIQ1_D[0]]
+set_property SLEW FAST [get_ports LMS_DIQ1_D[1]]
+set_property SLEW SLOW [get_ports LMS_DIQ1_D[2]]
+set_property SLEW SLOW [get_ports LMS_DIQ1_D[3]]
+set_property SLEW SLOW [get_ports LMS_DIQ1_D[4]]
+set_property SLEW SLOW [get_ports LMS_DIQ1_D[5]]
+set_property SLEW SLOW [get_ports LMS_DIQ1_D[6]]
+set_property SLEW FAST [get_ports LMS_DIQ1_D[7]]
+set_property SLEW FAST [get_ports LMS_DIQ1_D[8]]
+set_property SLEW SLOW [get_ports LMS_DIQ1_D[9]]
+set_property SLEW SLOW [get_ports LMS_DIQ1_D[10]]
+set_property SLEW FAST [get_ports LMS_DIQ1_D[11]]
+set_property SLEW SLOW [get_ports LMS_TXNRX1]
+set_property SLEW FAST [get_ports LMS_EN_IQSEL1]
+set_property SLEW FAST [get_ports LMS_FCLK1]
+
+
+set_property DRIVE  4 [get_ports LMS_DIQ1_D[0]]
+set_property DRIVE 16 [get_ports LMS_DIQ1_D[1]]
+set_property DRIVE  4 [get_ports LMS_DIQ1_D[2]]
+set_property DRIVE  4 [get_ports LMS_DIQ1_D[3]]
+set_property DRIVE  4 [get_ports LMS_DIQ1_D[4]]
+set_property DRIVE  4 [get_ports LMS_DIQ1_D[5]]
+set_property DRIVE  4 [get_ports LMS_DIQ1_D[6]]
+set_property DRIVE 16 [get_ports LMS_DIQ1_D[7]]
+set_property DRIVE 16 [get_ports LMS_DIQ1_D[8]]
+set_property DRIVE  4 [get_ports LMS_DIQ1_D[9]]
+set_property DRIVE  4 [get_ports LMS_DIQ1_D[10]]
+set_property DRIVE 24 [get_ports LMS_DIQ1_D[11]]
+set_property DRIVE  4 [get_ports LMS_TXNRX1]
+set_property DRIVE 16 [get_ports LMS_EN_IQSEL1]
+set_property DRIVE 24 [get_ports LMS_FCLK1]
+
+
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_DIQ1_D[0]]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_DIQ1_D[1]]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_DIQ1_D[2]]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_DIQ1_D[3]]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_DIQ1_D[4]]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_DIQ1_D[5]]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_DIQ1_D[6]]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_DIQ1_D[7]]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_DIQ1_D[8]]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_DIQ1_D[9]]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_DIQ1_D[10]]
+set_property IOSTANDARD LVTTL    [get_ports LMS_DIQ1_D[11]]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_TXNRX1]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_EN_IQSEL1]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_MCLK1]
+set_property IOSTANDARD LVTTL    [get_ports LMS_FCLK1]
 
 
 ## LMS constrains
@@ -338,14 +402,13 @@ set_property SLEW FAST [get_ports {{LMS_DIQ2_D[*]} LMS_FCLK2 LMS_EN_IQSEL2}]
 set_property DRIVE 8 [get_ports {{LMS_DIQ2_D[*]} LMS_FCLK2 LMS_EN_IQSEL2}]
 #}
 
-# LML Port 2
-set_property IOSTANDARD LVCMOS33 [get_ports {{LMS_DIQ1_D[*]} LMS_TXNRX1 LMS_EN_IQSEL1 LMS_MCLK1 LMS_FCLK1}]
+
 #if { $VIO_LML2_TYPE == "HSTL_II_18"} {
 #set_property IN_TERM UNTUNED_SPLIT_50 [get_ports {LMS_DIQ2_D[*] LMS_FCLK2 LMS_EN_IQSEL1}]
 #set_property INTERNAL_VREF 0.9         [get_iobanks 34]
 #} else {
-set_property SLEW FAST [get_ports LMS_FCLK1]
-set_property DRIVE 8 [get_ports LMS_FCLK1]
+#set_property SLEW FAST [get_ports LMS_FCLK1]
+#set_property DRIVE 24 [get_ports LMS_FCLK1]
 #}
 
 
