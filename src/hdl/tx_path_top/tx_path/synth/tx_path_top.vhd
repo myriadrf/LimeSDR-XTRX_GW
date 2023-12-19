@@ -9,7 +9,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.general_pkg.all;
-use work.tstcfg_pkg.all;
 
 -- ----------------------------------------------------------------------------
 -- Entity declaration
@@ -31,8 +30,6 @@ entity tx_path_top is
       iq_rdclk             : in std_logic;
       reset_n              : in std_logic;
       en                   : in std_logic;
-      from_tstcfg          : in  t_FROM_TSTCFG;
-      to_tstcfg            : out t_TO_TSTCFG;
       
       rx_sample_clk        : in std_logic;
       rx_sample_nr         : in std_logic_vector(63 downto 0);
@@ -313,8 +310,6 @@ inst0_one_pct_fifo : entity work.one_pct_fifo
    )
    port map(
       sys_clk           => sys_clk,
-      from_tstcfg       => from_tstcfg,
-      to_tstcfg         => to_tstcfg,
 
       wclk              => pct_wrclk,
       rclk              => iq_rdclk, 

@@ -15,7 +15,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use work.tstcfg_pkg.all;
 
 LIBRARY lpm;
 USE lpm.all;
@@ -33,8 +32,6 @@ entity p2d_rd is
       sys_clk                 : in std_logic;
       clk                     : in std_logic;
       reset_n                 : in std_logic;
-      from_tstcfg             : in     t_FROM_TSTCFG;
-      to_tstcfg               : out    t_TO_TSTCFG;
       
       synch_dis               : in std_logic;
       
@@ -112,61 +109,6 @@ signal current_state, next_state : state_type;
 
 
 begin
-
--- ----------------------------------------------------------------------------
--- Capture timestamps and other data for debug purposes
--- ----------------------------------------------------------------------------
-
-
--- sync
-generate_loop : for i in 0 to g_BUFF_COUNT-1 generate
-
-   sync_tx_ts : entity work.bus_sync_reg
-      generic map (
-                   bus_width => 64
-   )
-      port map (
-                clk      => sys_clk,
-                reset_n  => '1',
-                async_in => pct_hdr_1_array(i),
-                sync_out => to_tstcfg.TX_TS_BUF(i)
-   );
-
-end generate generate_loop;
-
-sync_rx_ts : entity work.bus_sync_reg
-      generic map (
-                   bus_width => 64
-   )
-      port map (
-                clk      => sys_clk,
-                reset_n  => '1',
-                async_in => sample_nr,
-                sync_out => to_tstcfg.TX_RX_TS
-   );
-   
-sync_buf_rdy : entity work.bus_sync_reg
-      generic map (
-                   bus_width => 4
-   )
-      port map (
-                clk      => sys_clk,
-                reset_n  => '1',
-                async_in => pct_buff_rdy,
-                sync_out => to_tstcfg.TX_AVAIL_BUFS
-   );
-   
-current_buf_nr : entity work.bus_sync_reg
-      generic map (
-                   bus_width => 4
-   )
-      port map (
-                clk      => sys_clk,
-                reset_n  => '1',
-                async_in => std_logic_vector(crnt_buff_cnt),
-                sync_out => to_tstcfg.crnt_buff_cnt
-   );
-
 
    
 -- ----------------------------------------------------------------------------

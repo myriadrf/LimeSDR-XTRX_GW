@@ -14,7 +14,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.fpgacfg_pkg.all;
-use work.tstcfg_pkg.all;
 use work.memcfg_pkg.all;
 
 -- ----------------------------------------------------------------------------
@@ -51,8 +50,6 @@ entity rxtx_top is
       -- Configuration memory ports     
       from_fpgacfg            : in     t_FROM_FPGACFG;
       to_fpgacfg              : out    t_TO_FPGACFG;
-      from_tstcfg             : in     t_FROM_TSTCFG;
-      to_tstcfg               : out    t_TO_TSTCFG;
       -- TX path
       tx_clk                  : in     std_logic;
       tx_clk_reset_n          : in     std_logic;    
@@ -266,8 +263,6 @@ TX_gen0 : if TX_EN = true generate
       )
    port map(
       sys_clk              => sys_clk,
-      from_tstcfg          => from_tstcfg,
-      to_tstcfg            => to_tstcfg,
       pct_wrclk            => tx_clk,
       iq_rdclk             => tx_clk,
       reset_n              => inst1_reset_n,

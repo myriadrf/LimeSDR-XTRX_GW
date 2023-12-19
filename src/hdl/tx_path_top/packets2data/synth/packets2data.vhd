@@ -14,7 +14,6 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.FIFO_PACK.all;
-use work.tstcfg_pkg.all;
 
 -- ----------------------------------------------------------------------------
 -- Entity declaration
@@ -33,8 +32,6 @@ entity packets2data is
       wclk                    : in std_logic;
       rclk                    : in std_logic;
       reset_n                 : in std_logic;
-      from_tstcfg             : in     t_FROM_TSTCFG;
-      to_tstcfg               : out    t_TO_TSTCFG;
       --Mode settings      
       mode			            : in std_logic; -- JESD207: 1; TRXIQ: 0
       trxiqpulse	            : in std_logic; -- trxiqpulse on: 1; trxiqpulse off: 0
@@ -275,8 +272,6 @@ p2d_rd_inst3 : entity work.p2d_rd
    )  
    port map(   
       sys_clk                 => sys_clk,
-      from_tstcfg             => from_tstcfg,
-      to_tstcfg               => to_tstcfg,
    
       clk                     => rclk,
       reset_n                 => reset_n,

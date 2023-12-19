@@ -13,7 +13,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use work.tstcfg_pkg.all;
 
 -- ----------------------------------------------------------------------------
 -- Entity declaration
@@ -33,8 +32,6 @@ entity packets2data_top is
       wclk              : in std_logic;
       rclk              : in std_logic;
       reset_n           : in std_logic;
-      from_tstcfg             : in     t_FROM_TSTCFG;
-      to_tstcfg               : out    t_TO_TSTCFG;
       pct_size          : in std_logic_vector(15 downto 0);
       
       --Mode settings
@@ -136,8 +133,6 @@ end process;
    )
    port map(
       sys_clk                 => sys_clk,
-      from_tstcfg             => from_tstcfg,
-      to_tstcfg               => to_tstcfg,
 
       wclk                    => wclk,
       rclk                    => rclk, 

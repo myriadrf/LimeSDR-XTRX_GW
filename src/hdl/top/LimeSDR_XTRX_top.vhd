@@ -495,9 +495,7 @@ begin
    port map(        
       sys_clk                 => sys_clk,                                     
       from_fpgacfg            => inst1_from_fpgacfg,
-      to_fpgacfg              => inst1_to_fpgacfg,
-      from_tstcfg             => inst1_from_tstcfg, 
-      to_tstcfg               => inst1_to_tstcfg,      
+      to_fpgacfg              => inst1_to_fpgacfg,  
       from_memcfg             => inst1_from_memcfg,
       to_memcfg               => inst1_to_memcfg,
       -- TX module signals
@@ -656,5 +654,31 @@ begin
    RX_SW3       <= rx_switches(0);
    RX_SW2       <= rx_switches(1);
    EN_GPIO      <= '0';
+   
+   
+   
+-- ----------------------------------------------------------------------------
+-- tst_top instance.
+-- Clock test logic
+-- ----------------------------------------------------------------------------
+   inst6_tst_top : entity work.tst_top
+   port map(
+      --input ports 
+      FX3_clk           => sys_clk,
+      reset_n           => global_rst_n,    
+      Si5351C_clk_0     => '0',
+      Si5351C_clk_1     => '0',
+      Si5351C_clk_2     => '0',
+      Si5351C_clk_3     => '0',
+      Si5351C_clk_5     => '0',
+      Si5351C_clk_6     => '0',
+      Si5351C_clk_7     => '0',
+      LMK_CLK           => FPGA_CLK,
+      ADF_MUXOUT        => '0',    
+   
+      -- To configuration memory
+      to_tstcfg         => inst1_to_tstcfg,
+      from_tstcfg       => inst1_from_tstcfg
+   );
 
 end architecture Structural;
