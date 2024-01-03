@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="ASCII"?>
+<systemproject:SystemProject xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:sdkproject="http://www.xilinx.com/sdkproject" xmlns:systemproject="http://www.xilinx.com/systemproject" name="cpu_system" platform="X:/Work/LimeSDR-XTRX/sw_workspace/lms7_trx_top/export/lms7_trx_top/lms7_trx_top.xpfm" platformUID="xilinx:::0.0(custom)" sysConfig="lms7_trx_top" runtime="cpp" dimmRepoPath="" rootFSLocation="" linuxImage="" sysroot="">
+  <configuration name="Debug">
+    <configBuildOptions xsi:type="systemproject:SystemOptions">
+      <applications name="cpu" domainName="standalone_domain" domainPrettyName="standalone on microblaze_0" appBuildConfig="Debug"/>
+      <options xsi:type="sdkproject:SdkOptions" generateSdCard="true"/>
+    </configBuildOptions>
+    <lastBuildOptions xsi:type="systemproject:SystemOptions">
+      <applications name="cpu" domainName="standalone_domain" domainPrettyName="standalone on microblaze_0" appBuildConfig="Debug"/>
+      <options xsi:type="sdkproject:SdkOptions" generateSdCard="true"/>
+    </lastBuildOptions>
+  </configuration>
+  <configuration name="Release">
+    <configBuildOptions xsi:type="systemproject:SystemOptions">
+      <applications name="cpu" domainName="standalone_domain" domainPrettyName="standalone on microblaze_0" appBuildConfig="Release"/>
+      <options xsi:type="sdkproject:SdkOptions" generateSdCard="true"/>
+    </configBuildOptions>
+  </configuration>
+</systemproject:SystemProject>
