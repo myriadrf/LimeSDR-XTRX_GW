@@ -1,0 +1,6 @@
+/.metadata/
+.analytics
+IDE.log
+/RemoteSystemsTempFiles/
+/lms7_trx_top/platform.tcl
+/cpu_system/_ide/scripts/debugger_cpu-default.tcl

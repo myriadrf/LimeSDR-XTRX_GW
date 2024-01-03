@@ -23,10 +23,11 @@ The gateware can be built with the free version of the Xilinx Vivado v2022.1 (64
 ## Modifying microblaze(embedded processor) code
 
 * Open Vitis
-* Create a workspace
+* Create a workspace at LimeSDR-XTRX_GW\software
 * Click File->Import..
-* Select "Vitis project exported zip file"
-* Select vitis_export_archive.ide.zip file included in the project folder
+* Select "Eclipse workspace or zip file"
+* Select LimeSDR-XTRX_GW\software as the root folder
+* Make sure "Copy projects into workspace" is NOT checked
 * Import all suggested projects
 
 ## Updating hardware description for vitis project
@@ -49,10 +50,7 @@ The gateware can be built with the free version of the Xilinx Vivado v2022.1 (64
 
 ## Exporting Vitis code
 
-* Open Vitis
-* Click File->Export
-* Select all projects
-* When prompted to overwrite the already existing vitis_export_archive.ide.zip, click Yes.
+* If projects were imported as directed, no special actions should be needed
 
 ## Branches
 
