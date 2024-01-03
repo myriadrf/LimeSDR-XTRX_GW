@@ -136,17 +136,9 @@ begin
                when "00000" => dout_reg <= (15 downto 8 => '0') & GW_TEST_RES & mem(0)(3 downto 0);
                when "00101" => dout_reg <= (15 downto 6 => '0') & to_tstcfg.TEST_CMPLT(5 downto 0);
                when "00111" => dout_reg <= (15 downto 6 => '0') & to_tstcfg.TEST_REZ(5 downto 0);
-               when "01001" => dout_reg <= to_tstcfg.FX3_CLK_CNT;
-               when "01010" => dout_reg <= to_tstcfg.Si5351C_CLK0_CNT;
-               when "01011" => dout_reg <= to_tstcfg.Si5351C_CLK1_CNT;
-               when "01100" => dout_reg <= to_tstcfg.Si5351C_CLK2_CNT;
-               when "01101" => dout_reg <= to_tstcfg.Si5351C_CLK3_CNT;
-               when "01111" => dout_reg <= to_tstcfg.Si5351C_CLK5_CNT;
-               when "10000" => dout_reg <= to_tstcfg.Si5351C_CLK6_CNT;
-               when "10001" => dout_reg <= to_tstcfg.Si5351C_CLK7_CNT;
-               when "10010" => dout_reg <= to_tstcfg.LMK_CLK_CNT(15 downto 0);
-               when "10011" => dout_reg <= (15 downto 8 => '0') & to_tstcfg.LMK_CLK_CNT(23 downto 16);
-               when "10100" => dout_reg <= to_tstcfg.ADF_CNT;
+               when "01001" => dout_reg <= to_tstcfg.SYS_CLK_CNT;
+               when "10010" => dout_reg <= to_tstcfg.LMS_TX_CLK_cnt(15 downto 0);
+               when "10011" => dout_reg <= (15 downto 8 => '0') & to_tstcfg.LMS_TX_CLK_cnt(23 downto 16);
                when others => dout_reg <= mem(to_integer(unsigned(inst_reg(4 downto 0))));
             end case;
          end if;  
@@ -177,18 +169,18 @@ begin
          mem(6)   <= "0000000000000000"; --RD   0 free, reserved
          mem(7)   <= "0000000000000000"; --RD   0 free, reserved[15:6],DDR2_2_TST_REZ,DDR2_1_TST_REZ,ADF_TST_REZ,VCTCXO_TST_REZ,Si5351C_TST_REZ,FX3_PCLK_TST_REZ
          mem(8)   <= "0000000000000000"; --RD   0 free, reserved
-         mem(9)   <= "0000000000000000"; --RD   0 free, FX3_CLK_CNT  
-         mem(10)  <= "0000000000000000"; --RD   0 free, Si5351C_CLK7_CNT
-         mem(11)  <= "0000000000000000"; --RD   0 free, Si5351C_CLK6_CNT
-         mem(12)  <= "0000000000000000"; --RD   0 free, Si5351C_CLK5_CNT
+         mem(9)   <= "0000000000000000"; --RD   0 free, SYS_CLK_CNT  
+         mem(10)  <= "0000000000000000"; --RD   0 free, reserved
+         mem(11)  <= "0000000000000000"; --RD   0 free, reserved
+         mem(12)  <= "0000000000000000"; --RD   0 free, reserved
          mem(13)  <= "0000000000000000"; --RD   0 free, reserved
-         mem(14)  <= "0000000000000000"; --RD   0 free, Si5351C_CLK3_CNT
-         mem(15)  <= "0000000000000000"; --RD   0 free, Si5351C_CLK2_CNT
-         mem(16)  <= "0000000000000000"; --RD   0 free, Si5351C_CLK1_CNT
-         mem(17)  <= "0000000000000000"; --RD   0 free, Si5351C_CLK0_CNT
-         mem(18)  <= "0000000000000000"; --RD   0 free, LMK_CLK_CNT[15:0]  
-         mem(19)  <= "0000000000000000"; --RD   0 free, LMK_CLK_CNT[23:16] 
-         mem(20)  <= "0000000000000000"; --RD   0 free, ADF_CNT   
+         mem(14)  <= "0000000000000000"; --RD   0 free, reserved
+         mem(15)  <= "0000000000000000"; --RD   0 free, reserved
+         mem(16)  <= "0000000000000000"; --RD   0 free, reserved
+         mem(17)  <= "0000000000000000"; --RD   0 free, reserved
+         mem(18)  <= "0000000000000000"; --RD   0 free, LMS_TX_CLK_CNT[15:0]  
+         mem(19)  <= "0000000000000000"; --RD   0 free, LMS_TX_CLK_CNT[23:16] 
+         mem(20)  <= "0000000000000000"; --RD   0 free, reserved
          mem(21)  <= "0000000000000000"; --RD   0 free, reserved
          mem(22)  <= "0000000000000000"; --RD   0 free, Reserved
          mem(23)  <= "0000000000000000"; --RD   0 free, Reserved
@@ -225,7 +217,6 @@ begin
    -- ---------------------------------------------------------------------------------------------
    
    from_tstcfg.TEST_EN       <= mem(1)(5 downto 0);
-   from_tstcfg.TEST_FRC_ERR  <= mem(3)(5 downto 0);
    from_tstcfg.TX_TST_I      <= mem(29)(15 downto 0);
    from_tstcfg.TX_TST_Q      <= mem(30)(15 downto 0);
 

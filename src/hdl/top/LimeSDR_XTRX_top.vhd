@@ -95,10 +95,10 @@ entity LimeSDR_XTRX_top is
    HW_VER           : in    std_logic_vector(2 downto 0);
    --GPS
    GNSS_1PPS        : in    std_logic;
-   GNSS_TXD         : in    std_logic;
-   GNSS_RXD         : out   std_logic;
-   GNSS_HW_S        : in    std_logic; --FIX
-   GNSS_HW_R        : in    std_logic; --FIX
+   GNSS_TXD         : out   std_logic;
+   GNSS_RXD         : in    std_logic;
+   GNSS_HW_S        : out   std_logic; --FIX
+   GNSS_HW_R        : out   std_logic; --FIX
    GNSS_FIX         : in    std_logic; --FIX
    --GPIO
    PPSI_GPIO1       : inout std_logic;   
@@ -664,21 +664,19 @@ begin
    inst6_tst_top : entity work.tst_top
    port map(
       --input ports 
-      FX3_clk           => sys_clk,
+      sys_clk           => sys_clk,
       reset_n           => global_rst_n,    
-      Si5351C_clk_0     => '0',
-      Si5351C_clk_1     => '0',
-      Si5351C_clk_2     => '0',
-      Si5351C_clk_3     => '0',
-      Si5351C_clk_5     => '0',
-      Si5351C_clk_6     => '0',
-      Si5351C_clk_7     => '0',
-      LMK_CLK           => FPGA_CLK,
-      ADF_MUXOUT        => '0',    
+      LMS_TX_CLK        => FPGA_CLK,
+      
+      GNSS_UART_RX      => GNSS_RXD,
+      GNSS_UART_TX      => GNSS_TXD,
    
       -- To configuration memory
       to_tstcfg         => inst1_to_tstcfg,
       from_tstcfg       => inst1_from_tstcfg
    );
+   
+   GNSS_HW_S <= '1';
+   GNSS_HW_R <= '1';
 
 end architecture Structural;

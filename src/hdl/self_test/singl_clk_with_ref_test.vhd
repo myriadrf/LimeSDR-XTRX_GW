@@ -117,7 +117,7 @@ fsm : process(current_state, test_en_reg(1), cnt_ref_clk) begin
 			end if;
 		when count => 					--enable counting
 			if test_en_reg(1)='1' then
-				if cnt_ref_clk>=16777210 then 
+				if cnt_ref_clk>=12500000 then -- 0.1s , if using 125MHz reflock
 					next_state<=count_end;
 				else 
 					next_state<=count;
