@@ -41,6 +41,10 @@ end tst_top;
 -- ----------------------------------------------------------------------------
 architecture arch of tst_top is
 
+signal test_enable   : std_logic_vector(4 downto 0);
+signal test_complete : std_logic_vector(4 downto 0);
+signal test_result   : std_logic_vector(4 downto 0);
+
 begin
 
 -- ----------------------------------------------------------------------------
@@ -51,9 +55,9 @@ begin
       --input ports 
       sys_clk           => sys_clk,
       reset_n           => reset_n,
-      test_en           => from_tstcfg.TEST_EN(1 downto 0),
-      test_cmplt        => to_tstcfg.TEST_CMPLT(1 downto 0),
-      test_rez          => to_tstcfg.TEST_REZ(1 downto 0),      
+      test_en           => test_enable(1 downto 0),
+      test_cmplt        => test_complete(1 downto 0),
+      test_rez          => test_result(1 downto 0),      
       LMS_TX_CLK        => LMS_TX_CLK,    
       sys_clk_cnt       => to_tstcfg.SYS_CLK_CNT,
       LMS_TX_CLK_cnt    => to_tstcfg.LMS_TX_CLK_CNT
@@ -70,16 +74,27 @@ begin
    )
    port map(
       CLK                 => sys_clk,
-      TEST_EN             => from_tstcfg.TEST_EN(2),     
+      TEST_EN             => test_enable(2),     
       
-      TEST_COMPLETE       => to_tstcfg.TEST_CMPLT(2),
-      TEST_PASS_FAIL      => to_tstcfg.TEST_REZ(2),  
+      TEST_COMPLETE       => test_complete(2),
+      TEST_PASS_FAIL      => test_result(2),  
       
       UART_RX             => GNSS_UART_RX,
       UART_TX             => GNSS_UART_TX
 
    );
-  
+   
+   
+   test_enable(0) <= from_tstcfg.TEST_EN(0);   
+   test_enable(1) <= from_tstcfg.TEST_EN(2);   
+   test_enable(2) <= from_tstcfg.TEST_EN(4);   
+   to_tstcfg.TEST_CMPLT(0) <= test_complete(0);
+   to_tstcfg.TEST_CMPLT(2) <= test_complete(1);
+   to_tstcfg.TEST_CMPLT(4) <= test_complete(2);
+   to_tstcfg.TEST_REZ(0)   <= test_result(0);    
+   to_tstcfg.TEST_REZ(2)   <= test_result(1);    
+   to_tstcfg.TEST_REZ(4)   <= test_result(2);    
+   
 end arch;   
 
 
