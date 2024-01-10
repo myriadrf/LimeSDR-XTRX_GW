@@ -23,7 +23,7 @@ The gateware can be built with the free version of the Xilinx Vivado v2022.1 (64
 ## Modifying microblaze(embedded processor) code
 
 * Open Vitis
-* Create a workspace at LimeSDR-XTRX_GW\software
+* Choose LimeSDR-XTRX_GW\software as your workspace
 * Click File->Import..
 * Select "Eclipse workspace or zip file"
 * Select LimeSDR-XTRX_GW\software as the root folder
