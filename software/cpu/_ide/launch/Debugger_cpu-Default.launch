@@ -18,7 +18,7 @@
     <booleanAttribute key="com.xilinx.sdk.tcf.debug.uipl.powerup" value="false"/>
     <stringAttribute key="com.xilinx.sdk.tcf.debug.uiproc.appl.map" value="{&quot;microblaze_0&quot;:{&quot;xilinx.tcf.application&quot;:&quot;Debug/cpu.elf&quot;,&quot;xilinx.tcf.datafiles&quot;:&quot;&quot;,&quot;xilinx.tcf.no_download&quot;:false,&quot;xilinx.tcf.profile_enabled&quot;:false,&quot;xilinx.tcf.profile_frequency&quot;:&quot;10000&quot;,&quot;xilinx.tcf.profile_non_int_frequency&quot;:&quot;100000000&quot;,&quot;xilinx.tcf.profile_non_int_high_addr&quot;:&quot;&quot;,&quot;xilinx.tcf.profile_non_int_low_addr&quot;:&quot;&quot;,&quot;xilinx.tcf.profile_non_int_use_count_instr&quot;:false,&quot;xilinx.tcf.profile_non_int_use_cumulate&quot;:false,&quot;xilinx.tcf.profile_non_intrusive_support&quot;:false,&quot;xilinx.tcf.profile_store_address&quot;:&quot;0x0&quot;,&quot;xilinx.tcf.profile_use_intrusive&quot;:false,&quot;xilinx.tcf.project&quot;:&quot;cpu&quot;,&quot;xilinx.tcf.relocate&quot;:false,&quot;xilinx.tcf.relocate_addr&quot;:&quot;&quot;,&quot;xilinx.tcf.reset&quot;:true,&quot;xilinx.tcf.stop_at_entry&quot;:false}}"/>
     <stringAttribute key="com.xilinx.sdk.tcf.debug.uiproc.selection" value="microblaze_0"/>
-    <booleanAttribute key="com.xilinx.sdk.tcf.debug.uiprogram.fpga" value="true"/>
+    <booleanAttribute key="com.xilinx.sdk.tcf.debug.uiprogram.fpga" value="false"/>
     <stringAttribute key="com.xilinx.sdk.tcf.debug.uiproject.name" value="cpu"/>
     <stringAttribute key="com.xilinx.sdk.tcf.debug.uips.device" value="Auto Detect"/>
     <booleanAttribute key="com.xilinx.sdk.tcf.debug.uips7.init" value="false"/>

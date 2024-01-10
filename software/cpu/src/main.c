@@ -50,6 +50,9 @@
 // we use the top of the flash instead of eeprom, thus the offset to last sector
 #define mem_write_offset 0x01FF0000
 
+#define FLASH_USER_SECTOR_START_ADDR 	0x01FE0000
+#define FLASH_USER_SECTOR_END_ADDR 		0x01FEFFFF
+
 /*
  * The following constants are part of clock dynamic reconfiguration
  * They are only defined here such that a user can easily change
@@ -789,6 +792,7 @@ int main()
 	u8 data_leftover;
 	u64 total_data = 0; // how much data has been transferred in total (debug value)
 	int address;
+	int k;
 
 	uint8_t phcfg_start_old, phcfg_start;
 	uint8_t pllcfg_start_old, pllcfg_start;
@@ -803,6 +807,8 @@ int main()
 	int spirez;
 	uint32_t *dest = (uint32_t *)glEp0Buffer_Tx;
 	u8 spi_ReadBuffer[4];
+
+	int flash_page_addr = 0;
 
 	init_platform();
 
@@ -829,7 +835,6 @@ int main()
 //    LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR,0x07,0xD2);
 //    LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR,0x10,0xB1);
 //    LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR,0x09,0xD2);
-
 
 	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x02, 0x88);
 	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x03, 0xD2);
@@ -1310,10 +1315,17 @@ int main()
 				// Reset spirez
 				spirez = 0;
 				data_cnt = LMS_Ctrl_Packet_Rx->Data_field[5];
-				// Check if the user is trying to store VCTCXO DAC value, return error otherwise
-				if (data_cnt == 2 || LMS_Ctrl_Packet_Rx->Data_field[8] == 0 || LMS_Ctrl_Packet_Rx->Data_field[9] == 16)
+
+				if ((LMS_Ctrl_Packet_Rx->Data_field[10] == 0) && (LMS_Ctrl_Packet_Rx->Data_field[11] == 3)) // TARGET = 3 (EEPROM)
 				{
-					if ((LMS_Ctrl_Packet_Rx->Data_field[10] == 0) && (LMS_Ctrl_Packet_Rx->Data_field[11] == 3)) // TARGET = 3 (EEPROM)
+					// Since the XTRX board does not have an eeprom to store permanent VCTCXO DAC value
+					// a workaround is implemented that uses a sufficiently high address in the configuration flash
+					// to store the DAC value
+					// Since to write data to a flash, a whole sector needs to be erased, additional checks are included
+					// to make sure this function is used ONLY to store VCTCXO DAC value
+
+					// Check if the user is trying to store VCTCXO DAC value, return error otherwise
+					if (data_cnt == 2 && LMS_Ctrl_Packet_Rx->Data_field[8] == 0 && LMS_Ctrl_Packet_Rx->Data_field[9] == 16)
 					{
 						if (LMS_Ctrl_Packet_Rx->Data_field[0] == 0) // write data to EEPROM #1
 						{
@@ -1333,10 +1345,49 @@ int main()
 						else
 							LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
 					}
+					else
+						LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
+
+				}
+				else if ((LMS_Ctrl_Packet_Rx->Data_field[10] == 0) && (LMS_Ctrl_Packet_Rx->Data_field[11] == 2)) // TARGET = 2 (FPGA FLASH)
+				{
+					flash_page_addr = 	(LMS_Ctrl_Packet_Rx->Data_field[6] << 24) 	|
+										(LMS_Ctrl_Packet_Rx->Data_field[7] << 16) 	|
+										(LMS_Ctrl_Packet_Rx->Data_field[8] << 8) 	|
+										(LMS_Ctrl_Packet_Rx->Data_field[9]);
+					// Check if the user is trying to access USER sector in FLASH memory, return error otherwise
+					if ( (flash_page_addr >= FLASH_USER_SECTOR_START_ADDR) && (flash_page_addr <= FLASH_USER_SECTOR_END_ADDR))
+					{
+						if (LMS_Ctrl_Packet_Rx->Data_field[0] == 0) // write data to FLASH
+						{
+							LMS_Ctrl_Packet_Rx->Data_field[22] = LMS_Ctrl_Packet_Rx->Data_field[8];
+							LMS_Ctrl_Packet_Rx->Data_field[23] = LMS_Ctrl_Packet_Rx->Data_field[9];
+							spirez = spirez || FlashQspi_EraseSector(&CFG_QSPI, FLASH_USER_SECTOR_START_ADDR);
+
+							for (k=0; k<data_cnt; k++) {
+								page_buffer[k] = LMS_Ctrl_Packet_Rx->Data_field[24+k];
+							}
+
+							spirez = spirez || FlashQspi_ProgramPage(&CFG_QSPI, FLASH_USER_SECTOR_START_ADDR, page_buffer);
+							cmd_errors = cmd_errors + spirez;
+
+							if (cmd_errors)
+								LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
+							else
+								LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
+						}
+						else
+							LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
+					}
+					else
+						LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
 				}
 				else
 					LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
+
 				break;
+
+
 
 			case CMD_MEMORY_RD:
 				// Since the XTRX board does not have an eeprom to store permanent VCTCXO DAC value
@@ -1348,10 +1399,9 @@ int main()
 				spirez = 0;
 				data_cnt = LMS_Ctrl_Packet_Rx->Data_field[5];
 
-				// Check if the user is trying to read VCTCXO DAC value, return error otherwise
-				if (data_cnt == 2 || LMS_Ctrl_Packet_Rx->Data_field[8] == 0 || LMS_Ctrl_Packet_Rx->Data_field[9] == 16)
+				if ((LMS_Ctrl_Packet_Rx->Data_field[10] == 0) && (LMS_Ctrl_Packet_Rx->Data_field[11] == 3)) /// TARGET = 3 (EEPROM)
 				{
-					if ((LMS_Ctrl_Packet_Rx->Data_field[10] == 0) && (LMS_Ctrl_Packet_Rx->Data_field[11] == 3)) /// TARGET = 3 (EEPROM)
+					if (data_cnt == 2 || LMS_Ctrl_Packet_Rx->Data_field[8] == 0 || LMS_Ctrl_Packet_Rx->Data_field[9] == 16)
 					{
 						if (LMS_Ctrl_Packet_Rx->Data_field[0] == 0) // read data from EEPROM #1
 						{
@@ -1359,7 +1409,35 @@ int main()
 							glEp0Buffer_Tx[32] = page_buffer[0];
 							glEp0Buffer_Tx[33] = page_buffer[1];
 
-							if (cmd_errors)
+							if (spirez)
+								LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
+							else
+								LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
+						}
+						else
+							LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
+					}
+					else
+						LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
+				}
+				else if ((LMS_Ctrl_Packet_Rx->Data_field[10] == 0) && (LMS_Ctrl_Packet_Rx->Data_field[11] == 2)) // TARGET = 1 (FPGA FLASH)
+				{
+					flash_page_addr = 	(LMS_Ctrl_Packet_Rx->Data_field[6] << 24) 	|
+										(LMS_Ctrl_Packet_Rx->Data_field[7] << 16) 	|
+										(LMS_Ctrl_Packet_Rx->Data_field[8] << 8) 	|
+										(LMS_Ctrl_Packet_Rx->Data_field[9]);
+					// Check if the user is trying to access USER sector in FLASH memory, return error otherwise
+					if ( (flash_page_addr >= FLASH_USER_SECTOR_START_ADDR) && (flash_page_addr <= FLASH_USER_SECTOR_END_ADDR))
+					{
+						if (LMS_Ctrl_Packet_Rx->Data_field[0] == 0) // read data from FLASH
+						{
+							spirez = spirez || FlashQspi_ReadPage(&CFG_QSPI, FLASH_USER_SECTOR_START_ADDR, page_buffer);
+
+							for (k=0; k<data_cnt; k++) {
+								LMS_Ctrl_Packet_Tx->Data_field[24+k] = page_buffer[k];
+							}
+
+							if (spirez)
 								LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
 							else
 								LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
@@ -1370,13 +1448,6 @@ int main()
 				}
 				else
 					LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
-
-				break;
-
-				if (cmd_errors)
-					LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
-				else
-					LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
 
 				break;
 
