@@ -52,6 +52,25 @@ The gateware can be built with the free version of the Xilinx Vivado v2022.1 (64
 
 * If projects were imported as directed, no special actions should be needed
 
+## Programming the board
+
+### Programming via LimeSuite 
+
+* A working board can be reprogrammed in LimeSuite by using the program function in Modules -> Programming
+
+**Note!** If an invalid file is uploaded to the board, or if the programming process is interrupted, the board will become inaccessible via LimeSuite
+
+### Programming via JTAG
+
+* Make sure you have a Xilinx JTAG programmer connected to the LimeSDR-XTRX's JTAG pins via a PCIe adapter or in some other way
+* Open Vivado
+* Open Hardware manager
+* Click Tools -> Auto connect
+* An FPGA device should be detected. Right click on it and select "Add configuration memory device"
+* Select "mx25l25673g-spi-x1_x2_x4"
+* Right click on the newly added memory device and choose "Program configuration memory device"
+* Select your configuration file and click OK
+
 ## Branches
 
 This repository contains the following branches:
