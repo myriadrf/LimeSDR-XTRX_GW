@@ -23,75 +23,79 @@ USE altera_mf.all;
 -- ----------------------------------------------------------------------------
 entity pcie_top is
    generic(
-      g_DEV_FAMILY               : string := "Cyclone V GX";
-      g_S0_DATA_WIDTH            : integer := 32;
-      g_C0_DATA_WIDTH            : integer := 8;
+      g_DEV_FAMILY               : string := "Cyclone V GX"; --! Device family 
+      g_S0_DATA_WIDTH            : integer := 32;  --! Stream 0 data width
+      g_C0_DATA_WIDTH            : integer := 8;   --! Control 0 data width
       -- Stream (Host->FPGA) 
-      g_H2F_S0_0_RDUSEDW_WIDTH   : integer := 11;
-      g_H2F_S0_0_RWIDTH          : integer := 32;
-      g_H2F_S0_1_RDUSEDW_WIDTH   : integer := 11;
-      g_H2F_S0_1_RWIDTH          : integer := 32;
+      g_H2F_S0_0_RDUSEDW_WIDTH   : integer := 11;  --! Stream 0_0 FIFO read used words width
+      g_H2F_S0_0_RWIDTH          : integer := 32;  --! Stream 0_0 FIFO read data with
+      g_H2F_S0_1_RDUSEDW_WIDTH   : integer := 11;  --! Stream 0_1 FIFO read used words width  
+      g_H2F_S0_1_RWIDTH          : integer := 32;  --! Stream 0_1 FIFO read data with
       -- Stream (FPGA->Host)
-      g_F2H_S0_WRUSEDW_WIDTH     : integer := 10;
-      g_F2H_S0_WWIDTH            : integer := 64;
+      g_F2H_S0_WRUSEDW_WIDTH     : integer := 10;  --! Stream 0 FIFO write used words width
+      g_F2H_S0_WWIDTH            : integer := 64;  --! Stream 0 FIFO write width
       -- Control (Host->FPGA)
-      g_H2F_C0_RDUSEDW_WIDTH     : integer := 11;
-      g_H2F_C0_RWIDTH            : integer := 8;
+      g_H2F_C0_RDUSEDW_WIDTH     : integer := 11;  --! Control 0 FIFO read used words wdth
+      g_H2F_C0_RWIDTH            : integer := 8;   --! Control 0 FIFO read width
       -- Control (FPGA->Host)
-      g_F2H_C0_WRUSEDW_WIDTH     : integer := 11;
-      g_F2H_C0_WWIDTH            : integer := 8
+      g_F2H_C0_WRUSEDW_WIDTH     : integer := 11;  --! Control 0 FIFO write used words width
+      g_F2H_C0_WWIDTH            : integer := 8    --! Control 0 FIFO write width
       
    );
    port (
-      clk                  : out  std_logic;   -- Internal logic clock (125Mhz)
-      reset_n              : in  std_logic;
+      clk                  : out  std_logic;    --! Internal logic clock (125Mhz)
+      reset_n              : in  std_logic;     --! Active low reset
       --PCIE external pins
-      pcie_perstn          : in  std_logic;
-      pcie_refclk_p        : in  std_logic;
-      pcie_refclk_n        : in  std_logic;
-      pcie_rx_p            : in  std_logic_vector(1 downto 0);
-      pcie_rx_n            : in  std_logic_vector(1 downto 0);
-      pcie_tx_p            : out std_logic_vector(1 downto 0);
-      pcie_tx_n            : out std_logic_vector(1 downto 0);
+      pcie_perstn          : in  std_logic;     --! PCIe fundamental reset
+      pcie_refclk_p        : in  std_logic;     --! PCIe reference clock 
+      pcie_refclk_n        : in  std_logic;     --! PCIe reference clock  
+      pcie_rx_p            : in  std_logic_vector(1 downto 0); --! PCIe receiver 
+      pcie_rx_n            : in  std_logic_vector(1 downto 0); --! PCIe receiver
+      pcie_tx_p            : out std_logic_vector(1 downto 0); --! PCIe transmitter
+      pcie_tx_n            : out std_logic_vector(1 downto 0); --! PCIe transmitter
       -- FIFO buffers
-      H2F_S0_sel           : in std_logic;   -- 0 - S0_0, 1 - S0_1
-      --Stream 0 endpoint FIFO 0 (Host->FPGA) 
-      H2F_S0_dma_en        : out std_logic;
+      H2F_S0_sel           : in std_logic;   --! Stream select: 0 - S0_0, 1 - S0_1 
+      H2F_S0_dma_en        : out std_logic;  --! Host->FPGA stream ready
+      --! @virtualbus H2F_S0_0 @dir in Stream 0 endpoint FIFO 0 (Host->FPGA)
+      --! Read clock
       H2F_S0_0_rdclk       : in std_logic;
-      H2F_S0_0_aclrn       : in std_logic;
-      H2F_S0_0_rd          : in std_logic;
-      H2F_S0_0_rdata       : out std_logic_vector(g_H2F_S0_0_RWIDTH-1 downto 0);
-      H2F_S0_0_rempty      : out std_logic;
-      H2F_S0_0_rdusedw     : out std_logic_vector(g_H2F_S0_0_RDUSEDW_WIDTH-1 downto 0);
-      --Stream 0 endpoint FIFO 1 (Host->FPGA) 
-      H2F_S0_1_rdclk       : in std_logic;
-      H2F_S0_1_aclrn       : in std_logic;
-      H2F_S0_1_rd          : in std_logic;
-      H2F_S0_1_rdata       : out std_logic_vector(g_H2F_S0_1_RWIDTH-1 downto 0);
-      H2F_S0_1_rempty      : out std_logic;
-      H2F_S0_1_rdusedw     : out std_logic_vector(g_H2F_S0_1_RDUSEDW_WIDTH-1 downto 0);
-      --Stream 0 endpoint FIFO (FPGA->Host)
-      F2H_S0_wclk          : in std_logic;
-      F2H_S0_aclrn         : in std_logic;
-      F2H_S0_wr            : in std_logic;
-      F2H_S0_wdata         : in std_logic_vector(g_F2H_S0_WWIDTH-1 downto 0);
-      F2H_S0_wfull         : out std_logic;
-      F2H_S0_wrusedw       : out std_logic_vector(g_F2H_S0_WRUSEDW_WIDTH-1 downto 0);
-      --Control endpoint FIFO (Host->FPGA)
+      H2F_S0_0_aclrn       : in std_logic;   --! Asynchronous clear
+      H2F_S0_0_rd          : in std_logic;   --! Read enable
+      H2F_S0_0_rdata       : out std_logic_vector(g_H2F_S0_0_RWIDTH-1 downto 0);          --! Read data
+      H2F_S0_0_rempty      : out std_logic;  --! Read empty
+      H2F_S0_0_rdusedw     : out std_logic_vector(g_H2F_S0_0_RDUSEDW_WIDTH-1 downto 0);   --! Read used words @end
+      --! @virtualbus H2F_S0_1 @dir in Stream 0 endpoint FIFO 1 (Host->FPGA)
+      H2F_S0_1_rdclk       : in std_logic;   --! Read clock 
+      H2F_S0_1_aclrn       : in std_logic;   --! Asynchronous clear
+      H2F_S0_1_rd          : in std_logic;   --! Read enable
+      H2F_S0_1_rdata       : out std_logic_vector(g_H2F_S0_1_RWIDTH-1 downto 0);          --! Read data
+      H2F_S0_1_rempty      : out std_logic;  --! Read empty
+      H2F_S0_1_rdusedw     : out std_logic_vector(g_H2F_S0_1_RDUSEDW_WIDTH-1 downto 0);   --! Read used words @end
+      --! @virtualbus F2H_S0 @dir out Stream 0 endpoint FIFO (FPGA->Host)
+      --! Write clock
+      F2H_S0_wclk          : in std_logic;   
+      F2H_S0_aclrn         : in std_logic;   --! Asynchronous clear
+      F2H_S0_wr            : in std_logic;   --! Write enable
+      F2H_S0_wdata         : in std_logic_vector(g_F2H_S0_WWIDTH-1 downto 0);             --! Write data
+      F2H_S0_wfull         : out std_logic;  --! Write full
+      F2H_S0_wrusedw       : out std_logic_vector(g_F2H_S0_WRUSEDW_WIDTH-1 downto 0);     --! Write used words @end
+      --! @virtualbus H2F_C0 Control endpoint FIFO (Host->FPGA)
+      --! Read clock
       H2F_C0_rdclk         : in std_logic;
-      H2F_C0_aclrn         : in std_logic;
-      H2F_C0_rd            : in std_logic;
-      H2F_C0_rdata         : out std_logic_vector(g_H2F_C0_RWIDTH-1 downto 0);
-      H2F_C0_rempty        : out std_logic;
-      --Control endpoint FIFO (FPGA->Host)
+      H2F_C0_aclrn         : in std_logic;   --! Asynchronous clear
+      H2F_C0_rd            : in std_logic;   --! Read enable
+      H2F_C0_rdata         : out std_logic_vector(g_H2F_C0_RWIDTH-1 downto 0);            --! Read data
+      H2F_C0_rempty        : out std_logic;  --! Read empty @end
+      --! @virtualbus F2H_C0 @dir out Control endpoint FIFO (FPGA->Host)
+      --! Write clock   
       F2H_C0_wclk          : in std_logic;
-      F2H_C0_aclrn         : in std_logic;
-      F2H_C0_wr            : in std_logic;
-      F2H_C0_wdata         : in std_logic_vector(g_F2H_C0_WWIDTH-1 downto 0);
-      F2H_C0_wfull         : out std_logic;
-      
-      S0_rx_en             : in std_logic;
-      F2H_S0_open          : out std_logic
+      F2H_C0_aclrn         : in std_logic;   --! Asynchronous clear
+      F2H_C0_wr            : in std_logic;   --! Write enable
+      F2H_C0_wdata         : in std_logic_vector(g_F2H_C0_WWIDTH-1 downto 0);             --! Write data
+      F2H_C0_wfull         : out std_logic;  --! Write full @end
+     
+      S0_rx_en             : in std_logic;   --! Stream 0 enable
+      F2H_S0_open          : out std_logic   --! FPGA->Host stream 0 ready 
       
    );
 end pcie_top;

@@ -424,13 +424,7 @@ begin
       LMS1_TXPLL_DRCT_C1_NDLY => 2,
       -- RX pll parameters
       LMS1_RXPLL_DRCT_C0_NDLY => 1,
-      LMS1_RXPLL_DRCT_C1_NDLY => 2,
-      -- TX pll parameters
-      LMS2_TXPLL_DRCT_C0_NDLY => 1,
-      LMS2_TXPLL_DRCT_C1_NDLY => 2,
-      -- RX pll parameters
-      LMS2_RXPLL_DRCT_C0_NDLY => 1,
-      LMS2_RXPLL_DRCT_C1_NDLY => 2
+      LMS1_RXPLL_DRCT_C1_NDLY => 2
    )
    port map(
       -- LMS#1 TX PLL 0 ports

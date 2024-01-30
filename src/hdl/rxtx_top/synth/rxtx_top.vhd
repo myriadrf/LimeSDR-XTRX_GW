@@ -21,69 +21,73 @@ use work.memcfg_pkg.all;
 -- ----------------------------------------------------------------------------
 entity rxtx_top is
    generic(  
-      index                        : integer := 1;
-      DEV_FAMILY                   : string := "Cyclone IV E"; 
-      TX_EN                        : boolean := true;
-      RX_EN                        : boolean := true;
+      index                        : integer := 1;             --! Module index, if more than one module exists in design
+      DEV_FAMILY                   : string := "Cyclone IV E"; --! Device family
+      TX_EN                        : boolean := true;          --! TX path enable
+      RX_EN                        : boolean := true;          --! RX path enable
       -- TX parameters
-      TX_IQ_WIDTH                  : integer := 12;
-      TX_N_BUFF                    : integer := 4; -- 2,4 valid values
-      TX_IN_PCT_SIZE               : integer := 4096; -- TX packet size in bytes
-      TX_IN_PCT_HDR_SIZE           : integer := 16;
-      TX_IN_PCT_DATA_W             : integer := 128;
-      TX_IN_PCT_RDUSEDW_W          : integer := 11;
-      TX_OUT_PCT_DATA_W            : integer := 64;
-      TX_SMPL_FIFO_WRUSEDW_W       : integer := 9;
-      TX_HIGHSPEED_BUS             : boolean := false;
+      TX_IQ_WIDTH                  : integer := 12;      --! TX DIQ sample width
+      TX_N_BUFF                    : integer := 4;       --! 2,4 valid values
+      TX_IN_PCT_SIZE               : integer := 4096;    --! TX packet size in bytes
+      TX_IN_PCT_HDR_SIZE           : integer := 16;      --! TX packet header size
+      TX_IN_PCT_DATA_W             : integer := 128;     --! TX packet data width
+      TX_IN_PCT_RDUSEDW_W          : integer := 11;      --! TX in packet read used word width
+      TX_OUT_PCT_DATA_W            : integer := 64;      --! TX out packet data width
+      TX_SMPL_FIFO_WRUSEDW_W       : integer := 9;       --! TX sample FIFO write used word size
+      TX_HIGHSPEED_BUS             : boolean := false;   --! Double TX sample FIFO size to
       
       -- RX parameters
-      RX_DATABUS_WIDTH             : integer := 64;
-      RX_IQ_WIDTH                  : integer := 12;
-      RX_INVERT_INPUT_CLOCKS       : string := "OFF";
-      RX_SMPL_BUFF_RDUSEDW_W       : integer := 11; --bus width in bits 
-      RX_PCT_BUFF_WRUSEDW_W        : integer := 12;  --bus width in bits 
-      RX_DISABLE_14B_SAMPLEPACKING : boolean := false
+      RX_DATABUS_WIDTH             : integer := 64;      --! RX data width
+      RX_IQ_WIDTH                  : integer := 12;      --! RX IQ sample width
+      RX_INVERT_INPUT_CLOCKS       : string := "OFF";    --! RX input clock inversion
+      RX_SMPL_BUFF_RDUSEDW_W       : integer := 11;      --! RX sample bus read used words width in bits 
+      RX_PCT_BUFF_WRUSEDW_W        : integer := 12;      --! RX packet buffer write used words width in bits 
+      RX_DISABLE_14B_SAMPLEPACKING : boolean := false    --! Disable RX sample packing in 14b words
       
    );
    port (
-      sys_clk                 : in     std_logic;
+      sys_clk                 : in     std_logic;        --! System clock, freerunning
       -- Configuration memory ports     
-      from_fpgacfg            : in     t_FROM_FPGACFG;
-      to_fpgacfg              : out    t_TO_FPGACFG;
+      from_fpgacfg            : in     t_FROM_FPGACFG;   --! Signals from FPGACFG registers
+      to_fpgacfg              : out    t_TO_FPGACFG;     --! Signals to FPGACFG register
       -- TX path
-      tx_clk                  : in     std_logic;
-      tx_clk_reset_n          : in     std_logic;    
-      tx_pct_loss_flg         : out    std_logic;
+      tx_clk                  : in     std_logic;        --! TX path clock
+      tx_clk_reset_n          : in     std_logic;        --! TX path active low reset
+      tx_pct_loss_flg         : out    std_logic;        --! TX packet loss indication flag
          -- Tx interface data
-      tx_smpl_fifo_wrreq      : out    std_logic;    
-      tx_smpl_fifo_wrfull     : in     std_logic;
-      tx_smpl_fifo_wrusedw    : in     std_logic_vector(TX_SMPL_FIFO_WRUSEDW_W-1 downto 0);
-      tx_smpl_fifo_data       : out    std_logic_vector(127 downto 0);   
+      --! @virtualbus tx_smpl_fifo @dir out
+      tx_smpl_fifo_wrreq      : out    std_logic;        --! Write request (data valid)
+      tx_smpl_fifo_wrfull     : in     std_logic;        --! Write full
+      tx_smpl_fifo_wrusedw    : in     std_logic_vector(TX_SMPL_FIFO_WRUSEDW_W-1 downto 0); --! Write used words
+      tx_smpl_fifo_data       : out    std_logic_vector(127 downto 0);   --! Write data @end
          -- TX FIFO read ports
-      tx_in_pct_reset_n_req   : out    std_logic;
-      tx_in_pct_rdreq         : out    std_logic;
-      tx_in_pct_data          : in     std_logic_vector(TX_IN_PCT_DATA_W-1 downto 0);
-      tx_in_pct_rdempty       : in     std_logic;
-      tx_in_pct_rdusedw       : in     std_logic_vector(TX_IN_PCT_RDUSEDW_W-1 downto 0);
+      --! @virtualbus tx_in_pct @dir in 
+      tx_in_pct_reset_n_req   : out    std_logic;        --! Reset request
+      tx_in_pct_rdreq         : out    std_logic;        --! Read request
+      tx_in_pct_data          : in     std_logic_vector(TX_IN_PCT_DATA_W-1 downto 0); --! Packet data
+      tx_in_pct_rdempty       : in     std_logic;        --! Read empty
+      tx_in_pct_rdusedw       : in     std_logic_vector(TX_IN_PCT_RDUSEDW_W-1 downto 0); --! Read used words @end 
       -- RX path
-      rx_clk                  : in     std_logic;
-      rx_clk_reset_n          : in     std_logic;
+      rx_clk                  : in     std_logic;        --! RX path clock
+      rx_clk_reset_n          : in     std_logic;        --! RX path active low reset
          --RX Sample FIFO ports
-      rx_smpl_fifo_wrreq      : in     std_logic;
-      rx_smpl_fifo_data       : in     std_logic_vector(RX_IQ_WIDTH*4-1 downto 0);
-      rx_smpl_fifo_wrfull     : out    std_logic;   
+      --! @virtualbus rx_smpl_fifo @dir in 
+      rx_smpl_fifo_wrreq      : in     std_logic;        --! Write request 
+      rx_smpl_fifo_data       : in     std_logic_vector(RX_IQ_WIDTH*4-1 downto 0); --! Data
+      rx_smpl_fifo_wrfull     : out    std_logic;        --! Write full @end 
          --RX Packet FIFO ports
-      rx_pct_fifo_aclrn_req   : out    std_logic;
-      rx_pct_fifo_wusedw      : in     std_logic_vector(RX_PCT_BUFF_WRUSEDW_W-1 downto 0);
-      rx_pct_fifo_wrreq       : out    std_logic;
-      rx_pct_fifo_wdata       : out    std_logic_vector(RX_DATABUS_WIDTH-1 downto 0);
+      --! @virtualbus rx_pct_fifo @dir out
+      rx_pct_fifo_aclrn_req   : out    std_logic;        --! Asynchronous clear request
+      rx_pct_fifo_wusedw      : in     std_logic_vector(RX_PCT_BUFF_WRUSEDW_W-1 downto 0);   --! Write used words
+      rx_pct_fifo_wrreq       : out    std_logic;        --! Write request (data valid)
+      rx_pct_fifo_wdata       : out    std_logic_vector(RX_DATABUS_WIDTH-1 downto 0); --! Data @end 
          -- RX sample nr count enable
-      rx_smpl_nr_cnt_en       : in     std_logic;
-      to_memcfg            : out     t_TO_MEMCFG;
-      from_memcfg          : in    t_FROM_MEMCFG;
+      rx_smpl_nr_cnt_en       : in     std_logic;        --! RX path sample number count enable
+      to_memcfg               : out    t_TO_MEMCFG;      --! Signals to MEMCFG registers 
+      from_memcfg             : in     t_FROM_MEMCFG;    --! Signals from MEMCFG registers
 
-      ext_rx_en: in std_logic;  -- B.J.;
-      tx_dma_en: in std_logic
+      ext_rx_en               : in     std_logic;        --! External RX path enable
+      tx_dma_en               : in     std_logic         --! TX DMA enble flag
       );
 end rxtx_top;
 

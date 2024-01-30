@@ -21,55 +21,49 @@ use work.axi_pkg.all;
 -- ----------------------------------------------------------------------------
 entity pll_top is
    generic(
-      INTENDED_DEVICE_FAMILY     : STRING    := "Cyclone V GX";
-      N_PLL                      : integer   := 2;
+      INTENDED_DEVICE_FAMILY     : STRING    := "Cyclone V GX";   --! Device family
+      N_PLL                      : integer   := 2;                --! Number of PLLs
       -- TX pll parameters
-      LMS1_TXPLL_DRCT_C0_NDLY    : integer   := 1;
-      LMS1_TXPLL_DRCT_C1_NDLY    : integer   := 2;
+      LMS1_TXPLL_DRCT_C0_NDLY    : integer   := 1; --! Direct TX clock delay (Obsolete)
+      LMS1_TXPLL_DRCT_C1_NDLY    : integer   := 2; --! Direct TX clock delay (Obsolete)
       -- RX pll parameters
-      LMS1_RXPLL_DRCT_C0_NDLY    : integer   := 1;
-      LMS1_RXPLL_DRCT_C1_NDLY    : integer   := 2;
-      -- TX pll parameters
-      LMS2_TXPLL_DRCT_C0_NDLY    : integer   := 1;
-      LMS2_TXPLL_DRCT_C1_NDLY    : integer   := 2;
-      -- RX pll parameters
-      LMS2_RXPLL_DRCT_C0_NDLY    : integer   := 1;
-      LMS2_RXPLL_DRCT_C1_NDLY    : integer   := 2
+      LMS1_RXPLL_DRCT_C0_NDLY    : integer   := 1; --! Direct RX clock delay (Obsolete)
+      LMS1_RXPLL_DRCT_C1_NDLY    : integer   := 2  --! Direct RX clock delay (Obsolete)
 
    );
    port (
-      -- LMS#1 TX PLL ports
-      lms1_txpll_inclk              : in  std_logic;
-      lms1_txpll_reconfig_clk       : in  std_logic;
-      lms1_txpll_logic_reset_n      : in  std_logic;
-      lms1_txpll_clk_ena            : in  std_logic_vector(1 downto 0);
-      lms1_txpll_drct_clk_en        : in  std_logic_vector(1 downto 0);
-      lms1_txpll_c0                 : out std_logic;
-      lms1_txpll_c1                 : out std_logic;
-      lms1_txpll_locked             : out std_logic;
-      -- LMS#1 RX PLL ports
-      lms1_rxpll_inclk              : in  std_logic;
-      lms1_rxpll_reconfig_clk       : in  std_logic;
-      lms1_rxpll_logic_reset_n      : in  std_logic;
-      lms1_rxpll_clk_ena            : in  std_logic_vector(1 downto 0);
-      lms1_rxpll_drct_clk_en        : in  std_logic_vector(1 downto 0); 
-      lms1_rxpll_c0                 : out std_logic;
-      lms1_rxpll_c1                 : out std_logic;
-      lms1_rxpll_locked             : out std_logic;
+      --! @virtualbus lms1_txpll LMS#1 TX PLL ports
+      lms1_txpll_inclk              : in  std_logic;  --! TXPLL input clock
+      lms1_txpll_reconfig_clk       : in  std_logic;  --! TXPLL reconfiguration clock
+      lms1_txpll_logic_reset_n      : in  std_logic;  --! TXPLL logic active low reset
+      lms1_txpll_clk_ena            : in  std_logic_vector(1 downto 0); --! TXPLL clock enable 
+      lms1_txpll_drct_clk_en        : in  std_logic_vector(1 downto 0); --! TXPLL direct clock enable (Obsolete)
+      lms1_txpll_c0                 : out std_logic;  --! TXPLL clock output c0
+      lms1_txpll_c1                 : out std_logic;  --! TXPLL clock output c1
+      lms1_txpll_locked             : out std_logic;  --! TXPLL locked output @end
+      --! @virtualbus lms1_rxpll LMS#1 RX PLL ports
+      lms1_rxpll_inclk              : in  std_logic;  --! RXPLL input clock
+      lms1_rxpll_reconfig_clk       : in  std_logic;  --! RXPLL reconfiguration clock
+      lms1_rxpll_logic_reset_n      : in  std_logic;  --! RXPLL logic active low reset
+      lms1_rxpll_clk_ena            : in  std_logic_vector(1 downto 0); --! RXPLL clock enable 
+      lms1_rxpll_drct_clk_en        : in  std_logic_vector(1 downto 0); --! RXPLL direct clock enable (Obsolete)
+      lms1_rxpll_c0                 : out std_logic;  --! RXPLL clock output c0
+      lms1_rxpll_c1                 : out std_logic;  --! RXPLL clock output c1
+      lms1_rxpll_locked             : out std_logic;  --! RXPLL locked output @end
       -- Sample comparing ports from LMS#1 RX interface
-      lms1_smpl_cmp_en              : out std_logic;
-      lms1_smpl_cmp_done            : in  std_logic;
-      lms1_smpl_cmp_error           : in  std_logic;
-      lms1_smpl_cmp_cnt             : out std_logic_vector(15 downto 0);
+      lms1_smpl_cmp_en              : out std_logic;  --! Sample compare enable
+      lms1_smpl_cmp_done            : in  std_logic;  --! Sample compare done
+      lms1_smpl_cmp_error           : in  std_logic;  --! Sample compare error
+      lms1_smpl_cmp_cnt             : out std_logic_vector(15 downto 0); --! Number of samples to compare
       -- Reconfiguration AXI ports 
-      rcnfg_axi_clk                 : in  std_logic;
-      rcnfg_axi_reset_n             : in  std_logic;
-      rcnfg_from_axim               : in  t_FROM_AXIM_32x32;
-      rcnfg_to_axim                 : out t_TO_AXIM_32x32;
-      rcnfg_sel                     : in  std_logic_vector(3 downto 0);
+      rcnfg_axi_clk                 : in  std_logic;  --! AXI bus reconfiguration clock
+      rcnfg_axi_reset_n             : in  std_logic;  --! AXI bus active low reset 
+      rcnfg_from_axim               : in  t_FROM_AXIM_32x32; --! AXI bus inputs
+      rcnfg_to_axim                 : out t_TO_AXIM_32x32;   --! AXI bus outputs
+      rcnfg_sel                     : in  std_logic_vector(3 downto 0); --! Reconfiguration select
       -- pllcfg ports
-      to_pllcfg                     : out t_TO_PLLCFG;
-      from_pllcfg                   : in  t_FROM_PLLCFG
+      to_pllcfg                     : out t_TO_PLLCFG;   --! Output signals PLLCFG registers
+      from_pllcfg                   : in  t_FROM_PLLCFG  --! Input signals from PLLCFG registers
       );
 end pll_top;
 

@@ -22,66 +22,67 @@ use work.memcfg_pkg.all;
 -- ----------------------------------------------------------------------------
 entity lms7002_top is
    generic(
-      g_DEV_FAMILY               : string := "Cyclone IV E";
-      g_IQ_WIDTH                 : integer := 12;
-      g_INV_INPUT_CLK            : string := "ON";
-      g_TX_SMPL_FIFO_0_WRUSEDW   : integer := 9;
-      g_TX_SMPL_FIFO_0_DATAW     : integer := 128;
-      g_TX_SMPL_FIFO_1_WRUSEDW   : integer := 9;
-      g_TX_SMPL_FIFO_1_DATAW     : integer := 128
+      g_DEV_FAMILY               : string := "Cyclone IV E";   --! Device family
+      g_IQ_WIDTH                 : integer := 12;              --! IQ bus width
+      g_INV_INPUT_CLK            : string := "ON";             --! Input clock inversion
+      g_TX_SMPL_FIFO_0_WRUSEDW   : integer := 9;               --! TX sample FIFO 0 write used words width
+      g_TX_SMPL_FIFO_0_DATAW     : integer := 128;             --! TX sample FIFO 0 data width
+      g_TX_SMPL_FIFO_1_WRUSEDW   : integer := 9;               --! TX sample FIFO 1 write used words width (Not in use)
+      g_TX_SMPL_FIFO_1_DATAW     : integer := 128              --! TX sample FIFO 1 write used words width (Not in use)
    );
    port (  
-      from_fpgacfg      : in  t_FROM_FPGACFG;
-      from_tstcfg       : in  t_FROM_TSTCFG;
-      from_memcfg       : in  t_FROM_MEMCFG;
-      -- Momory module reset
+      from_fpgacfg      : in  t_FROM_FPGACFG;   --! Signals from FPGACFG registers
+      from_tstcfg       : in  t_FROM_TSTCFG;    --! Signals from TSTCFG registers
+      from_memcfg       : in  t_FROM_MEMCFG;    --! Signals from MEMCFG registers
+      --! Memory module reset
       mem_reset_n       : in  std_logic;
-      -- PORT1 interface
-      MCLK1             : in  std_logic;  -- TX interface clock
-      MCLK1_2x          : in  std_logic;
-      FCLK1             : out std_logic;  -- TX interface feedback clock
-      DIQ1              : out std_logic_vector(g_IQ_WIDTH-1 downto 0);
-      ENABLE_IQSEL1     : out std_logic;
-      TXNRX1            : out std_logic;
-      -- PORT2 interface
-      MCLK2             : in  std_logic;  -- RX interface clock
-      FCLK2             : out std_logic;  -- RX interface feedback clock
-      DIQ2              : in  std_logic_vector(g_IQ_WIDTH-1 downto 0);
-      ENABLE_IQSEL2     : in  std_logic;
-      TXNRX2            : out std_logic;
-      -- MISC
-      RESET             : out std_logic; 
-      TXEN              : out std_logic;
-      RXEN              : out std_logic;
-      CORE_LDO_EN       : out std_logic;
-      -- Internal TX ports
-      tx_reset_n        : in  std_logic;
-      tx_fifo_0_wrclk   : in  std_logic;
-      tx_fifo_0_reset_n : in  std_logic;
-      tx_fifo_0_wrreq   : in  std_logic;
-      tx_fifo_0_data    : in  std_logic_vector(g_TX_SMPL_FIFO_0_DATAW-1 downto 0);
-      tx_fifo_0_wrfull  : out std_logic;
-      tx_fifo_0_wrusedw : out std_logic_vector(g_TX_SMPL_FIFO_0_WRUSEDW-1 downto 0);
-      tx_fifo_1_wrclk   : in  std_logic;
-      tx_fifo_1_reset_n : in  std_logic;
-      tx_fifo_1_wrreq   : in  std_logic;
-      tx_fifo_1_data    : in  std_logic_vector(g_TX_SMPL_FIFO_1_DATAW-1 downto 0);
-      tx_fifo_1_wrfull  : out std_logic;
-      tx_fifo_1_wrusedw : out std_logic_vector(g_TX_SMPL_FIFO_1_WRUSEDW-1 downto 0);
-      tx_ant_en         : out std_logic;
+      --! @virtualbus LMS_PORT1 @dir out interface
+      MCLK1             : in  std_logic;  --! TX interface clock
+      MCLK1_2x          : in  std_logic;  --! TX doubled interface clock (Not in use)
+      FCLK1             : out std_logic;  --! TX interface feedback clock
+      DIQ1              : out std_logic_vector(g_IQ_WIDTH-1 downto 0); --! DIQ1 data bus
+      ENABLE_IQSEL1     : out std_logic;  --! IQ select flag for DIQ1 data
+      TXNRX1            : out std_logic;  --! LMS_PORT1 direction select @end
+      --! @virtualbus LMS_PORT2 @dir in interface
+      MCLK2             : in  std_logic;  --! RX interface clock
+      FCLK2             : out std_logic;  --! RX interface feedback clock
+      DIQ2              : in  std_logic_vector(g_IQ_WIDTH-1 downto 0); --! DIQ2 data bus
+      ENABLE_IQSEL2     : in  std_logic;  --! IQ select flag for DIQ2 data
+      TXNRX2            : out std_logic;  --! LMS_PORT2 direction select @end
+      --! @virtualbus LMS_MISC @dir out LMS miscellaneous control ports
+      RESET             : out std_logic;  --! LMS hardware reset, active low
+      TXEN              : out std_logic;  --! TX hard power off
+      RXEN              : out std_logic;  --! RX hard power off
+      CORE_LDO_EN       : out std_logic;  --! LMS internal LDO enable control @end
+      --! @virtualbus tx_fifo0 @dir in Internal TX ports
+      tx_reset_n        : in  std_logic;  --! TX interface active low reset
+      tx_fifo_0_wrclk   : in  std_logic;  --! TX FIFO write clock
+      tx_fifo_0_reset_n : in  std_logic;  --! TX FIFO Reset
+      tx_fifo_0_wrreq   : in  std_logic;  --! TX FIFO write request
+      tx_fifo_0_data    : in  std_logic_vector(g_TX_SMPL_FIFO_0_DATAW-1 downto 0); --! TX FIFO data
+      tx_fifo_0_wrfull  : out std_logic;  --! TX FIFO write full
+      tx_fifo_0_wrusedw : out std_logic_vector(g_TX_SMPL_FIFO_0_WRUSEDW-1 downto 0);   --! TX FIFO write used words @end
+      --! @virtualbus tx_fifo1 @dir in (not in use)
+      tx_fifo_1_wrclk   : in  std_logic;  --! TX FIFO write clock
+      tx_fifo_1_reset_n : in  std_logic;  --! TX FIFO Reset
+      tx_fifo_1_wrreq   : in  std_logic;  --! TX FIFO write request
+      tx_fifo_1_data    : in  std_logic_vector(g_TX_SMPL_FIFO_1_DATAW-1 downto 0);  --! TX FIFO data
+      tx_fifo_1_wrfull  : out std_logic;  --! TX FIFO write full
+      tx_fifo_1_wrusedw : out std_logic_vector(g_TX_SMPL_FIFO_1_WRUSEDW-1 downto 0); --! TX FIFO write used words @end 
+      tx_ant_en         : out std_logic;  --! TX antenna enable flag
       -- Internal RX ports
-      rx_reset_n        : in  std_logic;
-      rx_diq_h          : out std_logic_vector(g_IQ_WIDTH downto 0);
-      rx_diq_l          : out std_logic_vector(g_IQ_WIDTH downto 0);
-      rx_data_valid     : out std_logic;
-      rx_data           : out std_logic_vector(g_IQ_WIDTH*4-1 downto 0);
+      rx_reset_n        : in  std_logic;  --! RX interface active low reset
+      rx_diq_h          : out std_logic_vector(g_IQ_WIDTH downto 0); --! Output of Direct capture on rising edge of DIQ2 port 
+      rx_diq_l          : out std_logic_vector(g_IQ_WIDTH downto 0); --! Output of Direct capture on falling edge of DIQ2 port
+      rx_data_valid     : out std_logic;  --! Received data from DIQ2 port valid signal
+      rx_data           : out std_logic_vector(g_IQ_WIDTH*4-1 downto 0);   --! Received data from DIQ2 port
       --sample compare
-      rx_smpl_cmp_start : in std_logic;
-      rx_smpl_cmp_length: in std_logic_vector(15 downto 0);
-      rx_smpl_cmp_done  : out std_logic;
-      rx_smpl_cmp_err   : out std_logic;
+      rx_smpl_cmp_start : in  std_logic;  --! RX sample compare start 
+      rx_smpl_cmp_length: in  std_logic_vector(15 downto 0);   --! RX sample compare length
+      rx_smpl_cmp_done  : out std_logic;  --! RX sample compare done flag 
+      rx_smpl_cmp_err   : out std_logic;  --! RX sample compare error flag
       -- RX sample counter enable
-      rx_smpl_cnt_en    : out std_logic
+      rx_smpl_cnt_en    : out std_logic   --! RX sample counter enable
    );
 end lms7002_top;
 
