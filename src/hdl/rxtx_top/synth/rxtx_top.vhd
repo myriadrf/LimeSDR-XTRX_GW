@@ -278,7 +278,7 @@ TX_gen0 : if TX_EN = true generate
       pct_sync_mode        => from_fpgacfg.synch_mode,
       pct_sync_dis         => from_fpgacfg.synch_dis,
       pct_sync_pulse       => inst6_pulse,
-      pct_sync_size        => from_fpgacfg.sync_size,
+      pct_sync_size        => (others => '0'),--from_fpgacfg.sync_size,
             
       pct_loss_flg         => inst1_pct_loss_flg,
       pct_loss_flg_clr     => inst5_pct_hdr_cap, --from_fpgacfg.txpct_loss_clr

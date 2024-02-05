@@ -14,23 +14,23 @@ use ieee.numeric_std.all;
 -- ----------------------------------------------------------------------------
 entity gnss_data_gen is
   generic (
-        G_CLK_FREQUENCY : integer := 125000000;
-        G_BAUD_RATE     : integer := 9600
+        G_CLK_FREQUENCY : integer := 125000000; --! CLK clock frequency, in Hz
+        G_BAUD_RATE     : integer := 9600 --! Baud rate of GNSS UART
   );
   port (
         --input ports 
-        CLK           	    : in std_logic;
-        RESET_N			    : in std_logic;
+        CLK           	    : in std_logic; --! Clock signal
+        RESET_N			    : in std_logic; --! Reset, active low
 		  
-		  TEST_COMPLETE	    : out std_logic;
-		  TEST_PASS_FAIL	    : out std_logic;
+		  TEST_COMPLETE	    : out std_logic; --! Test complete
+		  TEST_PASS_FAIL	    : out std_logic; --! Test pass, active high, equal to TEST_COMPLETE
 		  
-		  DATA_STREAM_IN      : out std_logic_vector(7 downto 0);
-		  DATA_STREAM_IN_STB  : out std_logic;
-        DATA_STREAM_IN_ACK  : in  std_logic;
-        DATA_STREAM_OUT     : in  std_logic_vector(7 downto 0);
-        DATA_STREAM_OUT_STB : in  std_logic;
-        DATA_STREAM_OUT_ACK : out std_logic
+		  DATA_STREAM_IN      : out std_logic_vector(7 downto 0); --! Outgoing data to UART module
+		  DATA_STREAM_IN_STB  : out std_logic; --! Outgoing data strobe signal
+        DATA_STREAM_IN_ACK  : in  std_logic; --! Outgoing data acknowledge signal
+        DATA_STREAM_OUT     : in  std_logic_vector(7 downto 0); --! Incoming data from UART module
+        DATA_STREAM_OUT_STB : in  std_logic; --! Incoming data strobe signal
+        DATA_STREAM_OUT_ACK : out std_logic --! Incoming data acknowledge signal
      
         );
 end gnss_data_gen;

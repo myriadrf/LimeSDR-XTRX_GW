@@ -19,18 +19,18 @@ library work;
 --! Entity/Package Description
 entity tdd_control is
    port (
-        MANUAL_VALUE        : in std_logic; -- Value to be used in manual mode
-        AUTO_ENABLE         : in std_logic; -- 0: manual mode 1: auto mode
-        AUTO_IN             : in std_logic; -- Signal to be used for manual control
-        AUTO_INVERT         : in std_logic; -- 0: don't invert auto input 1: invert auto input
+        MANUAL_VALUE        : in std_logic; --! Value to be used for TDD_OUT if AUTO_ENABLE = '0'
+        AUTO_ENABLE         : in std_logic; --! Enable automatic TDD_OUT control
+        AUTO_IN             : in std_logic; --! RF status. '1': transmitting, '0': not transmitting
+        AUTO_INVERT         : in std_logic; --! Invert TDD_OUT signal
         --
-        RX_RF_SW_IN         : in std_logic_vector(1 downto 0);
-        TX_RF_SW_IN         : in std_logic;
-        RF_SW_AUTO_ENANBLE  : in std_logic;
+        RX_RF_SW_IN         : in std_logic_vector(1 downto 0); --! RF RX switch configuration to be used when receiving
+        TX_RF_SW_IN         : in std_logic; --! RF TX switch configuration to be used when transmitting
+        RF_SW_AUTO_ENANBLE  : in std_logic; --! Enable automatic TDD RF RX/TX switch control
         --
-        TDD_OUT             : out std_logic; -- Output
-        RX_RF_SW_OUT        : out std_logic_vector(1 downto 0);
-        TX_RF_SW_OUT        : out std_logic
+        TDD_OUT             : out std_logic; --! Output signal for external TDD modules
+        RX_RF_SW_OUT        : out std_logic_vector(1 downto 0); --! RF RX switch control output
+        TX_RF_SW_OUT        : out std_logic --! RF TX switch control output
    );
 end entity tdd_control;
 
