@@ -337,9 +337,7 @@ begin
    generic map (
       FPGACFG_START_ADDR   => g_FPGACFG_START_ADDR,
       PLLCFG_START_ADDR    => g_PLLCFG_START_ADDR,
-      TSTCFG_START_ADDR    => g_TSTCFG_START_ADDR,
-      TXTSPCFG_START_ADDR  => g_TXTSPCFG_START_ADDR,
-      RXTSPCFG_START_ADDR  => g_RXTSPCFG_START_ADDR
+      TSTCFG_START_ADDR    => g_TSTCFG_START_ADDR
    )
    port map(
       clk                        => sys_clk,
@@ -437,7 +435,7 @@ begin
       lms1_txpll_inclk           => LMS_MCLK1,
       lms1_txpll_reconfig_clk    => sys_clk,
       lms1_txpll_logic_reset_n   => not inst1_pll_rst(0),
-      lms1_txpll_clk_ena         => inst1_from_fpgacfg.CLK_ENA(1 downto 0),
+      lms1_txpll_clk_ena         => "00",-- UNUSED PORT inst1_from_fpgacfg.CLK_ENA(1 downto 0),
       lms1_txpll_drct_clk_en     => inst1_from_fpgacfg.drct_clk_en(0) & inst1_from_fpgacfg.drct_clk_en(0),
       lms1_txpll_c0              => LMS_FCLK1,
       lms1_txpll_c1              => inst1_lms1_txpll_c1,
@@ -446,7 +444,7 @@ begin
       lms1_rxpll_inclk           => LMS_MCLK2,
       lms1_rxpll_reconfig_clk    => sys_clk,
       lms1_rxpll_logic_reset_n   => not inst1_pll_rst(1),
-      lms1_rxpll_clk_ena         => inst1_from_fpgacfg.CLK_ENA(3 downto 2),
+      lms1_rxpll_clk_ena         => "00",-- UNUSED PORT inst1_from_fpgacfg.CLK_ENA(3 downto 2),
       lms1_rxpll_drct_clk_en     => inst1_from_fpgacfg.drct_clk_en(1) & inst1_from_fpgacfg.drct_clk_en(1),
       lms1_rxpll_c0              => LMS_FCLK2,
       lms1_rxpll_c1              => inst1_lms1_rxpll_c1,

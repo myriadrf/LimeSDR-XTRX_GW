@@ -84,8 +84,8 @@ entity rx_pll_top is
    smpl_cmp_done     : in std_logic;
    smpl_cmp_error    : in std_logic;
    --Overall configuration PLL status
-   busy              : out std_logic;
-   from_pllcfg       : in  t_FROM_PLLCFG
+   busy              : out std_logic
+--   from_pllcfg       : in  t_FROM_PLLCFG
    );
 end rx_pll_top;
 
@@ -171,54 +171,54 @@ pll_areset_n   <= not pll_areset;
 ----------------------------------------------------------------------------
 -- Synchronization registers
 ----------------------------------------------------------------------------  
- sync_reg0 : entity work.sync_reg 
- port map(rcnfg_clk, pll_logic_reset_n, rcnfig_en, rcnfig_en_sync); 
+-- sync_reg0 : entity work.sync_reg 
+-- port map(rcnfg_clk, pll_logic_reset_n, rcnfig_en, rcnfig_en_sync); 
  
- sync_reg1 : entity work.sync_reg 
- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_en, dynps_en_sync); 
+-- sync_reg1 : entity work.sync_reg 
+-- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_en, dynps_en_sync); 
  
- sync_reg2 : entity work.sync_reg 
- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_dir, dynps_dir_sync); 
+-- sync_reg2 : entity work.sync_reg 
+-- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_dir, dynps_dir_sync); 
  
- sync_reg3 : entity work.sync_reg 
- port map(inst1_pll_scanclk, pll_logic_reset_n, rcnfig_en, rcnfig_en_sync_scanclk);
+-- sync_reg3 : entity work.sync_reg 
+-- port map(inst1_pll_scanclk, pll_logic_reset_n, rcnfig_en, rcnfig_en_sync_scanclk);
  
- sync_reg4 : entity work.sync_reg 
- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_mode, dynps_mode_sync);
+-- sync_reg4 : entity work.sync_reg 
+-- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_mode, dynps_mode_sync);
  
- sync_reg5 : entity work.sync_reg 
- port map(inst1_pll_scanclk, pll_logic_reset_n, smpl_cmp_done, smpl_cmp_done_sync);
+-- sync_reg5 : entity work.sync_reg 
+-- port map(inst1_pll_scanclk, pll_logic_reset_n, smpl_cmp_done, smpl_cmp_done_sync);
 
- sync_reg6 : entity work.sync_reg 
- port map(inst1_pll_scanclk, pll_logic_reset_n, smpl_cmp_error, smpl_cmp_error_sync);
+-- sync_reg6 : entity work.sync_reg 
+-- port map(inst1_pll_scanclk, pll_logic_reset_n, smpl_cmp_error, smpl_cmp_error_sync);
  
- sync_reg7 : entity work.sync_reg 
- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_areset_n, dynps_areset_n_sync);
+-- sync_reg7 : entity work.sync_reg 
+-- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_areset_n, dynps_areset_n_sync);
  
- sync_reg8 : entity work.sync_reg 
- port map(rcnfg_clk, pll_logic_reset_n, rcnfig_areset, rcnfig_areset_sync);
+-- sync_reg8 : entity work.sync_reg 
+-- port map(rcnfg_clk, pll_logic_reset_n, rcnfig_areset, rcnfig_areset_sync);
  
- sync_reg9 : entity work.sync_reg 
- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_tst, dynps_tst_sync);
+-- sync_reg9 : entity work.sync_reg 
+-- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_tst, dynps_tst_sync);
  
- sync_reg10 : entity work.sync_reg 
- port map(inst1_pll_scanclk, pll_logic_reset_n, inst3_locked, inst3_locked_scanclk);
+-- sync_reg10 : entity work.sync_reg 
+-- port map(inst1_pll_scanclk, pll_logic_reset_n, inst3_locked, inst3_locked_scanclk);
  
- bus_sync_reg0 : entity work.bus_sync_reg
- generic map (144) 
- port map(rcnfg_clk, pll_logic_reset_n, rcnfig_data, rcnfig_data_sync);
+-- bus_sync_reg0 : entity work.bus_sync_reg
+-- generic map (144) 
+-- port map(rcnfg_clk, pll_logic_reset_n, rcnfig_data, rcnfig_data_sync);
  
- bus_sync_reg1 : entity work.bus_sync_reg
- generic map (3) 
- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_cnt_sel, dynps_cnt_sel_sync);
+-- bus_sync_reg1 : entity work.bus_sync_reg
+-- generic map (3) 
+-- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_cnt_sel, dynps_cnt_sel_sync);
  
- bus_sync_reg2 : entity work.bus_sync_reg
- generic map (10) 
- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_phase, dynps_phase_sync);
+-- bus_sync_reg2 : entity work.bus_sync_reg
+-- generic map (10) 
+-- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_phase, dynps_phase_sync);
  
-bus_sync_reg3 : entity work.bus_sync_reg
- generic map (10) 
- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_step_size, dynps_step_size_sync);
+--bus_sync_reg3 : entity work.bus_sync_reg
+-- generic map (10) 
+-- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_step_size, dynps_step_size_sync);
  
 ----------------------------------------------------------------------------
 -- pll_reconfig_module instance
@@ -349,36 +349,36 @@ inst1_pll_scanclk <= rcnfg_clk;
 
 end generate;
 
-    pll_ps_top_inst2 :  pll_ps_top
-       port map(
+--    pll_ps_top_inst2 :  pll_ps_top
+--       port map(
     
-          clk                     => inst1_pll_scanclk,
-          reset_n                 => dynps_areset_n_sync,
-          --module control ports
-          ps_en                   => dynps_en_sync,
-          ps_mode                 => dynps_mode_sync,
-          ps_tst                  => dynps_tst_sync, 
-          ps_cnt                  => dynps_cnt_sel_sync,
-          ps_updwn                => dynps_dir_sync,
-          ps_phase                => dynps_phase_sync,
-          ps_step_size            => dynps_step_size_sync,
-          ps_busy                 => inst2_ps_busy,
-          ps_done                 => inst2_ps_done,
-          ps_status               => inst2_ps_status,
-          --pll ports
-          pll_phasecounterselect  => inst2_pll_phasecounterselect,
-          pll_phaseupdown         => inst2_pll_phaseupdown, 
-          pll_phasestep           => inst2_pll_phasestep,        
-          pll_phasedone           => inst3_phasedone,      
-          pll_locked              => inst3_locked_scanclk,
-          pll_reconfig            => rcnfig_en_sync_scanclk,
-          pll_reset_req           => inst2_pll_reset_req,
-          --sample compare module
-          smpl_cmp_en             => smpl_cmp_en,
-          smpl_cmp_done           => smpl_cmp_done_sync,
-          smpl_cmp_error          => smpl_cmp_error_sync
+--          clk                     => inst1_pll_scanclk,
+--          reset_n                 => dynps_areset_n_sync,
+--          --module control ports
+--          ps_en                   => dynps_en_sync,
+--          ps_mode                 => dynps_mode_sync,
+--          ps_tst                  => dynps_tst_sync, 
+--          ps_cnt                  => dynps_cnt_sel_sync,
+--          ps_updwn                => dynps_dir_sync,
+--          ps_phase                => dynps_phase_sync,
+--          ps_step_size            => dynps_step_size_sync,
+--          ps_busy                 => inst2_ps_busy,
+--          ps_done                 => inst2_ps_done,
+--          ps_status               => inst2_ps_status,
+--          --pll ports
+--          pll_phasecounterselect  => inst2_pll_phasecounterselect,
+--          pll_phaseupdown         => inst2_pll_phaseupdown, 
+--          pll_phasestep           => inst2_pll_phasestep,        
+--          pll_phasedone           => inst3_phasedone,      
+--          pll_locked              => inst3_locked_scanclk,
+--          pll_reconfig            => rcnfig_en_sync_scanclk,
+--          pll_reset_req           => inst2_pll_reset_req,
+--          --sample compare module
+--          smpl_cmp_en             => smpl_cmp_en,
+--          smpl_cmp_done           => smpl_cmp_done_sync,
+--          smpl_cmp_error          => smpl_cmp_error_sync
                 
-          );  
+--          );  
     
            
        inst3_inclk <= '0' & pll_inclk;
@@ -521,18 +521,18 @@ port map(
 end generate;
    
    
-pll_reconfig_status_inst4 : entity work.pll_reconfig_status
-   port map(
-      clk               => inst1_pll_scanclk,
-      reset_n           => pll_areset_n,
-      reconfig_en       => rcnfig_en_sync_scanclk,
-      scandone          => inst3_scandone,
-      exclude_ps_status => '0',
-      ps_en             => dynps_en_sync,
-      ps_status         => inst2_ps_status,
-      rcfig_complete    => inst4_rcfig_complete
+--pll_reconfig_status_inst4 : entity work.pll_reconfig_status
+--   port map(
+--      clk               => inst1_pll_scanclk,
+--      reset_n           => pll_areset_n,
+--      reconfig_en       => rcnfig_en_sync_scanclk,
+--      scandone          => inst3_scandone,
+--      exclude_ps_status => '0',
+--      ps_en             => dynps_en_sync,
+--      ps_status         => inst2_ps_status,
+--      rcfig_complete    => inst4_rcfig_complete
       
-      );   
+--      );   
 
 -- ----------------------------------------------------------------------------
 -- c0 direct output lcell delay chain 

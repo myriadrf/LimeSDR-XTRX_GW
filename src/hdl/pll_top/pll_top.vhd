@@ -199,8 +199,8 @@ begin
    smpl_cmp_done              => lms1_smpl_cmp_done,
    smpl_cmp_error             => lms1_smpl_cmp_error,
    --Overall configuration PLL status
-   busy                       => inst0_busy,
-   from_pllcfg                => from_pllcfg
+   busy                       => inst0_busy
+--   from_pllcfg                => from_pllcfg
    );
    
 -- ----------------------------------------------------------------------------
@@ -257,8 +257,8 @@ begin
    smpl_cmp_en                => inst1_smpl_cmp_en,
    smpl_cmp_done              => lms1_smpl_cmp_done,
    smpl_cmp_error             => lms1_smpl_cmp_error,
-   busy                       => inst1_busy,
-   from_pllcfg                => from_pllcfg
+   busy                       => inst1_busy
+--   from_pllcfg                => from_pllcfg
    
    );
    
@@ -280,34 +280,34 @@ begin
    inst4_auto_phcfg_err  <= (0=>inst0_dynps_status, 1=>inst1_dynps_status, others=>'1');
      
 
-   inst4_pll_ctrl : entity work.pll_ctrl 
-   generic map(
-      n_pll	=> N_PLL
-   )
-   port map(
-      to_pllcfg         => to_pllcfg,
-      from_pllcfg       => from_pllcfg,
-         -- Status Inputs
-      pllcfg_busy       => inst4_pllcfg_busy,
-      pllcfg_done       => inst4_pllcfg_done,
-         -- PLL Lock flags
-      pll_lock          => inst4_pll_lock,
-         -- PLL Configuration Related
-      phcfg_mode        => inst4_phcfg_mode,
-      phcfg_tst         => inst4_phcfg_tst,
-      phcfg_start       => inst4_phcfg_start,   --
-      pllcfg_start      => inst4_pllcfg_start,  --
-      pllrst_start      => inst4_pllrst_start,  --
-      phcfg_updn        => inst4_phcfg_updn,
-      cnt_ind           => inst4_cnt_ind,       --
-      cnt_phase         => inst4_cnt_phase,     --
-      pllcfg_data       => inst4_pllcfg_data,
-      auto_phcfg_done   => inst4_auto_phcfg_done,
-      auto_phcfg_err    => inst4_auto_phcfg_err,
-      auto_phcfg_smpls  => inst4_auto_phcfg_smpls,
-      auto_phcfg_step   => inst4_auto_phcfg_step
+--   inst4_pll_ctrl : entity work.pll_ctrl 
+--   generic map(
+--      n_pll	=> N_PLL
+--   )
+--   port map(
+--      to_pllcfg         => to_pllcfg,
+--      from_pllcfg       => from_pllcfg,
+--         -- Status Inputs
+--      pllcfg_busy       => inst4_pllcfg_busy,
+--      pllcfg_done       => inst4_pllcfg_done,
+--         -- PLL Lock flags
+--      pll_lock          => inst4_pll_lock,
+--         -- PLL Configuration Related
+--      phcfg_mode        => inst4_phcfg_mode,
+--      phcfg_tst         => inst4_phcfg_tst,
+--      phcfg_start       => inst4_phcfg_start,   --
+--      pllcfg_start      => inst4_pllcfg_start,  --
+--      pllrst_start      => inst4_pllrst_start,  --
+--      phcfg_updn        => inst4_phcfg_updn,
+--      cnt_ind           => inst4_cnt_ind,       --
+--      cnt_phase         => inst4_cnt_phase,     --
+--      pllcfg_data       => inst4_pllcfg_data,
+--      auto_phcfg_done   => inst4_auto_phcfg_done,
+--      auto_phcfg_err    => inst4_auto_phcfg_err,
+--      auto_phcfg_smpls  => inst4_auto_phcfg_smpls,
+--      auto_phcfg_step   => inst4_auto_phcfg_step
         
-      );
+--      );
 -- ----------------------------------------------------------------------------
 -- Output ports
 -- ----------------------------------------------------------------------------  

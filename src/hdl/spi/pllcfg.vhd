@@ -299,66 +299,66 @@ end process ram;
 -- ---------------------------------------------------------------------------------------------
 -- Decoding logic, output assignments
 -- ---------------------------------------------------------------------------------------------
-from_pllcfg.phcfg_tst         <= mem(3)(15);   
+--from_pllcfg.phcfg_tst         <= mem(3)(15);   
 from_pllcfg.phcfg_mode        <= mem(3)(14);
-from_pllcfg.phcfg_updn        <= mem(3)(13);
-from_pllcfg.cnt_ind           <= mem(3)(12 downto 8);
-from_pllcfg.pll_ind           <= mem(3)(7 downto 3);
+--from_pllcfg.phcfg_updn        <= mem(3)(13);
+--from_pllcfg.cnt_ind           <= mem(3)(12 downto 8);
+--from_pllcfg.pll_ind           <= mem(3)(7 downto 3);
 from_pllcfg.pllrst_start      <= mem(3)(2);
 from_pllcfg.phcfg_start       <= mem(3)(1);
 from_pllcfg.pllcfg_start      <= mem(3)(0);
    
-from_pllcfg.cnt_phase         <= mem(4);
--- 
---from_pllcfg.pllcfg_bs       <= mem(5)(14 downto 11);
-from_pllcfg.chp_curr          <= mem(5)(10 downto 8);
-from_pllcfg.pllcfg_vcodiv     <= mem(5)(7);
-from_pllcfg.pllcfg_lf_res     <= mem(5)(6 downto 2);
-from_pllcfg.pllcfg_lf_cap     <= mem(5)(1 downto 0);
--- 
-from_pllcfg.m_odddiv          <= mem(6)(3);
-from_pllcfg.m_byp             <= mem(6)(2);
-from_pllcfg.n_odddiv          <= mem(6)(1);
-from_pllcfg.n_byp             <= mem(6)(0);
+--from_pllcfg.cnt_phase         <= mem(4);
+---- 
+----from_pllcfg.pllcfg_bs       <= mem(5)(14 downto 11);
+--from_pllcfg.chp_curr          <= mem(5)(10 downto 8);
+--from_pllcfg.pllcfg_vcodiv     <= mem(5)(7);
+--from_pllcfg.pllcfg_lf_res     <= mem(5)(6 downto 2);
+--from_pllcfg.pllcfg_lf_cap     <= mem(5)(1 downto 0);
+---- 
+--from_pllcfg.m_odddiv          <= mem(6)(3);
+--from_pllcfg.m_byp             <= mem(6)(2);
+--from_pllcfg.n_odddiv          <= mem(6)(1);
+--from_pllcfg.n_byp             <= mem(6)(0);
 
 
-from_pllcfg.c0_byp            <= mem(7)(0);
-from_pllcfg.c0_odddiv         <= mem(7)(1);
-from_pllcfg.c1_byp            <= mem(7)(2);
-from_pllcfg.c1_odddiv         <= mem(7)(3);
-from_pllcfg.c2_byp            <= mem(7)(4);
-from_pllcfg.c2_odddiv         <= mem(7)(5);
-from_pllcfg.c3_byp            <= mem(7)(6);
-from_pllcfg.c3_odddiv         <= mem(7)(7);
-from_pllcfg.c4_byp            <= mem(7)(8);
-from_pllcfg.c4_odddiv         <= mem(7)(9);
---from_pllcfg.c5_byp          <= mem(7)(10);
---from_pllcfg.c5_odddiv       <= mem(7)(11);
---from_pllcfg.c6_byp          <= mem(7)(12);
---from_pllcfg.c6_odddiv       <= mem(7)(13);
---from_pllcfg.c7_byp          <= mem(7)(14);
---from_pllcfg.c7_odddiv       <= mem(7)(15);
---from_pllcfg.c8_byp          <= mem(8)(0);
---from_pllcfg.c8_odddiv       <= mem(8)(1);
---from_pllcfg.c9_byp          <= mem(8)(2);
---from_pllcfg.c9_odddiv       <= mem(8)(3);
---
-from_pllcfg.n_cnt             <= mem(10);
-from_pllcfg.m_cnt             <= mem(11);
---from_pllcfg.m_frac          <= mem(13) & mem(12);
-from_pllcfg.c0_cnt            <= mem(14); 
-from_pllcfg.c1_cnt            <= mem(15); 
-from_pllcfg.c2_cnt            <= mem(16);
-from_pllcfg.c3_cnt            <= mem(17);
-from_pllcfg.c4_cnt            <= mem(18);
---from_pllcfg.c5_cnt          <= mem(19);
---from_pllcfg.c6_cnt          <= mem(20);
---from_pllcfg.c7_cnt          <= mem(21);
---from_pllcfg.c8_cnt          <= mem(22);
---from_pllcfg.c9_cnt          <= mem(23);
+--from_pllcfg.c0_byp            <= mem(7)(0);
+--from_pllcfg.c0_odddiv         <= mem(7)(1);
+--from_pllcfg.c1_byp            <= mem(7)(2);
+--from_pllcfg.c1_odddiv         <= mem(7)(3);
+--from_pllcfg.c2_byp            <= mem(7)(4);
+--from_pllcfg.c2_odddiv         <= mem(7)(5);
+--from_pllcfg.c3_byp            <= mem(7)(6);
+--from_pllcfg.c3_odddiv         <= mem(7)(7);
+--from_pllcfg.c4_byp            <= mem(7)(8);
+--from_pllcfg.c4_odddiv         <= mem(7)(9);
+----from_pllcfg.c5_byp          <= mem(7)(10);
+----from_pllcfg.c5_odddiv       <= mem(7)(11);
+----from_pllcfg.c6_byp          <= mem(7)(12);
+----from_pllcfg.c6_odddiv       <= mem(7)(13);
+----from_pllcfg.c7_byp          <= mem(7)(14);
+----from_pllcfg.c7_odddiv       <= mem(7)(15);
+----from_pllcfg.c8_byp          <= mem(8)(0);
+----from_pllcfg.c8_odddiv       <= mem(8)(1);
+----from_pllcfg.c9_byp          <= mem(8)(2);
+----from_pllcfg.c9_odddiv       <= mem(8)(3);
+----
+--from_pllcfg.n_cnt             <= mem(10);
+--from_pllcfg.m_cnt             <= mem(11);
+----from_pllcfg.m_frac          <= mem(13) & mem(12);
+--from_pllcfg.c0_cnt            <= mem(14); 
+--from_pllcfg.c1_cnt            <= mem(15); 
+--from_pllcfg.c2_cnt            <= mem(16);
+--from_pllcfg.c3_cnt            <= mem(17);
+--from_pllcfg.c4_cnt            <= mem(18);
+----from_pllcfg.c5_cnt          <= mem(19);
+----from_pllcfg.c6_cnt          <= mem(20);
+----from_pllcfg.c7_cnt          <= mem(21);
+----from_pllcfg.c8_cnt          <= mem(22);
+----from_pllcfg.c9_cnt          <= mem(23);
 
 from_pllcfg.auto_phcfg_smpls  <= mem(30);
-from_pllcfg.auto_phcfg_step   <= mem(31);
+--from_pllcfg.auto_phcfg_step   <= mem(31);
 
 
 end pllcfg_arch;

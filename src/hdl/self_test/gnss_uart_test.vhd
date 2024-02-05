@@ -14,19 +14,19 @@ use ieee.numeric_std.all;
 -- ----------------------------------------------------------------------------
 entity gnss_uart_test is
   generic (
-        G_CLK_FREQUENCY : integer := 125000000;
-        G_BAUD_RATE     : integer := 9600
+        G_CLK_FREQUENCY : integer := 125000000; --! CLK clock frequency, in Hz
+        G_BAUD_RATE     : integer := 9600 --! Baud rate of GNSS UART
   );
   port (
         --input ports 
-        CLK           	: in std_logic;
-        TEST_EN			: in std_logic;
+        CLK           	: in std_logic; --! Clock signal
+        TEST_EN			: in std_logic; --! Test enable
 		  
-		  TEST_COMPLETE	: out std_logic;
-		  TEST_PASS_FAIL	: out std_logic;
+		  TEST_COMPLETE	: out std_logic; --! Test complete
+		  TEST_PASS_FAIL	: out std_logic; --! Test pass, active high
 		  
-		  UART_RX         : in  std_logic;
-		  UART_TX         : out std_logic
+		  UART_RX         : in  std_logic; --! GNSS chip uart rx port
+		  UART_TX         : out std_logic --! GNSS chip uart tx port
      
         );
 end gnss_uart_test;

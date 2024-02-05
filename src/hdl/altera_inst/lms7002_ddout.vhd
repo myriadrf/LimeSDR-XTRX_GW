@@ -26,8 +26,6 @@ entity lms7002_ddout is
       iq_width      : integer:= 12
    );
    port (
-      from_fpgacfg  : in  t_FROM_FPGACFG;
-      --input ports 
       clk           : in std_logic;
       reset_n       : in std_logic;
       data_in_h     : in std_logic_vector(iq_width downto 0);
@@ -50,15 +48,6 @@ signal datout          : std_logic_vector(iq_width downto 0);
 signal dataout_delayed : std_logic_vector(iq_width-1 downto 0);
 type sel_array_type is array (0 to 11) of std_logic_vector(1 downto 0);
 signal dly_sel_array :  sel_array_type;
-
-signal data_reg_l : std_logic_vector(iq_width downto 0);
-signal data_reg_h : std_logic_vector(iq_width downto 0);
-
-signal data_l_muxed : std_logic_vector(iq_width downto 0);
-signal data_h_muxed : std_logic_vector(iq_width downto 0);
-
-signal tx_hi_freq_mode_reg : std_logic;
-
 
 
 COMPONENT ALTDDIO_OUT
@@ -108,30 +97,6 @@ END COMPONENT;
 
 begin
 
-      process(clk)
-      begin
-        if rising_edge(clk) then
-            data_reg_l <= data_in_l;
-            data_reg_h <= data_in_h;
-            
-            if tx_hi_freq_mode_reg = '1' then
-                data_l_muxed <= data_in_h(12) & data_in_l(11) & data_in_h(10 downto 0);
-                data_h_muxed <= data_in_l(12) & data_in_h(11) & data_reg_l(10 downto 0);
-            else
-                data_l_muxed <= data_in_l;
-                data_h_muxed <= data_in_h;
-            end if;
-        end if;      
-      end process;
-
-    sync_inst0 : entity work.sync_reg
-    port map(
-       clk     => clk,
-      reset_n  => reset_n,   
-      async_in => from_fpgacfg.TX_HI_FREQ_MODE,   
-      sync_out => tx_hi_freq_mode_reg
-    );
-
 
    aclr<=not reset_n;
 
@@ -173,8 +138,8 @@ begin
             Q  => datout(i),   -- 1-bit DDR output
             C  => clk,    -- 1-bit clock input
             CE => '1',  -- 1-bit clock enable input
-            D1 => data_h_muxed(i),--data_reg_h(i),--data_in_h(i),  -- 1-bit data input (positive edge)
-            D2 => data_l_muxed(i),--data_reg_l(i),--data_in_l(i),  -- 1-bit data input (negative edge)
+            D1 => data_in_h(i),  -- 1-bit data input (positive edge)
+            D2 => data_in_l(i),  -- 1-bit data input (negative edge)
             R  => aclr,    -- 1-bit reset input
             S  => '0'     -- 1-bit set input
          );      

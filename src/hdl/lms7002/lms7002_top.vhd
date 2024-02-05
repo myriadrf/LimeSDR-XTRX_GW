@@ -216,7 +216,6 @@ inst1_lms7002_tx : entity work.lms7002_tx
       clk_2x_reset_n       => inst1_clk_2x_reset_n,
       mem_reset_n          => mem_reset_n,
       from_memcfg          => from_memcfg,
-      from_fpgacfg         => from_fpgacfg,
       
       --Mode settings
       mode                 => int_mode,      -- JESD207: 1; TRXIQ: 0

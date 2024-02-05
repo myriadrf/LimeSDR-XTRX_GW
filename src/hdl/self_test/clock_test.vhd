@@ -15,16 +15,16 @@ use ieee.numeric_std.all;
 entity clock_test is
   port (
         --input ports 
-        sys_clk       		: in std_logic;
-        reset_n   	 		: in std_logic;
-		  test_en				: in std_logic_vector(1 downto 0);
-		  test_cmplt			: out std_logic_vector(1 downto 0);
-		  test_rez				: out std_logic_vector(1 downto 0);
+        sys_clk       		: in std_logic; --! System clock, used as reference
+        reset_n   	 		: in std_logic; --! Reset, active low
+		  test_en				: in std_logic_vector(1 downto 0); --! Test enable [0] - sys_clk test, [1] - LMS CLK test
+		  test_cmplt			: out std_logic_vector(1 downto 0); --! Test complete [0] - sys_clk test, [1] - LMS CLK test
+		  test_rez				: out std_logic_vector(1 downto 0); --! Test result (not fully implemented) [0] - sys_clk test, [1] - LMS CLK test
 		  
-		  LMS_TX_CLK		 	: in std_logic;
+		  LMS_TX_CLK		 	: in std_logic; --! LMS7002 tx clock
 		  
-		  sys_clk_cnt   		: out std_logic_vector(15 downto 0);
-		  LMS_TX_CLK_cnt		: out std_logic_vector(23 downto 0)
+		  sys_clk_cnt   		: out std_logic_vector(15 downto 0); --! number of cycles counted in sys clk test
+		  LMS_TX_CLK_cnt		: out std_logic_vector(23 downto 0) --! number of cycles counted in LMS CLK test
         
         );
 end clock_test;

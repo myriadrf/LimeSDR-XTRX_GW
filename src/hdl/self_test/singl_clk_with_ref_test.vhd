@@ -15,14 +15,14 @@ use ieee.numeric_std.all;
 entity singl_clk_with_ref_test is
   port (
         --input ports 
-        refclk       	: in std_logic;
-        reset_n   		: in std_logic;
-		  clk0				: in std_logic;
+        refclk       	: in std_logic; --! Reference clock
+        reset_n   		: in std_logic; --! Reset, active low
+		  clk0				: in std_logic; --! Clock to be tested
 		  
-		  test_en			: in std_logic;
-		  test_cnt0			: out std_logic_vector(23 downto 0);
-		  test_complete	: out std_logic;
-		  test_pass_fail	: out std_logic
+		  test_en			: in std_logic; --! Test enable
+		  test_cnt0			: out std_logic_vector(23 downto 0); --! Number of clock cycles counted during test
+		  test_complete	: out std_logic; --! Test complete
+		  test_pass_fail	: out std_logic --! Test pass, not implemented
      
         );
 end singl_clk_with_ref_test;

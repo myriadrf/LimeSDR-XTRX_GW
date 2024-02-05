@@ -160,12 +160,11 @@ begin
          -- Load operation
          elsif dout_reg_len = '1' then
             case inst_reg(4 downto 0) is  -- mux read-only outputs
-               when "00000" => dout_reg <= BOARD_ID_reg;
-               when "00001" => dout_reg <= MAJOR_REV_reg;
+               when "00000" => dout_reg <= BOARD_ID_reg;--0
+               when "00001" => dout_reg <= MAJOR_REV_reg;--1
 --               when "00010" => dout_reg <= (15 downto 8 => '0') & COMPILE_REV_reg;
-               when "00010" => dout_reg <= COMPILE_REV_reg;
-               when "00011" => dout_reg <= (15 downto 9 => '0') & to_fpgacfg.PWR_SRC & to_fpgacfg.BOM_VER & to_fpgacfg.HW_VER;
-               when "01110" => dout_reg <= to_fpgacfg.tx_pct_cnt;--adr = 14
+               when "00010" => dout_reg <= COMPILE_REV_reg;--2
+               when "00011" => dout_reg <= (15 downto 9 => '0') & to_fpgacfg.PWR_SRC & to_fpgacfg.BOM_VER & to_fpgacfg.HW_VER; --3
                when others  => dout_reg <= mem(to_integer(unsigned(inst_reg(4 downto 0))));
             end case;
          end if;
@@ -242,11 +241,11 @@ begin
    -- Decoding logic
    -- ---------------------------------------------------------------------------------------------
          --FPGA direct clocking
-      from_fpgacfg.phase_reg_sel       <= mem(4);
-      from_fpgacfg.drct_clk_en         <= mem(5);
-      from_fpgacfg.clk_ind             <= mem(6) (4 downto 0);
-      from_fpgacfg.cnt_ind             <= mem(6) (9 downto 5);
-      from_fpgacfg.load_phase_reg      <= mem(6) (10);
+--      from_fpgacfg.phase_reg_sel       <= mem(4);  --unused
+      from_fpgacfg.drct_clk_en         <= mem(5); --unused, do not remove
+--      from_fpgacfg.clk_ind             <= mem(6) (4 downto 0);-- unused
+--      from_fpgacfg.cnt_ind             <= mem(6) (9 downto 5);--unused
+--      from_fpgacfg.load_phase_reg      <= mem(6) (10); --unused
       --Interface Config
       from_fpgacfg.ch_en               <= mem(7);
       from_fpgacfg.smpl_width          <= mem(8) (1 downto 0);
@@ -255,11 +254,11 @@ begin
       from_fpgacfg.trxiq_pulse         <= mem(8) (7);
       from_fpgacfg.mimo_int_en         <= mem(8) (8);
       from_fpgacfg.synch_dis           <= mem(8) (9);
-      from_fpgacfg.dlb_en              <= mem(8) (10);
+--      from_fpgacfg.dlb_en              <= mem(8) (10); --unused
       from_fpgacfg.smpl_nr_clr         <= mem(9) (0);
       from_fpgacfg.txpct_loss_clr      <= mem(9) (1);
       from_fpgacfg.rx_en               <= mem(10) (0);
-      from_fpgacfg.tx_en               <= mem(10) (1);
+--      from_fpgacfg.tx_en               <= mem(10) (1); --unused
       from_fpgacfg.rx_rf_sw            <= mem(10) (3 downto 2);
       from_fpgacfg.tx_rf_sw            <= mem(10) (4);
       from_fpgacfg.tdd_manual          <= mem(10) (5);
@@ -269,53 +268,52 @@ begin
       from_fpgacfg.tx_ptrn_en          <= mem(10) (9);
       from_fpgacfg.tx_cnt_en           <= mem(10) (10);
       from_fpgacfg.rf_sw_auto_en       <= mem(10) (11);
-      from_fpgacfg.tx_pct_cnt_rst      <= mem(11)(0);
+--      from_fpgacfg.tx_pct_cnt_rst      <= mem(11)(0); --unused
       
-      from_fpgacfg.wfm_ch_en           <= mem(12) (15 downto 0);
-      from_fpgacfg.wfm_play            <= mem(13) (1);
-      from_fpgacfg.wfm_load            <= mem(13) (2);
-      from_fpgacfg.wfm_smpl_width      <= mem(13) (1 downto 0);
+--      from_fpgacfg.wfm_ch_en           <= mem(12) (15 downto 0); --unused
+      from_fpgacfg.wfm_play            <= mem(13) (1); --unused, do not remove
+--      from_fpgacfg.wfm_load            <= mem(13) (2); --unused
+--      from_fpgacfg.wfm_smpl_width      <= mem(13) (1 downto 0); --unused
       from_fpgacfg.RX_PACKET_SAMPLES   <= mem(14); -- Related to RX_PACKET_SIZE
-      from_fpgacfg.sync_size           <= mem(15) (15 downto 0);
+--      from_fpgacfg.sync_size           <= mem(15) (15 downto 0); --unused
       from_fpgacfg.txant_pre           <= mem(16) (15 downto 0);
       from_fpgacfg.txant_post          <= mem(17) (15 downto 0);
 
-      for_loop : for i in 0 to 15 generate --to prevent SPI_SS to go low on same time as sen
-         from_fpgacfg.SPI_SS(i)<= mem(18)(i) OR (NOT sen);
-      end generate;
+--      for_loop : for i in 0 to 15 generate --to prevent SPI_SS to go low on same time as sen
+--         from_fpgacfg.SPI_SS(i)<= mem(18)(i) OR (NOT sen);
+--      end generate;
       
-      from_fpgacfg.LMS1_SS             <= mem(19)(0) OR (NOT sen); --to prevent SPI_SS to go low on same time as sen
-      from_fpgacfg.LMS1_RESET          <= mem(19)(1);
-      from_fpgacfg.LMS1_CORE_LDO_EN    <= mem(19)(2);
+      from_fpgacfg.LMS1_SS             <= mem(19)(0) OR (NOT sen); --to prevent SPI_SS to go low on same time as sen --unused
+      from_fpgacfg.LMS1_RESET          <= mem(19)(1); 
+      from_fpgacfg.LMS1_CORE_LDO_EN    <= mem(19)(2);--unused
       from_fpgacfg.LMS1_TXNRX1         <= mem(19)(3); 
       from_fpgacfg.LMS1_TXNRX2         <= mem(19)(4);
       from_fpgacfg.LMS1_TXEN           <= mem(19)(5); 
       from_fpgacfg.LMS1_RXEN           <= mem(19)(6);
       from_fpgacfg.LMS_TXRXEN_MUX_SEL  <= mem(19)(7);
-      from_fpgacfg.LMS2_SS             <= mem(19)(8) OR (NOT sen); --to prevent SPI_SS to go low on same time as sen
-      from_fpgacfg.LMS2_RESET          <= mem(19)(9);
-      from_fpgacfg.LMS2_CORE_LDO_EN    <= mem(19)(10); 
-      from_fpgacfg.LMS2_TXNRX1         <= mem(19)(11);
-      from_fpgacfg.LMS2_TXNRX2         <= mem(19)(12);
-      from_fpgacfg.LMS2_TXEN           <= mem(19)(13);
-      from_fpgacfg.LMS2_RXEN           <= mem(19)(14);
+      from_fpgacfg.LMS2_SS             <= mem(19)(8) OR (NOT sen); --to prevent SPI_SS to go low on same time as sen--unused
+--      from_fpgacfg.LMS2_RESET          <= mem(19)(9);--unused
+--      from_fpgacfg.LMS2_CORE_LDO_EN    <= mem(19)(10); --unused
+--      from_fpgacfg.LMS2_TXNRX1         <= mem(19)(11);--unused
+--      from_fpgacfg.LMS2_TXNRX2         <= mem(19)(12);--unused
+--      from_fpgacfg.LMS2_TXEN           <= mem(19)(13);--unused
+--      from_fpgacfg.LMS2_RXEN           <= mem(19)(14);--unused
       from_fpgacfg.LMS_TXRXEN_INV      <= mem(19)(15);
-      from_fpgacfg.GPIO                <= mem(23)(15 downto  0);
-      from_fpgacfg.TX_HI_FREQ_MODE     <= '0';--mem(24)(0);
+--      from_fpgacfg.GPIO                <= mem(23)(15 downto  0);--unused
       from_fpgacfg.LMS_RST             <= mem(24)(0);
       from_fpgacfg.TCXO_EN             <= mem(24)(1);
       from_fpgacfg.EXT_CLK             <= mem(24)(2);
       from_fpgacfg.CORE_LDO_EN         <= mem(24)(3);
       from_fpgacfg.RX_PACKET_SIZE      <= mem(25); -- Related to RX_PACKET_SAMPLES
       
-      from_fpgacfg.FPGA_LED1_CTRL      <= mem(26)(2 downto 0);
-      from_fpgacfg.FPGA_LED2_CTRL      <= mem(26)(6 downto 4);
-      from_fpgacfg.FPGA_LED3_CTRL      <= mem(26)(10 downto 8);
-	  from_fpgacfg.FPGA_LED4_CTRL      <= mem(26)(14 downto 12);
-	  from_fpgacfg.FPGA_LED5_CTRL      <= mem(27)(2 downto 0);
-	  from_fpgacfg.FPGA_LED6_CTRL      <= mem(27)(6 downto 4);
-      from_fpgacfg.FX3_LED_CTRL        <= mem(28)(2 downto 0);
-      from_fpgacfg.CLK_ENA             <= mem(29)(7 downto 0);
+--      from_fpgacfg.FPGA_LED1_CTRL      <= mem(26)(2 downto 0);--unused
+--      from_fpgacfg.FPGA_LED2_CTRL      <= mem(26)(6 downto 4);--unused
+--      from_fpgacfg.FPGA_LED3_CTRL      <= mem(26)(10 downto 8);--unused
+--	  from_fpgacfg.FPGA_LED4_CTRL      <= mem(26)(14 downto 12);--unused
+--	  from_fpgacfg.FPGA_LED5_CTRL      <= mem(27)(2 downto 0);--unused
+--	  from_fpgacfg.FPGA_LED6_CTRL      <= mem(27)(6 downto 4);--unused
+--      from_fpgacfg.FX3_LED_CTRL        <= mem(28)(2 downto 0);--unused
+--      from_fpgacfg.CLK_ENA             <= mem(29)(7 downto 0);--unused
       from_fpgacfg.sync_pulse_period   <= mem(30)(15 downto 0) & mem(31)(15 downto 0);
       
 

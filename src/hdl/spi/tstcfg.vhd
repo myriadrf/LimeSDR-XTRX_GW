@@ -172,19 +172,19 @@ begin
                when "00000" =>
                   dout_reg <= (15 downto 8 => '0') & gw_test_res & mem(0)(3 downto 0);
 
-               when "00101" =>
+               when "00101" =>--5
                   dout_reg <= (15 downto 6 => '0') & to_tstcfg.TEST_CMPLT(5 downto 0);
 
-               when "00111" =>
+               when "00111" =>--7
                   dout_reg <= (15 downto 6 => '0') & to_tstcfg.TEST_REZ(5 downto 0);
 
-               when "01001" =>
+               when "01001" =>--9
                   dout_reg <= to_tstcfg.SYS_CLK_CNT;
 
-               when "10010" =>
+               when "10010" =>--18
                   dout_reg <= to_tstcfg.LMS_TX_CLK_cnt(15 downto 0);
 
-               when "10011" =>
+               when "10011" =>--19
                   dout_reg <= (15 downto 8 => '0') & to_tstcfg.LMS_TX_CLK_cnt(23 downto 16);
 
                when others =>
