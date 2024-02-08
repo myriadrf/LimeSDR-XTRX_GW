@@ -13,9 +13,9 @@ set clk_period        8.138;
 # ----------------------------------------------------------------------------
 # Primary Clocks
 # ----------------------------------------------------------------------------
-create_clock -period $clk_period -name LMS_MCLK1 [get_ports LMS_MCLK1]
+create_clock -period $clk_period -name LMS_MCLK1 [get_ports RXCLK_M]
 
-create_clock -period $clk_period -name LMS_MCLK2 [get_ports LMS_MCLK2]
+create_clock -period $clk_period -name LMS_MCLK2 [get_ports TXCLK_M]
 
 # ----------------------------------------------------------------------------
 # Virtual clocks
@@ -28,7 +28,7 @@ create_clock -period 8.138 -name LMS1_MCLK2_VIRT -waveform {3.8 7.869}
 #Adding an offset to the clock to satisfy timing analysis, since the phase can be changed during runtime
 #create_generated_clock -name LMS1_FCLK1 -source [get_pins inst2_pll_top/inst0_tx_pll_top_cyc5/XILINX_PLL_DDIO.XILINX_PLL_DDIO/C] -multiply_by 1 [get_ports LMS_FCLK1]
  #-waveform {1 5.069}
-create_generated_clock -name LMS_FCLK1 -source [get_pins inst2_pll_top/inst0_tx_pll_top_cyc5/XILINX_PLL_DDIO.XILINX_PLL_DDIO/C] -edges {1 2 3} -edge_shift {-1.5 -1.5 -1.5} [get_ports LMS_FCLK1]
+create_generated_clock -name LMS_FCLK1 -source [get_pins inst2_pll_top/inst0_tx_pll_top_cyc5/XILINX_PLL_DDIO.XILINX_PLL_DDIO/C] -edges {1 2 3} -edge_shift {-1.5 -1.5 -1.5} [get_ports RXCLK_F]
 
 
 ##  B.J.
@@ -46,13 +46,13 @@ create_generated_clock -name LMS_FCLK1 -source [get_pins inst2_pll_top/inst0_tx_
 #set MAX_DELAY_RX 5.050
 
 #LMS1
-set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -max 1 [get_ports {{LMS_DIQ2_D[*]} LMS_EN_IQSEL2}]
+set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -max 1 [get_ports {{TXD[*]} TXIQSEL}]
 
-set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -min -0.2 [get_ports {{LMS_DIQ2_D[*]} LMS_EN_IQSEL2}]
+set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -min -0.2 [get_ports {{TXD[*]} TXIQSEL}]
 
-set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -clock_fall -max -add_delay 1 [get_ports {{LMS_DIQ2_D[*]} LMS_EN_IQSEL2}]
+set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -clock_fall -max -add_delay 1 [get_ports {{TXD[*]} TXIQSEL}]
 
-set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -clock_fall -min -add_delay -0.2 [get_ports {{LMS_DIQ2_D[*]} LMS_EN_IQSEL2}]
+set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -clock_fall -min -add_delay -0.2 [get_ports {{TXD[*]} TXIQSEL}]
 
 
 # ----------------------------------------------------------------------------
@@ -67,18 +67,18 @@ set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -clock_fall -min -add_delay 
 
 
 #LMS1
-set_output_delay -clock [get_clocks LMS_FCLK1] -max -0.5 [get_ports {{LMS_DIQ1_D[*]} LMS_EN_IQSEL1}]
-set_output_delay -clock [get_clocks LMS_FCLK1] -min -1.7 [get_ports {{LMS_DIQ1_D[*]} LMS_EN_IQSEL1}]
+set_output_delay -clock [get_clocks LMS_FCLK1] -max -0.5 [get_ports {{RXD[*]} RXIQSEL}]
+set_output_delay -clock [get_clocks LMS_FCLK1] -min -1.7 [get_ports {{RXD[*]} RXIQSEL}]
 
-set_output_delay -clock [get_clocks LMS_FCLK1] -clock_fall -max -add_delay -0.5 [get_ports {{LMS_DIQ1_D[*]} LMS_EN_IQSEL1}]
-set_output_delay -clock [get_clocks LMS_FCLK1] -clock_fall -min -add_delay -1.7 [get_ports {{LMS_DIQ1_D[*]} LMS_EN_IQSEL1}]
+set_output_delay -clock [get_clocks LMS_FCLK1] -clock_fall -max -add_delay -0.5 [get_ports {{RXD[*]} RXIQSEL}]
+set_output_delay -clock [get_clocks LMS_FCLK1] -clock_fall -min -add_delay -1.7 [get_ports {{RXD[*]} RXIQSEL}]
 
 #different values for high drive ports to satisfy timing analysis
-set_output_delay -clock [get_clocks LMS_FCLK1] -max 1 [get_ports {LMS_DIQ1_D[1] LMS_DIQ1_D[7] LMS_DIQ1_D[8] LMS_DIQ1_D[11] LMS_EN_IQSEL1 }]
-set_output_delay -clock [get_clocks LMS_FCLK1] -min -0.2 [get_ports {LMS_DIQ1_D[1] LMS_DIQ1_D[7] LMS_DIQ1_D[8] LMS_DIQ1_D[11] LMS_EN_IQSEL1 }]
+set_output_delay -clock [get_clocks LMS_FCLK1] -max 1 [get_ports {RXD[1] RXD[7] RXD[8] RXD[11] RXIQSEL }]
+set_output_delay -clock [get_clocks LMS_FCLK1] -min -0.2 [get_ports {RXD[1] RXD[7] RXD[8] RXD[11] RXIQSEL }]
 
-set_output_delay -clock [get_clocks LMS_FCLK1] -clock_fall -max -add_delay 1 [get_ports {LMS_DIQ1_D[1] LMS_DIQ1_D[7] LMS_DIQ1_D[8] LMS_DIQ1_D[11] LMS_EN_IQSEL1 }]
-set_output_delay -clock [get_clocks LMS_FCLK1] -clock_fall -min -add_delay -0.2 [get_ports {LMS_DIQ1_D[1] LMS_DIQ1_D[7] LMS_DIQ1_D[8] LMS_DIQ1_D[11] LMS_EN_IQSEL1 }]
+set_output_delay -clock [get_clocks LMS_FCLK1] -clock_fall -max -add_delay 1 [get_ports {RXD[1] RXD[7] RXD[8] RXD[11] RXIQSEL }]
+set_output_delay -clock [get_clocks LMS_FCLK1] -clock_fall -min -add_delay -0.2 [get_ports {RXD[1] RXD[7] RXD[8] RXD[11] RXIQSEL }]
 
 #set_output_delay -clock [get_clocks LMS_FCLK1] -max 3.800 [get_ports {LMS1_DIQ1_D[11]}]
 #set_output_delay -clock [get_clocks LMS_FCLK1] -min 2.000 [get_ports {LMS1_DIQ1_D[11]}]
@@ -86,7 +86,7 @@ set_output_delay -clock [get_clocks LMS_FCLK1] -clock_fall -min -add_delay -0.2 
 #set_output_delay -clock [get_clocks LMS_FCLK1] -clock_fall -max -add_delay 3.800 [get_ports {LMS1_DIQ1_D[11]}]
 #set_output_delay -clock [get_clocks LMS_FCLK1] -clock_fall -min -add_delay 2.000 [get_ports {LMS1_DIQ1_D[11]}]
 
-set_false_path -to [get_ports LMS_FCLK1]
+set_false_path -to [get_ports RXCLK_F]
 
 
 ##  Setup/Hold Case:

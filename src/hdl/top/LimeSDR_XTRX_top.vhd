@@ -53,94 +53,60 @@ entity LimeSDR_XTRX_top is
    );
    port (
    --PCIe ports
-   PCI_EXP_TXP      : out  std_logic_vector(1 downto 0);
-   PCI_EXP_TXN      : out  std_logic_vector(1 downto 0);
-   PCI_EXP_RXP      : in   std_logic_vector(1 downto 0);
-   PCI_EXP_RXN      : in   std_logic_vector(1 downto 0);
-   --pseudo - GPIO
-   FPGA_LED1        : out  std_logic;
-   FPGA_LED2        : out  std_logic;
-   OPTION           : in   std_logic;
-   PCI_REF_CLK_p    : in   std_logic;
-   PCI_REF_CLK_n    : in   std_logic;
-   PERST            : in   std_logic;
+   GTP_TX_P          : out  std_logic_vector(1 downto 0); 
+   GTP_TX_N          : out  std_logic_vector(1 downto 0); 
+   GTP_RX_P          : in   std_logic_vector(1 downto 0); 
+   GTP_RX_N          : in   std_logic_vector(1 downto 0); 
+   GTP_REF_P         : in   std_logic; 
+   GTP_REF_N         : in   std_logic; 
    --LMS SPI               
-   FPGA_SPI_MOSI    : out  std_logic;
-   FPGA_SPI_SCLK    : out  std_logic;
-   FPGA_SPI_MISO    : in   std_logic;
-   FPGA_SPI_LMS_SS  : out  std_logic;
+   LMS_SDIO          : out  std_logic;
+   LMS_SCLK          : out  std_logic;
+   LMS_SDO           : in   std_logic;
+   LMS_SEN           : out  std_logic;
    --LMS generic           
-   LMS_RESET        : out  std_logic;
-   LMS_RXEN         : out  std_logic;
-   LMS_TXEN         : out  std_logic;
-   LMS_CORE_LDO_EN  : out  std_logic;
+   LMS_RESET         : out  std_logic;
+   RXEN              : out  std_logic;
+   TXEN              : out  std_logic;
+   LMS_LDO_EN        : out  std_logic;
    --LMS port1 - TX
-   LMS_TXNRX1       : out   std_logic;
-   LMS_MCLK1        : in    std_logic;
-   LMS_FCLK1        : out   std_logic; 
-   LMS_EN_IQSEL1    : out   std_logic;
-   LMS_DIQ1_D       : out   std_logic_vector(11 downto 0);
+   TXNRX1            : out   std_logic;
+   RXCLK_M           : in    std_logic;
+   RXCLK_F           : out   std_logic;
+   RXIQSEL           : out   std_logic; 
+   RXD               : out   std_logic_vector(11 downto 0);
    --LMS port2 - RX
-   LMS_TXNRX2       : out   std_logic;
-   LMS_MCLK2        : in    std_logic;
-   LMS_FCLK2        : out   std_logic;
-   LMS_EN_IQSEL2    : in    std_logic;
-   LMS_DIQ2_D       : in    std_logic_vector(11 downto 0);
+   TXNRX2            : out   std_logic;
+   TXCLK_M           : in    std_logic;
+   TXCLK_F           : out   std_logic;
+   TXIQSEL           : in    std_logic;
+   TXD               : in    std_logic_vector(11 downto 0);
    --AUX
-   EN_TCXO          : out   std_logic;
-   EXT_CLK          : out   std_logic;      
-   EN_GPIO          : out   std_logic;           
-   FPGA_CLK         : in    std_logic;
-   BOM_VER          : in    std_logic_vector(2 downto 0);
-   HW_VER           : in    std_logic_vector(2 downto 0);
-   --GPS
-   GNSS_1PPS        : in    std_logic;
-   GNSS_TXD         : out   std_logic;
-   GNSS_RXD         : in    std_logic;
-   GNSS_HW_S        : out   std_logic; --FIX
-   GNSS_HW_R        : out   std_logic; --FIX
-   GNSS_FIX         : in    std_logic; --FIX
+   INTREF_SW         : out   std_logic;
+   LDOEN             : out   std_logic; -- LDO enable for LMSVA_1V4 and LMSVA_1V25 power rails          
+   USB_CLK_EN        : out   std_logic;
    --GPIO
-   PPSI_GPIO1       : inout std_logic;   
-   PPSO_GPIO2       : inout std_logic;
-   TDD_GPIO3_P      : inout std_logic;
-   TDD_GPIO3_N      : inout std_logic;
-   LED_WWAN_GPIO5   : inout std_logic;
-   LED_WLAN_GPIO6   : inout std_logic;
-   LED_WPAN_GPIO7   : inout std_logic;
-   GPIO8            : inout std_logic;
-   GPIO9_P          : inout std_logic;
-   GPIO9_N          : inout std_logic;
-   GPIO11_P         : inout std_logic;
-   GPIO11_N         : inout std_logic;
-   GPIO13           : inout std_logic;
-   --I2C BUS1 (3v3: TMP108, LTC26x6, LP8758 [FPGA])
-   FPGA_I2C1_SDA    : inout std_logic;
-   FPGA_I2C1_SCL    : inout std_logic;
+   GPLEDINT          : out   std_logic;
+   GPLED0            : out   std_logic;
+   GPLED1            : out   std_logic;
+   GPIO              : inout std_logic_vector(11 downto 0);
+   --TDD_GPIO3_N      : inout std_logic;
    --I2C BUS2 (vio: LP8758 [LMS])
-   FPGA_I2C_SDA     : inout std_logic;
-   FPGA_I2C_SCL     : inout std_logic;
+   SDA2              : inout std_logic;
+   SCL2              : inout std_logic;
    --TX/RX SWITCH
-   TX_SW            : out   std_logic; 
-   RX_SW3           : out   std_logic;
-   RX_SW2           : out   std_logic;
+   TXSW              : out   std_logic;
+   RXSW              : out   std_logic;
    --FLASH & BOOT
-   FPGA_CFG_D       : inout std_logic_vector(3 downto 0);    
-   FPGA_CFG_CS      : out   std_logic;
-   --SIM
-   SIM_MOD          : out   std_logic;
-   SIM_ENA          : out   std_logic;
-   SIM_CLK          : out   std_logic;
-   SIM_RST          : out   std_logic;
-   SIM_DIO          : inout std_logic;
+   FLASH_D           : inout std_logic_vector(3 downto 0);
+   FLASH_FCS_B       : out   std_logic;
    --USB2 PHY
    USB_D            : inout std_logic_vector(7 downto 0);
    USB_CLK          : in    std_logic;
    USB_NRST         : out   std_logic;
-   USB_26M          : out   std_logic;
    USB_DIR          : in    std_logic;
    USB_STP          : inout std_logic;
-   USB_NXT          : in    std_logic
+   USB_NXT          : in    std_logic 
    );
 end entity LimeSDR_XTRX_top;
 
@@ -165,6 +131,7 @@ constant c_F2H_C0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_FPGA2HOST_C0
 signal sys_clk      : std_logic;
 signal global_rst_n : std_logic;
 signal rx_switches  : std_logic_vector(1 downto 0);
+signal tx_switches  : std_logic;
 
 --pcie
 
@@ -247,11 +214,17 @@ signal      inst4_rx_smpl_cmp_start         : std_logic;
 signal      inst4_rx_smpl_cmp_cnt           : std_logic_vector(15 downto 0);
 signal      inst4_lms_reset                 : std_logic;
 
+signal      PERST                           : std_logic;   
+
 
 begin
 
+   PERST <= '1'; -- Assigning to '1' since there is no such external pin in hardware
+
    --placeholder assignment
    global_rst_n <= PERST;
+   
+   LDOEN <= '1';
 
    inst0 : entity work.pcie_top
   generic map(
@@ -278,12 +251,12 @@ begin
                 reset_n          => global_rst_n,
                 
                 pcie_perstn      => PERST  ,
-                pcie_refclk_p    => PCI_REF_CLK_p  ,
-                pcie_refclk_n    => PCI_REF_CLK_n  ,
-                pcie_rx_p        => pci_exp_rxp,
-                pcie_rx_n        => pci_exp_rxn,
-                pcie_tx_p        => pci_exp_txp,
-                pcie_tx_n        => pci_exp_txn,
+                pcie_refclk_p    => GTP_REF_P  ,
+                pcie_refclk_n    => GTP_REF_N  ,
+                pcie_rx_p        => GTP_RX_P,
+                pcie_rx_n        => GTP_RX_N,
+                pcie_tx_p        => GTP_TX_P,
+                pcie_tx_n        => GTP_TX_N,
                 
                 H2F_S0_sel       => '0',
                 
@@ -356,14 +329,14 @@ begin
       spi_0_SCLK                 => inst1_spi_0_SCLK,
       spi_0_SS_n                 => inst1_spi_0_SS_n,
       -- Config QSPI
-      fpga_cfg_qspi_MOSI         => FPGA_CFG_D(0),--FPGA_CFG_MOSI,
-      fpga_cfg_qspi_MISO         => FPGA_CFG_D(1),--FPGA_CFG_MISO,
-      fpga_cfg_qspi_SS_n         => FPGA_CFG_CS,--FPGA_CFG_CS,     
+      fpga_cfg_qspi_MOSI         => FLASH_D(0),--FPGA_CFG_MOSI,
+      fpga_cfg_qspi_MISO         => FLASH_D(1),--FPGA_CFG_MISO,
+      fpga_cfg_qspi_SS_n         => FLASH_FCS_B,--FPGA_CFG_CS,     
       -- I2C
-      i2c_1_scl                  => FPGA_I2C1_SCL,
-      i2c_1_sda                  => FPGA_I2C1_SDA,
-      i2c_2_scl                  => FPGA_I2C_SCL,
-      i2c_2_sda                  => FPGA_I2C_SDA,
+      i2c_1_scl                  => open,
+      i2c_1_sda                  => open,
+      i2c_2_scl                  => SCL2,
+      i2c_2_sda                  => SDA2,
       -- Genral purpose I/O
       gpi                        => "00000000",--"0000" & FPGA_SW,
       gpo                        => open,--inst0_gpo, 
@@ -400,10 +373,10 @@ begin
       smpl_cmp_status            => inst1_smpl_cmp_status
    );
    
-   inst1_spi_0_MISO  <= FPGA_SPI_MISO;
-   FPGA_SPI_MOSI       <= inst1_spi_0_MOSI;
-   FPGA_SPI_SCLK        <= inst1_spi_0_SCLK;
-   FPGA_SPI_LMS_SS        <= inst1_spi_0_SS_n(1);
+   inst1_spi_0_MISO  <= LMS_SDO;
+   LMS_SDIO       <= inst1_spi_0_MOSI;
+   LMS_SCLK        <= inst1_spi_0_SCLK;
+   LMS_SEN        <= inst1_spi_0_SS_n(1);
    
 
    
@@ -426,21 +399,21 @@ begin
    )
    port map(
       -- LMS#1 TX PLL 0 ports
-      lms1_txpll_inclk           => LMS_MCLK1,
+      lms1_txpll_inclk           => RXCLK_M,
       lms1_txpll_reconfig_clk    => sys_clk,
       lms1_txpll_logic_reset_n   => not inst1_pll_rst(0),
       lms1_txpll_clk_ena         => "00",-- UNUSED PORT inst1_from_fpgacfg.CLK_ENA(1 downto 0),
       lms1_txpll_drct_clk_en     => inst1_from_fpgacfg.drct_clk_en(0) & inst1_from_fpgacfg.drct_clk_en(0),
-      lms1_txpll_c0              => LMS_FCLK1,
+      lms1_txpll_c0              => RXCLK_F,
       lms1_txpll_c1              => inst1_lms1_txpll_c1,
       lms1_txpll_locked          => inst1_lms1_txpll_locked,
       -- LMS#1 RX PLL ports
-      lms1_rxpll_inclk           => LMS_MCLK2,
+      lms1_rxpll_inclk           => TXCLK_M,
       lms1_rxpll_reconfig_clk    => sys_clk,
       lms1_rxpll_logic_reset_n   => not inst1_pll_rst(1),
       lms1_rxpll_clk_ena         => "00",-- UNUSED PORT inst1_from_fpgacfg.CLK_ENA(3 downto 2),
       lms1_rxpll_drct_clk_en     => inst1_from_fpgacfg.drct_clk_en(1) & inst1_from_fpgacfg.drct_clk_en(1),
-      lms1_rxpll_c0              => LMS_FCLK2,
+      lms1_rxpll_c0              => TXCLK_F,
       lms1_rxpll_c1              => inst1_lms1_rxpll_c1,
       lms1_rxpll_locked          => inst1_lms1_rxpll_locked,
       -- Sample comparing ports from LMS#1 RX interface
@@ -551,20 +524,20 @@ begin
                 MCLK1_2x           => '0',
                 FCLK1              => open,
                 -- DIQ1
-                DIQ1               => LMS_DIQ1_D,
-                ENABLE_IQSEL1      => LMS_EN_IQSEL1,
-                TXNRX1             => LMS_TXNRX1,
+                DIQ1               => RXD,
+                ENABLE_IQSEL1      => RXIQSEL,
+                TXNRX1             => TXNRX1,
                 -- PORT2 interface
                 MCLK2              => inst1_lms1_rxpll_c1,
                 FCLK2              => open,
                 -- DIQ2
-                DIQ2               => LMS_DIQ2_D,
-                ENABLE_IQSEL2      => LMS_EN_IQSEL2,
-                TXNRX2             => LMS_TXNRX2,
+                DIQ2               => TXD,
+                ENABLE_IQSEL2      => TXIQSEL,
+                TXNRX2             => TXNRX2,
                 -- MISC
                 RESET              => inst4_lms_reset,
-                TXEN               => LMS_TXEN,
-                RXEN               => LMS_RXEN,
+                TXEN               => TXEN,
+                RXEN               => RXEN,
                 CORE_LDO_EN        => open,
                 -- Internal TX ports
                 tx_reset_n         => inst1_lms1_txpll_locked,
@@ -599,30 +572,30 @@ begin
    inst1_smpl_cmp_status(1)   <= inst4_rx_smpl_cmp_err ;
    
    
-   LMS_RESET <= inst4_lms_reset and inst1_from_fpgacfg.LMS_RST;--inst1_lms_reset_cpu; -- reset is active low, so any module can reset the LMS
-   en_tcxo    <= inst1_from_fpgacfg.TCXO_EN;--'1'; --tcxo enabled
-   ext_clk    <= inst1_from_fpgacfg.EXT_CLK;--'0'; --internal clock used
+   LMS_RESET   <= inst4_lms_reset and inst1_from_fpgacfg.LMS_RST;--inst1_lms_reset_cpu; -- reset is active low, so any module can reset the LMS
+   USB_CLK_EN  <= inst1_from_fpgacfg.TCXO_EN;      --'1'; --USB Clock enabled
+   INTREF_SW   <= NOT inst1_from_fpgacfg.EXT_CLK;  --'0'; --internal clock used
 
-   LMS_CORE_LDO_EN <= inst1_from_fpgacfg.CORE_LDO_EN;
+   LMS_LDO_EN <= inst1_from_fpgacfg.CORE_LDO_EN;
    
    
-   blinker_proc_vctcxo : process(FPGA_CLK)
+   blinker_proc_vctcxo : process(USB_CLK)
     variable blink_counter : unsigned(25 downto 0) := (others => '0');
    begin
-    if rising_edge(FPGA_CLK) then
+    if rising_edge(USB_CLK) then
         blink_counter := blink_counter +1;
     end if;
-        FPGA_LED1 <= blink_counter(blink_counter'LEFT);   
+        GPLEDINT <= blink_counter(blink_counter'LEFT);   
    end process;
    
-   blinker_proc_pcie : process(sys_clk)
-    variable blink_counter : unsigned(25 downto 0) := (others => '0');
-   begin
-    if rising_edge(sys_clk) then
-        blink_counter := blink_counter +1;
-    end if;
-        FPGA_LED2 <= blink_counter(blink_counter'LEFT);   
-   end process;
+   --blinker_proc_pcie : process(sys_clk)
+   -- variable blink_counter : unsigned(25 downto 0) := (others => '0');
+   --begin
+   -- if rising_edge(sys_clk) then
+   --     blink_counter := blink_counter +1;
+   -- end if;
+   --     FPGA_LED2 <= blink_counter(blink_counter'LEFT);   
+   --end process;
 -- ----------------------------------------------------------------------------
 -- tdd_control instance.
 -- Simple module for TDD signal control
@@ -638,14 +611,15 @@ begin
                 TX_RF_SW_IN        => inst1_from_fpgacfg.tx_rf_sw,
                 RF_SW_AUTO_ENANBLE => inst1_from_fpgacfg.rf_sw_auto_en,
                 --
-                TDD_OUT            => TDD_GPIO3_N, --This GPIO is used for TDD control
+                TDD_OUT            => open, --TDD_GPIO3_N, --This GPIO is used for TDD control
                 RX_RF_SW_OUT       => rx_switches,
-                TX_RF_SW_OUT       => TX_SW
+                TX_RF_SW_OUT       => tx_switches 
    );
    
-   RX_SW3       <= rx_switches(0);
-   RX_SW2       <= rx_switches(1);
-   EN_GPIO      <= '0';
+   --RX_SW3       <= rx_switches(0);
+   --RX_SW2       <= rx_switches(1);
+   RXSW           <= rx_switches(1);  -- 0 - WIDE, 1- HIGH
+   TXSW           <= NOT tx_switches; -- 0 - BAND1, 1 - BAND2 
    
    
    
@@ -653,22 +627,22 @@ begin
 -- tst_top instance.
 -- Clock test logic
 -- ----------------------------------------------------------------------------
-   inst6_tst_top : entity work.tst_top
-   port map(
-      --input ports 
-      sys_clk           => sys_clk,
-      reset_n           => global_rst_n,    
-      LMS_TX_CLK        => FPGA_CLK,
-      
-      GNSS_UART_RX      => GNSS_RXD,
-      GNSS_UART_TX      => GNSS_TXD,
-   
-      -- To configuration memory
-      to_tstcfg         => inst1_to_tstcfg,
-      from_tstcfg       => inst1_from_tstcfg
-   );
-   
-   GNSS_HW_S <= '1';
-   GNSS_HW_R <= '1';
+  --inst6_tst_top : entity work.tst_top
+  --port map(
+  --   --input ports 
+  --   sys_clk           => sys_clk,
+  --   reset_n           => global_rst_n,    
+  --   LMS_TX_CLK        => FPGA_CLK,
+  --   
+  --   GNSS_UART_RX      => GNSS_RXD,
+  --   GNSS_UART_TX      => GNSS_TXD,
+  --
+  --   -- To configuration memory
+  --   to_tstcfg         => inst1_to_tstcfg,
+  --   from_tstcfg       => inst1_from_tstcfg
+  --);
+  --
+  --GNSS_HW_S <= '1';
+  --GNSS_HW_R <= '1';
 
 end architecture Structural;
