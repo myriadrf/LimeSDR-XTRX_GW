@@ -19,6 +19,9 @@ library ieee;
    use work.tstcfg_pkg.all;
    use work.memcfg_pkg.all;
    use work.axi_pkg.all;
+   
+   Library UNISIM;
+   use UNISIM.vcomponents.all;
 
 -- ----------------------------------------------------------------------------
 -- Entity declaration
@@ -173,6 +176,9 @@ architecture ARCH of CPU_TOP is
 
    signal vctcxo_tamer_0_irq_out_irq     : std_logic;
    signal vctcxo_tamer_0_ctrl_export     : std_logic_vector(3 downto 0);
+   
+   signal efuseusr                       : std_logic_vector(31 downto 0);
+ 
 
    component CPU_DESIGN is
       port (
@@ -207,6 +213,7 @@ architecture ARCH of CPU_TOP is
          I2C_2_SDA_I                : in    std_logic;
          I2C_2_SDA_O                : out   std_logic;
          I2C_2_SDA_T                : out   std_logic;
+         SERIAL_IN_tri_i            : in    std_logic_vector(31 downto 0);
          PLL_LOCKED_TRI_I           : in    std_logic_vector(1 downto 0):="11";
          PLL_RST_TRI_O              : out   std_logic_vector( 1 downto 0);
          PLLCFG_CMD_TRI_I           : in    std_logic_vector( 3 downto 0);
@@ -293,6 +300,15 @@ begin
          ASYNC_IN => SMPL_CMP_STATUS,
          SYNC_OUT => smpl_cmp_status_sync
       );
+      
+      
+   EFUSE_USR_inst : EFUSE_USR
+   generic map (
+      SIM_EFUSE_VALUE => X"00000000"  -- Value of the 32-bit non-volatile value used in simulation
+   )
+   port map (
+      EFUSEUSR => efuseusr  -- 32-bit output: User eFUSE register value output
+   );
 
    -- ----------------------------------------------------------------------------
    -- MicroBlaze instance
@@ -332,6 +348,8 @@ begin
          I2C_2_SDA_I => I2C_2_SDA,
          I2C_2_SDA_O => inst0_i2c_2_sda_o,
          I2C_2_SDA_T => inst0_i2c_2_sda_t,
+         --
+         SERIAL_IN_tri_i   => efuseusr,
          --
          PLL_RST_TRI_O     => PLL_RST,
          PLLCFG_CMD_TRI_I  => inst0_pllcfg_cmd_export,
