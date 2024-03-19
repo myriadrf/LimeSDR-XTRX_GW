@@ -97,7 +97,7 @@ int data_cnt = 0;
  */
 static XSpi Spi0;
 static XSpi CFG_QSPI;
-static XGpio gpio, pll_rst, pllcfg_cmd, pllcfg_stat, extm_0_axi_sel, smpl_cmp_en, smpl_cmp_status;
+static XGpio gpio, pll_rst, pllcfg_cmd, pllcfg_stat, extm_0_axi_sel, smpl_cmp_en, smpl_cmp_status, gpio_serial;
 
 static XGpio vctcxo_tamer_ctrl;
 // XClk_Wiz ClkWiz_Dynamic; /* The instance of the ClkWiz_Dynamic */
@@ -106,7 +106,8 @@ static XGpio vctcxo_tamer_ctrl;
 #define cbi(p, n) ((p) &= ~(1 << (n)))
 
 //#define FW_VER 1 // Initial version
-#define FW_VER 2 // Fix for PLL config. hang when changing from low to high frequency.
+//#define FW_VER 2 // Fix for PLL config. hang when changing from low to high frequency.
+#define FW_VER 3 // Added serial number into GET_INFO cmd
 
 // Variables for QSPI config (configuration flash programming)
 unsigned long int last_portion, current_portion, fpga_data, fpga_byte;
@@ -821,6 +822,8 @@ int main()
 
 	int flash_page_addr = 0;
 
+	uint32_t serial_num = 0;
+
 	init_platform();
 
 
@@ -833,6 +836,7 @@ int main()
 	XGpio_Initialize(&smpl_cmp_en, XPAR_SMPL_CMP_GPIO_SMPL_CMP_CMD_DEVICE_ID);
 	XGpio_Initialize(&smpl_cmp_status, XPAR_SMPL_CMP_GPIO_SMPL_CMP_STAT_DEVICE_ID);
 	XGpio_Initialize(&vctcxo_tamer_ctrl, XPAR_VCTCXO_TAMER_CTRL_DEVICE_ID);
+	XGpio_Initialize(&gpio_serial, XPAR_AXI_GPIO_SERIAL_DEVICE_ID);
 
 	// I2C Voltage init
 	//    XPAR_I2C_CORES_I2C1_BASEADDR
@@ -994,6 +998,13 @@ int main()
 				LMS_Ctrl_Packet_Tx->Data_field[2] = LMS_PROTOCOL_VER;
 				LMS_Ctrl_Packet_Tx->Data_field[3] = HW_VER;
 				LMS_Ctrl_Packet_Tx->Data_field[4] = EXP_BOARD;
+
+				serial_num = XGpio_DiscreteRead(&gpio_serial, 1);
+
+				LMS_Ctrl_Packet_Tx->Data_field[10] = (uint8_t) (serial_num >> 24);
+				LMS_Ctrl_Packet_Tx->Data_field[11] = (uint8_t) (serial_num >> 16);
+				LMS_Ctrl_Packet_Tx->Data_field[12] = (uint8_t) (serial_num >> 8);
+				LMS_Ctrl_Packet_Tx->Data_field[13] = (uint8_t) serial_num;
 
 				LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
 				break;
