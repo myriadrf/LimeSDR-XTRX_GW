@@ -97,7 +97,7 @@ int data_cnt = 0;
  */
 static XSpi Spi0;
 static XSpi CFG_QSPI;
-static XGpio gpio, pll_rst, pllcfg_cmd, pllcfg_stat, extm_0_axi_sel, smpl_cmp_en, smpl_cmp_status;
+static XGpio gpio, gpio_2, pll_rst, pllcfg_cmd, pllcfg_stat, extm_0_axi_sel, smpl_cmp_en, smpl_cmp_status;
 
 static XGpio vctcxo_tamer_ctrl;
 // XClk_Wiz ClkWiz_Dynamic; /* The instance of the ClkWiz_Dynamic */
@@ -695,18 +695,21 @@ uint8_t AutoUpdatePHCFG_DRP(void)
 	//	int lock_status;
 	uint8_t phase_mux = 0;
 	uint8_t delay_time = 0;
-
+	int debug_var;
 	uint8_t mmcm_cfg_status = 0;
 	/* State machine for VCTCXO tuning */
 	typedef enum state
 	{
-		PHASE_MIN,
+		PHASE_MIN_0,
+		PHASE_MIN_1,
+		PHASE_MIN_2,
 		PHASE_MAX,
+		PHASE_DONE0,
 		PHASE_DONE,
 		DO_NOTHING
 	} state_t;
 
-	state_t phase_state = PHASE_MIN;
+	state_t phase_state = PHASE_MIN_0;
 
 	// Read
 	wr_buf[0] = 0x00; // Command and Address
@@ -731,6 +734,15 @@ uint8_t AutoUpdatePHCFG_DRP(void)
 	uint16_t max_phase = pll_cfg.CLKOUT1_DIVIDE * 8; // 46*8;//
 	//	uint16_t max_phase = 46*8;//
 
+	//debug
+	if (pll_ind == 0) {
+		debug_var = 0;
+	}
+
+	if (pll_ind==1) {
+		debug_var = 1;
+	}
+
 	for (int i = 0; i < max_phase; i++)
 	{
 		phase_mux = (i & 0x7);
@@ -742,21 +754,55 @@ uint8_t AutoUpdatePHCFG_DRP(void)
 
 		switch (phase_state)
 		{
-		case PHASE_MIN:
+		case PHASE_MIN_0:
+			if (cmp_status == 0x01)
+			{
+				phase_state = PHASE_MIN_1;
+				PhaseMin = i;
+			}
+			break;
+
+		case PHASE_MIN_1:
+			if (cmp_status == 0x01)
+			{
+				phase_state = PHASE_MIN_2;
+				PhaseMin = i;
+			}
+			else if (cmp_status == 0x03) {
+				phase_state = PHASE_MIN_0;
+			}
+			break;
+
+		case PHASE_MIN_2:
 			if (cmp_status == 0x01)
 			{
 				phase_state = PHASE_MAX;
 				PhaseMin = i;
 			}
+			else if (cmp_status == 0x03) {
+				phase_state = PHASE_MIN_0;
+			}
 			break;
+
 		case PHASE_MAX:
-			if (cmp_status == 0x03)
+			if ((cmp_status == 0x03) || (i >= max_phase-1))
 			{
 				PhaseMax = i;
 				PhaseMiddle = PhaseMin + ((PhaseMax - PhaseMin) / 2);
+				phase_state = PHASE_DONE0;
+				//debug
+				if (pll_ind == 0) {
+					debug_var = 0;
+				}
+			}
+			break;
+
+		case PHASE_DONE0:
+			if (i==max_phase-1){
 				phase_state = PHASE_DONE;
 			}
 			break;
+
 		case PHASE_DONE:
 			break;
 
@@ -826,6 +872,7 @@ int main()
 
 	// initialize XGpio variable
 	XGpio_Initialize(&gpio, XPAR_ADC_RESET_GPIO_DEVICE_ID);
+	XGpio_Initialize(&gpio_2, XPAR_AXI_GPIO_0_DEVICE_ID);
 	XGpio_Initialize(&pll_rst, XPAR_PLL_GPIO_PLL_RST_DEVICE_ID);
 	XGpio_Initialize(&pllcfg_cmd, XPAR_PLL_GPIO_PLLCFG_COMMAND_DEVICE_ID);
 	XGpio_Initialize(&pllcfg_stat, XPAR_PLL_GPIO_PLLCFG_STATUS_DEVICE_ID);
@@ -888,6 +935,8 @@ int main()
     	LP8758_RD_REG(XPAR_I2C_CORES_I2C2_BASEADDR,i,&regvals2[0]);
     }
 
+    // Enable LDO
+    XGpio_DiscreteWrite(&gpio_2, 1, 0x01);
     
 
 	// Init flash SPI
@@ -900,12 +949,14 @@ int main()
 //	XIic_Send(XPAR_I2C_CORES_I2C1_BASEADDR, I2C_DAC_ADDR, i2c_buf, 3, XIIC_STOP);
     uint8_t i2c_buf[3];
 	// Write DAC value stored in flash storage only if it isn't default (0xFFFF)
+    /* There is no DAC in this board
 	FlashQspi_ReadPage(&CFG_QSPI, mem_write_offset, page_buffer);
 	i2c_buf[0] = 0x30; // cmd
 	i2c_buf[1] = page_buffer[1];
 	i2c_buf[2] = page_buffer[0];
 	if (!(i2c_buf[1] == 0xFF && i2c_buf[2] == 0xFF))
 		XIic_Send(XPAR_I2C_CORES_I2C1_BASEADDR, I2C_DAC_ADDR, i2c_buf, 3, XIIC_STOP);
+	*/
 
 	// Initialize variables to detect PLL phase change and PLL config update request
 	phcfg_start_old = 0;
@@ -1237,6 +1288,7 @@ int main()
 				{
 					switch (LMS_Ctrl_Packet_Rx->Data_field[0 + (block)]) // ch
 					{
+					/*
 					case 0:				   // dac val
 						XIic_Recv(XPAR_I2C_CORES_I2C1_BASEADDR, I2C_DAC_ADDR, i2c_buf, 2, XIIC_STOP);
 						LMS_Ctrl_Packet_Tx->Data_field[0 + (block * 4)] = LMS_Ctrl_Packet_Rx->Data_field[block]; // ch
@@ -1273,6 +1325,9 @@ int main()
 						LMS_Ctrl_Packet_Tx->Data_field[3 + (block * 4)] = (uint8_t)(converted_value & 0xFF);//signed val, LSB byte
 
 						break;
+						*/
+
+
 					default:
 						cmd_errors++;
 						break;
@@ -1295,6 +1350,7 @@ int main()
 				{
 					switch (LMS_Ctrl_Packet_Rx->Data_field[0 + (block * 4)]) // do something according to channel
 					{
+					/*
 					case 0:														  // TCXO DAC
 						if (LMS_Ctrl_Packet_Rx->Data_field[1 + (block * 4)] == 0) // RAW units?
 						{
@@ -1306,6 +1362,7 @@ int main()
 						else
 							cmd_errors++;
 						break;
+					*/
 					default:
 						cmd_errors++;
 						break;

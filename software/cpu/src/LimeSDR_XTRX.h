@@ -19,7 +19,7 @@
 #define   I2C_ADDR_EEPROM   0x50
 
 //GET INFO
-#define DEV_TYPE			LMS_DEV_XTRX
+#define DEV_TYPE			LMS_DEV_XSDR
 #define HW_VER				0
 #define EXP_BOARD			EXP_BOARD_UNSUPPORTED
 
