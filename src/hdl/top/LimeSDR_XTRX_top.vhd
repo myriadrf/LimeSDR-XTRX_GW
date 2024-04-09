@@ -449,65 +449,65 @@ begin
 -- rxtx_top instance.
 -- Handle rx/tx streams, packets
 -- ---------------------------------------------------------------------------- 
---   inst3_rxtx_top : entity work.rxtx_top
---   generic map(
---      index                   => 1,
---      DEV_FAMILY              => g_DEV_FAMILY,
---      -- TX parameters
---      TX_IQ_WIDTH             => 12,
---      TX_N_BUFF               => g_TX_N_BUFF,              -- 2,4 valid values
---      TX_IN_PCT_SIZE          => g_TX_PCT_SIZE,
---      TX_IN_PCT_HDR_SIZE      => g_TX_IN_PCT_HDR_SIZE,
---      TX_IN_PCT_DATA_W        => c_H2F_S0_0_RWIDTH,      -- 
---      TX_IN_PCT_RDUSEDW_W     => c_H2F_S0_0_RDUSEDW_WIDTH,
---      TX_HIGHSPEED_BUS        => false,
---      
---      -- RX parameters
---      RX_DATABUS_WIDTH        => c_F2H_S0_WWIDTH,
---      RX_IQ_WIDTH             => 12,
---      RX_INVERT_INPUT_CLOCKS  => "ON",
---      RX_PCT_BUFF_WRUSEDW_W   => c_F2H_S0_WRUSEDW_WIDTH --bus width in bits 
---      
---   )
---   port map(        
---      sys_clk                 => sys_clk,                                     
---      from_fpgacfg            => inst1_from_fpgacfg,
---      to_fpgacfg              => inst1_to_fpgacfg,  
---      from_memcfg             => inst1_from_memcfg,
---      to_memcfg               => inst1_to_memcfg,
---      -- TX module signals
---      tx_clk                  => inst1_lms1_txpll_c1,      
---      tx_clk_reset_n          => inst1_lms1_txpll_locked,
---      tx_pct_loss_flg         => open,
---      --Tx interface data 
---      tx_smpl_fifo_wrreq      => inst3_tx_samplefifo_wrreq,
---      tx_smpl_fifo_wrfull     => inst3_tx_samplefifo_wrfull,
---      tx_smpl_fifo_wrusedw    => inst3_tx_samplefifo_wrusedw,
---      tx_smpl_fifo_data       => inst3_tx_samplefifo_data,
---      --TX packet FIFO ports
---      tx_in_pct_reset_n_req   => inst0_s0_raclrn,
---      tx_in_pct_rdreq         => inst0_s0_rd,
---      tx_in_pct_data          => inst0_s0_rdata,
---      tx_in_pct_rdempty       => inst0_s0_rempty,
---      tx_in_pct_rdusedw       => inst0_s0_rdusedw,     
---      -- RX path
---      rx_clk                  => inst1_lms1_rxpll_c1,
---      rx_clk_reset_n          => inst1_lms1_rxpll_locked,
---      --RX FIFO for IQ samples   
---      rx_smpl_fifo_wrreq      => inst3_rx_samplefifo_wrreq,
---      rx_smpl_fifo_data       => inst3_rx_samplefifo_data,
---      rx_smpl_fifo_wrfull     => open,
---      --RX Packet FIFO ports
---      rx_pct_fifo_aclrn_req   => inst0_s0_waclrn,
---      rx_pct_fifo_wusedw      => inst0_s0_wrusedw,
---      rx_pct_fifo_wrreq       => inst0_s0_wr,
---      rx_pct_fifo_wdata       => inst0_s0_wdata,
---      -- RX sample nr count enable
---      rx_smpl_nr_cnt_en       => inst3_rx_smpl_cnt_en,
---      
---      ext_rx_en => '0',--dpd_tx_en,   
---      tx_dma_en => inst0_s0_dma_en
---   );   
+   inst3_rxtx_top : entity work.rxtx_top
+   generic map(
+      index                   => 1,
+      DEV_FAMILY              => g_DEV_FAMILY,
+      -- TX parameters
+      TX_IQ_WIDTH             => 12,
+      TX_N_BUFF               => g_TX_N_BUFF,              -- 2,4 valid values
+      TX_IN_PCT_SIZE          => g_TX_PCT_SIZE,
+      TX_IN_PCT_HDR_SIZE      => g_TX_IN_PCT_HDR_SIZE,
+      TX_IN_PCT_DATA_W        => c_H2F_S0_0_RWIDTH,      -- 
+      TX_IN_PCT_RDUSEDW_W     => c_H2F_S0_0_RDUSEDW_WIDTH,
+      TX_HIGHSPEED_BUS        => false,
+      
+      -- RX parameters
+      RX_DATABUS_WIDTH        => c_F2H_S0_WWIDTH,
+      RX_IQ_WIDTH             => 12,
+      RX_INVERT_INPUT_CLOCKS  => "ON",
+      RX_PCT_BUFF_WRUSEDW_W   => c_F2H_S0_WRUSEDW_WIDTH --bus width in bits 
+      
+   )
+   port map(        
+      sys_clk                 => sys_clk,                                     
+      from_fpgacfg            => inst1_from_fpgacfg,
+      to_fpgacfg              => inst1_to_fpgacfg,  
+      from_memcfg             => inst1_from_memcfg,
+      to_memcfg               => inst1_to_memcfg,
+      -- TX module signals
+      tx_clk                  => inst1_lms1_txpll_c1,      
+      tx_clk_reset_n          => inst1_lms1_txpll_locked,
+      tx_pct_loss_flg         => open,
+      --Tx interface data 
+      tx_smpl_fifo_wrreq      => inst3_tx_samplefifo_wrreq,
+      tx_smpl_fifo_wrfull     => inst3_tx_samplefifo_wrfull,
+      tx_smpl_fifo_wrusedw    => inst3_tx_samplefifo_wrusedw,
+      tx_smpl_fifo_data       => inst3_tx_samplefifo_data,
+      --TX packet FIFO ports
+      tx_in_pct_reset_n_req   => inst0_s0_raclrn,
+      tx_in_pct_rdreq         => inst0_s0_rd,
+      tx_in_pct_data          => inst0_s0_rdata,
+      tx_in_pct_rdempty       => inst0_s0_rempty,
+      tx_in_pct_rdusedw       => inst0_s0_rdusedw,     
+      -- RX path
+      rx_clk                  => inst1_lms1_rxpll_c1,
+      rx_clk_reset_n          => inst1_lms1_rxpll_locked,
+      --RX FIFO for IQ samples   
+      rx_smpl_fifo_wrreq      => inst3_rx_samplefifo_wrreq,
+      rx_smpl_fifo_data       => inst3_rx_samplefifo_data,
+      rx_smpl_fifo_wrfull     => open,
+      --RX Packet FIFO ports
+      rx_pct_fifo_aclrn_req   => inst0_s0_waclrn,
+      rx_pct_fifo_wusedw      => inst0_s0_wrusedw,
+      rx_pct_fifo_wrreq       => inst0_s0_wr,
+      rx_pct_fifo_wdata       => inst0_s0_wdata,
+      -- RX sample nr count enable
+      rx_smpl_nr_cnt_en       => inst3_rx_smpl_cnt_en,
+      
+      ext_rx_en => '0',--dpd_tx_en,   
+      tx_dma_en => inst0_s0_dma_en
+   );   
 
 -- ----------------------------------------------------------------------------
 -- lms7002m_top instance.
