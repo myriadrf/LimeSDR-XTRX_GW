@@ -283,9 +283,9 @@ set_property PULLDOWN true [get_ports LMS_SDIO]
 set_property PULLDOWN true [get_ports LMS_SDO]
 
 # LML Port 1
-set_property INTERNAL_VREF 0.900 [get_iobanks 14]
-#set_property IOSTANDARD LVCMOS18 [get_ports {{RXD[*]} TXNRX1 RXIQSEL RXCLK_M RXCLK_F}]
-set_property IOSTANDARD HSTL_I_18 [get_ports {{RXD[*]} TXNRX1 RXIQSEL RXCLK_M RXCLK_F}]
+#set_property INTERNAL_VREF 0.900 [get_iobanks 14]
+set_property IOSTANDARD LVCMOS18 [get_ports {{RXD[*]} TXNRX1 RXIQSEL RXCLK_M RXCLK_F}]
+#set_property IOSTANDARD HSTL_I_18 [get_ports {{RXD[*]} TXNRX1 RXIQSEL RXCLK_M RXCLK_F}]
 # LML Port 2
 set_property IOSTANDARD LVCMOS18 [get_ports {{TXD[*]} TXNRX2 TXIQSEL TXCLK_M TXCLK_F}]
 
