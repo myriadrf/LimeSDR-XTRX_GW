@@ -159,24 +159,27 @@ class LitePCIeCRG(Module):
             
 # LMS Control CSR----------------------------------------------------------------------------------------
 class CNTRL_CSR(Module,AutoCSR):
-    def __init__(self,ndmas):
+    def __init__(self,ndmas,dma_buff_size):
         self.cntrl = CSRStorage(control_width,0,write_from_dev=True)
         self.enable = CSRStorage()
         self.test = CSRStorage(32)
         self.ndma = CSRStatus(4, reset=ndmas)
         self.enable_both = CSRStorage()
+        self.dma_buff_size = CSRStatus(32, reset=dma_buff_size)
 
 # Core ---------------------------------------------------------------------------------------------
 
 class LitePCIeCore(SoCMini):
     SoCMini.mem_map["csr"] = 0x00000000
     SoCMini.csr_map = {
-        "ctrl":           0,
-        "crg" :           1,
-        "pcie_phy":       2,
-        "pcie_msi":       3,
-        "pcie_msi_table": 4,
-        "CNTRL":         26,
+        "ctrl":             0,
+        "crg" :             1,
+        "pcie_phy":         2,
+        "pcie_msi":         3,
+        "pcie_msi_table":   4,
+        "identifier_mem":   13,
+        "CNTRL":            26,
+
     }
     def __init__(self, platform, core_config):
         platform.add_extension(get_cntrl_ios())
@@ -190,8 +193,8 @@ class LitePCIeCore(SoCMini):
         SoCMini.__init__(self, platform, clk_freq=sys_clk_freq,
             csr_data_width = 32,
             csr_ordering   = core_config.get("csr_ordering", "big"),
-            ident          = "LitePCIe standalone core",
-            ident_version  = True
+            ident          = core_config["identifier_mem"],
+            ident_version  = False
         )
 
         # CRG --------------------------------------------------------------------------------------
@@ -262,7 +265,8 @@ class LitePCIeCore(SoCMini):
                 self.submodules += pcie_wishbone_slave
                 self.comb += wb.connect(pcie_wishbone_slave.wishbone)
         ndmas = core_config["dma_channels"]
-        self.submodules.CNTRL = CNTRL_CSR(ndmas)
+        dma_buff_size = core_config["dma_buffering"]
+        self.submodules.CNTRL = CNTRL_CSR(ndmas, dma_buff_size)
         cntrl_ios = platform.request("cntrl")
         self.comb += [
             cntrl_ios.writer_data.eq(self.CNTRL.cntrl.storage),

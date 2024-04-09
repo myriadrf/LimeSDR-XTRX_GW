@@ -6,9 +6,7 @@ set_msg_config -id {Common 17-55} -new_severity {Warning}
 
 # Add Sources
 
-read_verilog {c:\users\servenikas\downloads\litex\litepcie\litepcie\phy\xilinx_s7_gen2\pcie_pipe_clock.v}
-read_verilog {c:\users\servenikas\downloads\litex\litepcie\litepcie\phy\xilinx_s7_gen2\pcie_s7_support.v}
-read_verilog {Z:\Work\LimeSDR-XTRX\litepcie_gen\build\gateware\litepcie_core.v}
+read_verilog {D:\work_dir\LimeSDR-XTRX\LimeSDR-XTRX_GW_M2\litepcie_gen\build\gateware\litepcie_core.v}
 
 # Add EDIFs
 
@@ -63,8 +61,8 @@ opt_design -directive default
 
 # Add pre-placement commands
 
-reset_property LOC [get_cells -hierarchical -filter {NAME=~pcie_support/*gtp_common.gtpe2_common_i}]
-reset_property LOC [get_cells -hierarchical -filter {NAME=~pcie_support/*genblk*.bram36_tdp_bl.bram36_tdp_bl}]
+reset_property LOC [get_cells -hierarchical -filter {NAME=~pcie_s7/*gtp_common.gtpe2_common_i}]
+reset_property LOC [get_cells -hierarchical -filter {NAME=~pcie_s7/*genblk*.bram36_tdp_bl.bram36_tdp_bl}]
 
 # Placement
 
