@@ -14,13 +14,13 @@ package revisions is
 	constant major_rev : integer := 1; 
 	constant minor_rev : integer := 1;
 	constant beta_rev : integer := 1;
-	constant compile_rev : integer := 10;
+	constant compile_rev : integer := 0;
 	constant compile_year_stamp : integer := 24;
-	constant compile_month_stamp : integer := 01;
-	constant compile_day_stamp : integer := 30;
-	constant compile_hour_stamp : integer := 16;
+	constant compile_month_stamp : integer := 03;
+	constant compile_day_stamp : integer := 12;
+	constant compile_hour_stamp : integer := 12;
 	
 	constant magic_num : std_logic_vector(31 downto 0) := x"d8a5f009";
-   constant board_id : std_logic_vector(15 downto 0) := 16d"27"; -- 5g radio
+   constant board_id : std_logic_vector(15 downto 0) := 16d"30"; -- 5g radio
 end revisions;
 

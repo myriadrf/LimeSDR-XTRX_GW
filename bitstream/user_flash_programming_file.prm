@@ -2,10 +2,10 @@
 Configuration Memory information
 ===================================
 File Format        BIN
-Interface          SPIX4
+Interface          SPIX1
 Size               4M
 Start Address      0x00000000
 End Address        0x003FFFFF
 
 Addr1         Addr2         Date                    File(s)
-0x00000000    0x00199ED7    Mar  8 10:12:14 2024    D:/work_dir/LimeSDR-XTRX/LimeSDR-XTRX_GW_M2/LimeSDR-XTRX/LimeSDR-XTRX.runs/impl_1/LimeSDR_XTRX_top.bit
+0x00000000    0x00189423    Apr  9 09:08:15 2024    D:/work_dir/LimeSDR-XTRX/LimeSDR-XTRX_GW_M2/LimeSDR-XTRX/LimeSDR-XTRX.runs/impl_1_user/LimeSDR_XTRX_top.bit
