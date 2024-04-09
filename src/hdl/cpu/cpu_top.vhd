@@ -195,6 +195,7 @@ architecture ARCH of CPU_TOP is
          FIFO_WRITE_0_WR_EN         : out   std_logic;
          GPIO_0_TRI_I               : in    std_logic_vector( 7 downto 0);
          GPIO_1_TRI_O               : out   std_logic_vector( 7 downto 0);
+         GPIO_2_TRI_O               : out   std_logic_vector( 7 downto 0);
          I2C_1_SCL_I                : in    std_logic;
          I2C_1_SCL_O                : out   std_logic;
          I2C_1_SCL_T                : out   std_logic;
@@ -317,7 +318,8 @@ begin
          FIFO_WRITE_0_WR_DATA     => EXFIFO_OF_D,
          FIFO_WRITE_0_WR_EN       => EXFIFO_OF_WR,
          GPIO_0_TRI_I             => GPI,
-         GPIO_1_TRI_O             => GPO,
+         GPIO_1_TRI_O             => open,
+         GPIO_2_TRI_O             => GPO,
          --
          I2C_1_SCL_I => I2C_1_SCL,
          I2C_1_SCL_O => inst0_i2c_1_scl_o,
