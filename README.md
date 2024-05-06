@@ -6,6 +6,8 @@ LimeSDR XTRX is Small form factor mini PCIe expansion card Software Defined Radi
 
 This repository contains the LimeSDR XTRX FPGA gateware project.
 
+:warning: Please use specific branch according to your board version. 
+
 The gateware can be built with the free version of the Xilinx Vivado v2022.1 (64-bit).
 
 ## Project building
@@ -72,12 +74,11 @@ The gateware can be built with the free version of the Xilinx Vivado v2022.1 (64
 * Select your configuration file and click OK
 
 ## Branches
-
 This repository contains the following branches:
 
 * Master:
-  * Main branch;
-  * LimeSDR-XTRX_fairwaves_rev5;
+  * Main branch                  - Gateware for LimeSDR-XTRX boards;
+  * LimeSDR-XTRX_fairwaves_rev5  - Gateware for Fairwaves rev5 boards;
 
   
 ## Licensing
