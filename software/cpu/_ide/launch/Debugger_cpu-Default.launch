@@ -61,7 +61,7 @@
     </listAttribute>
     <booleanAttribute key="org.eclipse.tcf.debug.AttachChildren" value="true"/>
     <booleanAttribute key="org.eclipse.tcf.debug.DisconnectOnCtxExit" value="false"/>
-    <stringAttribute key="org.eclipse.tcf.debug.MemoryMap" value="[{&quot;FileName&quot;:&quot;X:\\Work\\LimeSDR-XTRX\\sw_workspace\\cpu\\Debug\\cpu.elf&quot;,&quot;Flags&quot;:0,&quot;ID&quot;:&quot;/xc7a50t/MicroBlaze Debug Module at USER2&quot;,&quot;UUID&quot;:&quot;8b40731a-97dd-4fb1-a037-b1b208151186&quot;}]"/>
+    <stringAttribute key="org.eclipse.tcf.debug.MemoryMap" value="[{&quot;FileName&quot;:&quot;D:\\work_dir\\LimeSDR-XTRX\\LimeSDR-XTRX_GW\\software\\cpu\\Debug\\cpu.elf&quot;,&quot;Flags&quot;:0,&quot;ID&quot;:&quot;/xc7a50t/MicroBlaze Debug Module at USER2&quot;,&quot;UUID&quot;:&quot;8b40731a-97dd-4fb1-a037-b1b208151186&quot;}]"/>
     <booleanAttribute key="org.eclipse.tcf.debug.StopAtEntry" value="false"/>
     <booleanAttribute key="org.eclipse.tcf.debug.StopAtMain" value="true"/>
     <booleanAttribute key="org.eclipse.tcf.debug.UseContextFilter" value="false"/>
