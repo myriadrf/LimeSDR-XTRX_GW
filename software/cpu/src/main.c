@@ -10,6 +10,7 @@
 #include <xiic.h>				/* I2C driver*/
 #include "xspi.h"				/* SPI device driver */
 #include "AXI_to_native_FIFO.h" /* Native FIFO driver*/
+#include "xintc_l.h"
 
 #include "fpga_flash_qspi.h"
 #include "LMS64C_protocol.h"
@@ -19,6 +20,7 @@
 #include "sleep.h"
 #include "utility_functions.h"
 #include "LP8758.h"
+
 // #include "math.h"
 /************************** Constant Definitions *****************************/
 /*
@@ -87,6 +89,12 @@ uint16_t pa2_dac_val = 0xFFFF;
 uint16_t dac_val = 30714;			  // TCXO DAC value
 signed short int converted_val = 300; // Temperature
 int data_cnt = 0;
+
+uint8_t serial_otp_unlock_key = 0;
+volatile unsigned char serial[32] = {0};
+volatile unsigned char tmp_serial[32] = {0};
+volatile unsigned char tmprd_serial[32] = {0};
+
 
 /************************** Variable Definitions *****************************/
 
@@ -794,6 +802,11 @@ uint8_t AutoUpdatePHCFG_DRP(void)
 	return PHCFG_ERROR;
 }
 
+void copyArray(unsigned char *source, unsigned char *destination, size_t sourceIndex, size_t destinationIndex, size_t count) {
+    memcpy(destination + destinationIndex, source + sourceIndex, count);
+}
+
+
 int main()
 {
 	int PAGE_SIZE = 256; // page size
@@ -822,7 +835,10 @@ int main()
 
 	int flash_page_addr = 0;
 
-	uint32_t serial_num = 0;
+	//uint32_t serial_num = 0;
+
+	//Xil_ExceptionDisable();
+
 
 	init_platform();
 
@@ -850,7 +866,7 @@ int main()
 //    LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR,0x07,0xD2);
 //    LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR,0x10,0xB1);
 //    LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR,0x09,0xD2);
-
+	/*
 	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x02, 0x88);
 	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x03, 0xD2);
 	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x04, 0x88);
@@ -881,6 +897,7 @@ int main()
 	LP8758_WR_REG(XPAR_I2C_CORES_I2C2_BASEADDR, 0x10, 0xBE);
 
 	LP8758_WR_REG(XPAR_I2C_CORES_I2C2_BASEADDR, 0x1A, 0xFF);
+	*/
 
 
 	uint8_t regvals2[1];
@@ -895,6 +912,84 @@ int main()
 
 	// Init flash SPI
 	Init_flash_qspi(QSPI_DEVICE_ID, &CFG_QSPI, XSP_MASTER_OPTION | XSP_MANUAL_SSELECT_OPTION);
+
+
+	/*
+	spi_wrbuf[0] = 0x2B;
+	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, spi_rdbuf, 3);
+
+	// Enter Secured OTP (ENSO)
+	//spi_wrbuf[0] = 0xB1;
+	//spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, NULL, 1);
+	spirez = FlashQspi_CMD(&CFG_QSPI, ENSO);
+
+	spi_wrbuf[0] = 0x2B;
+	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, spi_rdbuf, 3);
+
+	// Read address 0x30
+	spi_wrbuf[0] = 0x03;
+	spi_wrbuf[1] = 0x0;
+	spi_wrbuf[2] = 0x0;
+	spi_wrbuf[3] = 0x30;
+	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, spi_rdbuf, 8);
+
+	// Write Enable (WREN)
+	spi_wrbuf[0] = 0x06;
+	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, NULL, 1);
+
+	// Read Status Register (RDSR)
+	spi_wrbuf[0] = 0x05;
+	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, spi_rdbuf, 3);
+
+	//Sector erase
+	spi_wrbuf[0] = 0x20;
+	spi_wrbuf[1] = 0x0;
+	spi_wrbuf[2] = 0x0;
+	spi_wrbuf[3] = 0x00;
+	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, NULL, 4);
+
+	// Read Status Register (RDSR)
+	spi_wrbuf[0] = 0x05;
+	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, spi_rdbuf, 3);
+
+	// Write Enable (WREN)
+	spi_wrbuf[0] = 0x06;
+	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, NULL, 1);
+
+	//Write to 0x30 address
+	spi_wrbuf[0] = 0x02;
+	spi_wrbuf[1] = 0x0;
+	spi_wrbuf[2] = 0x0;
+	spi_wrbuf[3] = 0x30;
+	spi_wrbuf[4] = 0x55;
+	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, NULL, 5);
+
+	// Read Status Register (RDSR)
+	spi_wrbuf[0] = 0x05;
+	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, spi_rdbuf, 3);
+
+	// Read address 0x30
+	spi_wrbuf[0] = 0x03;
+	spi_wrbuf[1] = 0x0;
+	spi_wrbuf[2] = 0x0;
+	spi_wrbuf[3] = 0x30;
+	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, spi_rdbuf, 8);
+
+	// Exit Secured OTP (EXSO)
+	spirez = FlashQspi_CMD(&CFG_QSPI, EXSO);
+
+	// Read address 0x30
+	spi_wrbuf[0] = 0x03;
+	spi_wrbuf[1] = 0x0;
+	spi_wrbuf[2] = 0x0;
+	spi_wrbuf[3] = 0x30;
+	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, spi_rdbuf, 8);
+
+	*/
+
+
+
+
 
 	// Write config to DAC
 //	i2c_buf[0] = 0x04; // cmd
@@ -999,18 +1094,87 @@ int main()
 				LMS_Ctrl_Packet_Tx->Data_field[3] = HW_VER;
 				LMS_Ctrl_Packet_Tx->Data_field[4] = EXP_BOARD;
 
-				serial_num = XGpio_DiscreteRead(&gpio_serial, 1);
+				//serial_num = XGpio_DiscreteRead(&gpio_serial, 1);
 
+				/*
 				LMS_Ctrl_Packet_Tx->Data_field[10] = (uint8_t) (serial_num >> 24);
 				LMS_Ctrl_Packet_Tx->Data_field[11] = (uint8_t) (serial_num >> 16);
 				LMS_Ctrl_Packet_Tx->Data_field[12] = (uint8_t) (serial_num >> 8);
 				LMS_Ctrl_Packet_Tx->Data_field[13] = (uint8_t) serial_num;
+				*/
+
+				spirez = FlashQspi_CMD_ReadOTPData(&CFG_QSPI, OTP_SERIAL_ADDRESS, sizeof(serial), serial);
+
+
+				LMS_Ctrl_Packet_Tx->Data_field[10] = serial[0];
+				LMS_Ctrl_Packet_Tx->Data_field[11] = serial[1];
+				LMS_Ctrl_Packet_Tx->Data_field[12] = serial[2];
+				LMS_Ctrl_Packet_Tx->Data_field[13] = serial[3];
+				LMS_Ctrl_Packet_Tx->Data_field[14] = serial[4];
+				LMS_Ctrl_Packet_Tx->Data_field[15] = serial[5];
+				LMS_Ctrl_Packet_Tx->Data_field[16] = serial[6];
+				LMS_Ctrl_Packet_Tx->Data_field[17] = serial[7];
+
+
+
+
 
 				LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
+
+				if (spirez != XST_SUCCESS)
+					LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
 				break;
 
-				// COMMAND LMS RESET
 
+
+			case CMD_SERIAL_WR:
+
+				copyArray(LMS_Ctrl_Packet_Rx->Data_field, tmp_serial, 24, 0, 32);
+
+				// STORAGE_TYPE
+				switch (LMS_Ctrl_Packet_Rx->Data_field[0]) {
+				case 0:		//Default
+					LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
+					break;
+				case 1:		//Volatile memory
+					LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
+					break;
+				case 2:		//Non-Volatile memory
+					LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
+					break;
+				case 3:		//Non-Volatile OTP memory
+					if (serial_otp_unlock_key == OTP_UNLOCK_KEY) {
+						//FlashQspi_EraseSector(&CFG_QSPI, OTP_SERIAL_ADDRESS); //temp for testing
+						spirez = FlashQspi_ProgramOTP(&CFG_QSPI, OTP_SERIAL_ADDRESS, LMS_Ctrl_Packet_Rx->Data_field[1], tmp_serial);
+						serial_otp_unlock_key = 0;
+						LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
+					} else if (serial_otp_unlock_key != OTP_UNLOCK_KEY && LMS_Ctrl_Packet_Rx->Data_field[2] == OTP_UNLOCK_KEY) {
+						serial_otp_unlock_key = LMS_Ctrl_Packet_Rx->Data_field[2];
+						LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
+					}
+					else {
+						LMS_Ctrl_Packet_Tx->Header.Status = STATUS_RESOURCE_DENIED_CMD;
+					}
+					break;
+				default:
+					LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
+					break;
+				}
+
+				break;
+
+
+			case CMD_SERIAL_RD:
+				spirez = FlashQspi_CMD_ReadOTPData(&CFG_QSPI, OTP_SERIAL_ADDRESS, 32, tmprd_serial);
+				copyArray(tmprd_serial, LMS_Ctrl_Packet_Tx->Data_field, 0, 24, 32);
+				LMS_Ctrl_Packet_Tx->Data_field[1] = 16;
+				LMS_Ctrl_Packet_Tx->Data_field[2] = serial_otp_unlock_key;
+				LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
+				if (spirez != XST_SUCCESS)
+					LMS_Ctrl_Packet_Tx->Header.Status = STATUS_ERROR_CMD;
+				break;
+
+		    // COMMAND LMS RESET
 			case CMD_LMS_RST:
 
 				if (!Check_Periph_ID(MAX_ID_LMS7, LMS_Ctrl_Packet_Rx->Header.Periph_ID))

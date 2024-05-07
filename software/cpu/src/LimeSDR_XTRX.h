@@ -25,4 +25,9 @@
 
 #define MAX_ID_LMS7		1
 
+#define OTP_UNLOCK_KEY		0x5A
+//#define OTP_SERIAL_ADDRESS  0x1FD8000
+#define OTP_SERIAL_ADDRESS  0x00001E0
+#define OTP_SERIAL_LENGTH   0x10
+
 #endif /* SRC_LIMESDR_XTRX_H_ */

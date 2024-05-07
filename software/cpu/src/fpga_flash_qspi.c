@@ -87,6 +87,14 @@ void Init_flash_qspi(u16 DeviceId, XSpi *InstancePtr, u32 Options)
 
 }
 
+int FlashQspi_CMD(XSpi *InstancePtr, u8 cmd)
+{
+	u8 sendbuf[1]={0};
+	sendbuf[0] = cmd;
+
+	return XSpi_Transfer(InstancePtr, sendbuf, NULL, 1);
+}
+
 int FlashQspi_CMD_ReadRDSR(XSpi *InstancePtr, u8* Data)
 {
     u8 sendbuf[3]={0};
@@ -185,6 +193,49 @@ int FlashQspi_CMD_ReadDataPage(XSpi *InstancePtr, u32 address, u8* buffer)
     return retval;
 }
 
+/******************************************************************************
+*
+* Read One Time Programmable flash memory region
+*
+* @param	InstancePtr
+* @param	address 	- starting address
+* @param	bytes 		- bytes to read, up to 256bytes
+* @param	buffer		- buffer where to store data
+*
+* @return	XST_SUCCESS if Successful else XST_FAILURE.
+*
+* @note		None.
+*
+******************************************************************************/
+int FlashQspi_CMD_ReadOTPData(XSpi *InstancePtr, u32 address, u8 bytes, u8* buffer)
+{
+    // 256 bytes in a page, 1 byte command, 3 byte address
+//    u8 sendbuf[260] = {0};
+    u8 recvbuf[260] = {0};
+    int TotalByteCount = bytes + 4;
+    int retval;
+
+    // Enter secured OTP
+    retval = FlashQspi_CMD(InstancePtr, ENSO);
+
+    recvbuf[0] = 0x03;
+    recvbuf[1] = (address >> 16)&0xff;
+    recvbuf[2] = (address >> 8)&0xff;
+    recvbuf[3] = (address )&0xff;
+
+    retval = XSpi_Transfer(InstancePtr, recvbuf, recvbuf, TotalByteCount);
+
+    for(int i=4; i<TotalByteCount; i++)
+    {
+        buffer[i-4] = recvbuf[i];
+    }
+
+    // Exit secured OTP
+    retval = FlashQspi_CMD(InstancePtr, EXSO);
+
+    return retval;
+}
+
 int FlashQspi_CMD_WriteDataPage(XSpi *InstancePtr, u32 address, u8* buffer)
 {
     // 256 bytes in a page, 1 byte command, 3 byte address
@@ -206,6 +257,33 @@ int FlashQspi_CMD_WriteDataPage(XSpi *InstancePtr, u32 address, u8* buffer)
 
 
     
+    return retval;
+}
+
+int FlashQspi_CMD_PageProgram(XSpi *InstancePtr, u32 address, u8 bytes, u8* buffer)
+{
+	// One to 256 bytes can be sent to the device to be programmed
+
+    // sendbuf[260] = 256 bytes in a page, 1 byte command, 3 byte address
+    u8 sendbuf[260] = {0};
+
+    int TotalByteCount = bytes + 4;
+    int retval;
+
+    sendbuf[0] = 0x02;
+    sendbuf[1] = (address >> 16)&0xff;
+    sendbuf[2] = (address >> 8)&0xff;
+    sendbuf[3] = (address)&0xff;
+
+    for(int i=4; i<TotalByteCount; i++)
+    {
+        sendbuf[i] = buffer[i-4];
+    }
+
+    retval = XSpi_Transfer(InstancePtr, sendbuf, NULL, TotalByteCount);
+
+
+
     return retval;
 }
 
@@ -236,7 +314,7 @@ int FlashQspi_ProgramPage(XSpi *InstancePtr, u32 address, u8* data)
         if(retval != XST_SUCCESS) return retval;
         retval = FlashQspi_CMD_ReadRDSR(InstancePtr,&status_reg); 
         if(retval != XST_SUCCESS) return retval;       
-    } while(status_reg&2 == 0); //Check write enable
+    } while((status_reg&2) == 0); //Check write enable
     //Perform write
     retval = FlashQspi_CMD_WriteDataPage(InstancePtr,address,data);
     if(retval != XST_SUCCESS) return retval;   
@@ -245,7 +323,40 @@ int FlashQspi_ProgramPage(XSpi *InstancePtr, u32 address, u8* data)
     {
         retval = FlashQspi_CMD_ReadRDSR(InstancePtr,&status_reg); 
         if(retval != XST_SUCCESS) return retval;  
-    } while(status_reg&1 == 1);
+    } while((status_reg&1) == 1);
+    //Return success if no problems
+    return XST_SUCCESS;
+}
+
+int FlashQspi_ProgramOTP(XSpi *InstancePtr, u32 address, u8 bytes, u8* data)
+{
+    u8 status_reg = 0;
+    int retval;
+
+    // Enter secured OTP
+    retval = FlashQspi_CMD(InstancePtr, ENSO);
+
+    //Set Write enable
+    do
+    {
+        retval = FlashQspi_CMD_WREN(InstancePtr);
+        if(retval != XST_SUCCESS) return retval;
+        retval = FlashQspi_CMD_ReadRDSR(InstancePtr,&status_reg);
+        if(retval != XST_SUCCESS) return retval;
+    } while((status_reg&2) == 0); //Check write enable
+
+    //Perform write
+    retval = FlashQspi_CMD_PageProgram(InstancePtr,address, bytes, data);
+    if(retval != XST_SUCCESS) return retval;
+    //Check if flash is busy
+    do
+    {
+        retval = FlashQspi_CMD_ReadRDSR(InstancePtr,&status_reg);
+        if(retval != XST_SUCCESS) return retval;
+    } while((status_reg&1) == 1);
+
+    // Exit secured OTP
+    retval = FlashQspi_CMD(InstancePtr, EXSO);
     //Return success if no problems
     return XST_SUCCESS;
 }
@@ -261,7 +372,7 @@ int FlashQspi_EraseSector(XSpi *InstancePtr, u32 address)
         if(retval != XST_SUCCESS) return retval;
         retval = FlashQspi_CMD_ReadRDSR(InstancePtr,&status_reg); 
         if(retval != XST_SUCCESS) return retval;       
-    } while(status_reg&2 == 0); //Check write enable
+    } while((status_reg&2) == 0); //Check write enable
     // Perform erase
     retval = FlashQspi_CMD_SectorErase(InstancePtr,address);
     if(retval != XST_SUCCESS) return retval;   
@@ -270,7 +381,7 @@ int FlashQspi_EraseSector(XSpi *InstancePtr, u32 address)
     {
         retval = FlashQspi_CMD_ReadRDSR(InstancePtr,&status_reg); 
         if(retval != XST_SUCCESS) return retval;  
-    } while(status_reg&1 == 1);
+    } while((status_reg&1) == 1);
     //Return success if no problems
     return XST_SUCCESS;
 }
@@ -280,3 +391,4 @@ int FlashQspi_ReadPage(XSpi *InstancePtr, u32 address, u8* data)
     //No additional operations are needed
     return FlashQspi_CMD_ReadDataPage(InstancePtr,address,data);
 }
+
