@@ -10,7 +10,6 @@
 #include <xiic.h>				/* I2C driver*/
 #include "xspi.h"				/* SPI device driver */
 #include "AXI_to_native_FIFO.h" /* Native FIFO driver*/
-#include "xintc_l.h"
 
 #include "fpga_flash_qspi.h"
 #include "LMS64C_protocol.h"
@@ -835,11 +834,6 @@ int main()
 
 	int flash_page_addr = 0;
 
-	//uint32_t serial_num = 0;
-
-	//Xil_ExceptionDisable();
-
-
 	init_platform();
 
 
@@ -912,83 +906,6 @@ int main()
 
 	// Init flash SPI
 	Init_flash_qspi(QSPI_DEVICE_ID, &CFG_QSPI, XSP_MASTER_OPTION | XSP_MANUAL_SSELECT_OPTION);
-
-
-	/*
-	spi_wrbuf[0] = 0x2B;
-	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, spi_rdbuf, 3);
-
-	// Enter Secured OTP (ENSO)
-	//spi_wrbuf[0] = 0xB1;
-	//spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, NULL, 1);
-	spirez = FlashQspi_CMD(&CFG_QSPI, ENSO);
-
-	spi_wrbuf[0] = 0x2B;
-	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, spi_rdbuf, 3);
-
-	// Read address 0x30
-	spi_wrbuf[0] = 0x03;
-	spi_wrbuf[1] = 0x0;
-	spi_wrbuf[2] = 0x0;
-	spi_wrbuf[3] = 0x30;
-	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, spi_rdbuf, 8);
-
-	// Write Enable (WREN)
-	spi_wrbuf[0] = 0x06;
-	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, NULL, 1);
-
-	// Read Status Register (RDSR)
-	spi_wrbuf[0] = 0x05;
-	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, spi_rdbuf, 3);
-
-	//Sector erase
-	spi_wrbuf[0] = 0x20;
-	spi_wrbuf[1] = 0x0;
-	spi_wrbuf[2] = 0x0;
-	spi_wrbuf[3] = 0x00;
-	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, NULL, 4);
-
-	// Read Status Register (RDSR)
-	spi_wrbuf[0] = 0x05;
-	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, spi_rdbuf, 3);
-
-	// Write Enable (WREN)
-	spi_wrbuf[0] = 0x06;
-	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, NULL, 1);
-
-	//Write to 0x30 address
-	spi_wrbuf[0] = 0x02;
-	spi_wrbuf[1] = 0x0;
-	spi_wrbuf[2] = 0x0;
-	spi_wrbuf[3] = 0x30;
-	spi_wrbuf[4] = 0x55;
-	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, NULL, 5);
-
-	// Read Status Register (RDSR)
-	spi_wrbuf[0] = 0x05;
-	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, spi_rdbuf, 3);
-
-	// Read address 0x30
-	spi_wrbuf[0] = 0x03;
-	spi_wrbuf[1] = 0x0;
-	spi_wrbuf[2] = 0x0;
-	spi_wrbuf[3] = 0x30;
-	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, spi_rdbuf, 8);
-
-	// Exit Secured OTP (EXSO)
-	spirez = FlashQspi_CMD(&CFG_QSPI, EXSO);
-
-	// Read address 0x30
-	spi_wrbuf[0] = 0x03;
-	spi_wrbuf[1] = 0x0;
-	spi_wrbuf[2] = 0x0;
-	spi_wrbuf[3] = 0x30;
-	spirez = XSpi_Transfer (&CFG_QSPI, spi_wrbuf, spi_rdbuf, 8);
-
-	*/
-
-
-
 
 
 	// Write config to DAC
@@ -1094,17 +1011,8 @@ int main()
 				LMS_Ctrl_Packet_Tx->Data_field[3] = HW_VER;
 				LMS_Ctrl_Packet_Tx->Data_field[4] = EXP_BOARD;
 
-				//serial_num = XGpio_DiscreteRead(&gpio_serial, 1);
-
-				/*
-				LMS_Ctrl_Packet_Tx->Data_field[10] = (uint8_t) (serial_num >> 24);
-				LMS_Ctrl_Packet_Tx->Data_field[11] = (uint8_t) (serial_num >> 16);
-				LMS_Ctrl_Packet_Tx->Data_field[12] = (uint8_t) (serial_num >> 8);
-				LMS_Ctrl_Packet_Tx->Data_field[13] = (uint8_t) serial_num;
-				*/
-
+				// Read Serial number from FLASH OTP region
 				spirez = FlashQspi_CMD_ReadOTPData(&CFG_QSPI, OTP_SERIAL_ADDRESS, sizeof(serial), serial);
-
 
 				LMS_Ctrl_Packet_Tx->Data_field[10] = serial[0];
 				LMS_Ctrl_Packet_Tx->Data_field[11] = serial[1];
@@ -1114,10 +1022,6 @@ int main()
 				LMS_Ctrl_Packet_Tx->Data_field[15] = serial[5];
 				LMS_Ctrl_Packet_Tx->Data_field[16] = serial[6];
 				LMS_Ctrl_Packet_Tx->Data_field[17] = serial[7];
-
-
-
-
 
 				LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
 
