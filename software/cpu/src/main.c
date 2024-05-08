@@ -1014,14 +1014,14 @@ int main()
 				// Read Serial number from FLASH OTP region
 				spirez = FlashQspi_CMD_ReadOTPData(&CFG_QSPI, OTP_SERIAL_ADDRESS, sizeof(serial), serial);
 
-				LMS_Ctrl_Packet_Tx->Data_field[10] = serial[0];
-				LMS_Ctrl_Packet_Tx->Data_field[11] = serial[1];
-				LMS_Ctrl_Packet_Tx->Data_field[12] = serial[2];
-				LMS_Ctrl_Packet_Tx->Data_field[13] = serial[3];
-				LMS_Ctrl_Packet_Tx->Data_field[14] = serial[4];
-				LMS_Ctrl_Packet_Tx->Data_field[15] = serial[5];
-				LMS_Ctrl_Packet_Tx->Data_field[16] = serial[6];
-				LMS_Ctrl_Packet_Tx->Data_field[17] = serial[7];
+				LMS_Ctrl_Packet_Tx->Data_field[10] = serial[7];
+				LMS_Ctrl_Packet_Tx->Data_field[11] = serial[6];
+				LMS_Ctrl_Packet_Tx->Data_field[12] = serial[5];
+				LMS_Ctrl_Packet_Tx->Data_field[13] = serial[4];
+				LMS_Ctrl_Packet_Tx->Data_field[14] = serial[3];
+				LMS_Ctrl_Packet_Tx->Data_field[15] = serial[2];
+				LMS_Ctrl_Packet_Tx->Data_field[16] = serial[1];
+				LMS_Ctrl_Packet_Tx->Data_field[17] = serial[0];
 
 				LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
 
