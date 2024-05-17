@@ -85,7 +85,7 @@ uint8_t temp_buffer1[4];
 // storage for dac values
 uint16_t pa1_dac_val = 0xFFFF;
 uint16_t pa2_dac_val = 0xFFFF;
-uint16_t dac_val = 30714;			  // TCXO DAC value
+uint16_t dac_val = DAC_DEFF_VAL;			  // TCXO DAC value
 signed short int converted_val = 300; // Temperature
 int data_cnt = 0;
 
@@ -114,7 +114,8 @@ static XGpio vctcxo_tamer_ctrl;
 
 //#define FW_VER 1 // Initial version
 //#define FW_VER 2 // Fix for PLL config. hang when changing from low to high frequency.
-#define FW_VER 3 // Added serial number into GET_INFO cmd
+//#define FW_VER 3 // Added serial number into GET_INFO cmd
+#define FW_VER 4 // Fix for DAC volatile value read. Added default DAC value if FLASH is empty
 
 // Variables for QSPI config (configuration flash programming)
 unsigned long int last_portion, current_portion, fpga_data, fpga_byte;
@@ -861,6 +862,7 @@ int main()
 //    LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR,0x10,0xB1);
 //    LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR,0x09,0xD2);
 
+
 	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x02, 0x88);
 	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x03, 0xD2);
 	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x04, 0x88);
@@ -914,13 +916,24 @@ int main()
 //	i2c_buf[2] = 0x01; // lsb data
 //	XIic_Send(XPAR_I2C_CORES_I2C1_BASEADDR, I2C_DAC_ADDR, i2c_buf, 3, XIIC_STOP);
     uint8_t i2c_buf[3];
-	// Write DAC value stored in flash storage only if it isn't default (0xFFFF)
+    // Read DAC value stored in flash storage
 	FlashQspi_ReadPage(&CFG_QSPI, mem_write_offset, page_buffer);
-	i2c_buf[0] = 0x30; // cmd
-	i2c_buf[1] = page_buffer[1];
-	i2c_buf[2] = page_buffer[0];
-	if (!(i2c_buf[1] == 0xFF && i2c_buf[2] == 0xFF))
-		XIic_Send(XPAR_I2C_CORES_I2C1_BASEADDR, I2C_DAC_ADDR, i2c_buf, 3, XIIC_STOP);
+
+	// Write DAC value stored in flash storage only if it isn't empty (0xFFFF)
+	if ((page_buffer[1] == 0xFF) && (page_buffer[0] == 0xFF)) {
+		// Write Default value
+		dac_val = DAC_DEFF_VAL;
+		i2c_buf[0] = 0x30; // cmd
+		i2c_buf[1] = (dac_val >> 8) & 0xFF;
+		i2c_buf[2] = dac_val & 0xFF;
+	} else {
+		// Write DAC value from FLASH
+		dac_val = ((uint16_t)page_buffer[1])<<8 | ((uint16_t)page_buffer[0]);
+		i2c_buf[0] = 0x30; // cmd
+		i2c_buf[1] = page_buffer[1];
+		i2c_buf[2] = page_buffer[0];
+	}
+	XIic_Send(XPAR_I2C_CORES_I2C1_BASEADDR, I2C_DAC_ADDR, i2c_buf, 3, XIIC_STOP);
 
 	// Initialize variables to detect PLL phase change and PLL config update request
 	phcfg_start_old = 0;
@@ -1321,6 +1334,8 @@ int main()
 						LMS_Ctrl_Packet_Tx->Data_field[1 + (block * 4)] = 0x00;									 // RAW //unit, power
 						LMS_Ctrl_Packet_Tx->Data_field[2 + (block * 4)] = i2c_buf[0];							 // unsigned val, MSB byte
 						LMS_Ctrl_Packet_Tx->Data_field[3 + (block * 4)] = i2c_buf[1];							 // unsigned val, LSB byte
+						// Storing volatile DAC value
+						dac_val = ((uint16_t)i2c_buf[0])<<8 | ((uint16_t)i2c_buf[1]);
 
 						break;
 
@@ -1379,6 +1394,9 @@ int main()
 							i2c_buf[0] = 0x30;											  // addr
 							i2c_buf[1] = LMS_Ctrl_Packet_Rx->Data_field[2 + (block * 4)]; // MSB
 							i2c_buf[2] = LMS_Ctrl_Packet_Rx->Data_field[3 + (block * 4)]; // LSB
+							// Storing volatile DAC value
+							dac_val = ((uint16_t)i2c_buf[1])<<8 | ((uint16_t)i2c_buf[2]);
+							// Writing to DAC
 							XIic_Send(XPAR_I2C_CORES_I2C1_BASEADDR, I2C_DAC_ADDR, i2c_buf, 3, XIIC_STOP);
 						}
 						else

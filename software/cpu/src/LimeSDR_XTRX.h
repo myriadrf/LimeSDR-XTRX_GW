@@ -30,4 +30,6 @@
 //#define OTP_SERIAL_ADDRESS  0x00001A0
 #define OTP_SERIAL_LENGTH   0x10
 
+#define DAC_DEFF_VAL			46870			// Default TCXO DAC value loaded when EEPROM is empty
+
 #endif /* SRC_LIMESDR_XTRX_H_ */
