@@ -17,6 +17,7 @@ library ieee;
    use work.fpgacfg_pkg.all;
    use work.pllcfg_pkg.all;
    use work.tstcfg_pkg.all;
+   use work.periphcfg_pkg.all;
    use work.memcfg_pkg.all;
    use work.axi_pkg.all;
    
@@ -33,7 +34,7 @@ entity CPU_TOP is
       FPGACFG_START_ADDR   : integer := 0;    --! FPGACFG register start address
       PLLCFG_START_ADDR    : integer := 32;   --! PLLCFG register start address
       TSTCFG_START_ADDR    : integer := 96;   --! TSTCFG register start address
-      --      PERIPHCFG_START_ADDR : integer := 192;
+      PERIPHCFG_START_ADDR : integer := 192;  --! PERIPHCFG register start address
       MEMCFG_START_ADDR    : integer := 65504 --! MEMCFG register start address
    );
    port (
@@ -106,6 +107,8 @@ entity CPU_TOP is
       TO_PLLCFG             : in    t_TO_PLLCFG;                                      --! PLLCFG register bus Modules -> Registers
       FROM_TSTCFG           : out   t_FROM_TSTCFG;                                    --! TSTCFG register bus Registers -> Modules
       TO_TSTCFG             : in    t_TO_TSTCFG;                                      --! TSTCFG register bus Modules -> Registers
+      TO_PERIPHCFG          : in    t_TO_PERIPHCFG;                                   --! PERIPHCFG register bus Registers -> Modules
+      FROM_PERIPHCFG        : out   t_FROM_PERIPHCFG;                                 --! PERIPHCFG register bus Modules -> Registers
       TO_MEMCFG             : in    t_TO_MEMCFG;                                      --! MEMCFG register bus Registers -> Modules
       FROM_MEMCFG           : out   t_FROM_MEMCFG;                                    --! MEMCFG register bus Modules -> Registers
 
@@ -438,11 +441,11 @@ begin
    -- ----------------------------------------------------------------------------
    inst1_cfg_top : entity work.cfg_top
       generic map (
-         FPGACFG_START_ADDR => FPGACFG_START_ADDR,
-         PLLCFG_START_ADDR  => PLLCFG_START_ADDR,
-         TSTCFG_START_ADDR  => TSTCFG_START_ADDR,
-         MEMCFG_START_ADDR  => MEMCFG_START_ADDR
-      --      PERIPHCFG_START_ADDR => PERIPHCFG_START_ADDR
+         FPGACFG_START_ADDR   => FPGACFG_START_ADDR,
+         PLLCFG_START_ADDR    => PLLCFG_START_ADDR,
+         TSTCFG_START_ADDR    => TSTCFG_START_ADDR,
+         MEMCFG_START_ADDR    => MEMCFG_START_ADDR,
+         PERIPHCFG_START_ADDR => PERIPHCFG_START_ADDR
       )
       port map (
          -- Serial port IOs
@@ -455,14 +458,17 @@ begin
          PLLCFG_SEN   => inst0_pllcfg_spi_ss_n,
          PLLCFG_SDOUT => inst1_pllcfg_sdout,
          -- Signals coming from the pins or top level serial interface
-         LRESET       => RESET_N,
-         MRESET       => RESET_N,
-         TO_FPGACFG   => TO_FPGACFG,
-         FROM_FPGACFG => FROM_FPGACFG,
-         TO_PLLCFG    => to_pllcfg_int,
-         FROM_PLLCFG  => FROM_PLLCFG,
-         TO_TSTCFG    => TO_TSTCFG,
-         FROM_TSTCFG  => FROM_TSTCFG,
+         LRESET         => RESET_N,
+         MRESET         => RESET_N,
+         TO_FPGACFG     => TO_FPGACFG,
+         FROM_FPGACFG   => FROM_FPGACFG,
+         TO_PLLCFG      => to_pllcfg_int,
+         FROM_PLLCFG    => FROM_PLLCFG,
+         TO_TSTCFG      => TO_TSTCFG,
+         TO_PERIPHCFG   => TO_PERIPHCFG, 
+         FROM_PERIPHCFG => FROM_PERIPHCFG,
+         FROM_TSTCFG    => FROM_TSTCFG,
+         
          TO_MEMCFG    => TO_MEMCFG,
          FROM_MEMCFG  => FROM_MEMCFG
       );

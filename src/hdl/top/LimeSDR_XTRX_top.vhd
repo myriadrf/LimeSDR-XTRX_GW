@@ -17,6 +17,7 @@ use work.FIFO_PACK.all;
 use work.fpgacfg_pkg.all;
 use work.pllcfg_pkg.all;
 use work.tstcfg_pkg.all;
+use work.periphcfg_pkg.all;
 use work.memcfg_pkg.all;
 use work.axi_pkg.all;
 
@@ -45,6 +46,7 @@ entity LimeSDR_XTRX_top is
       g_TSTCFG_START_ADDR     : integer := 96;
       g_TXTSPCFG_START_ADDR   : integer := 128;
       g_RXTSPCFG_START_ADDR   : integer := 160;
+      g_PERIPHCFG_START_ADDR  : integer := 192;
       g_MEMCFG_START_ADDR     : integer := 65504;
       -- TX interface 
       g_TX_N_BUFF             : integer := 4;      -- N 4KB buffers in TX interface (2 OR 4)
@@ -207,6 +209,8 @@ signal      inst1_from_pllcfg               : t_FROM_PLLCFG;
 signal      inst1_to_pllcfg                 : t_TO_PLLCFG;
 signal      inst1_from_tstcfg               : t_FROM_TSTCFG;
 signal      inst1_to_tstcfg                 : t_TO_TSTCFG;
+signal      inst1_from_periphcfg            : t_FROM_PERIPHCFG;
+signal      inst1_to_periphcfg              : t_TO_PERIPHCFG;
 signal      inst1_to_memcfg                 : t_TO_MEMCFG;
 signal      inst1_from_memcfg               : t_FROM_MEMCFG;
 signal      inst1_pll_from_axim             : t_FROM_AXIM_32x32;
@@ -246,6 +250,8 @@ signal      inst4_rx_smpl_cmp_err           : std_logic;
 signal      inst4_rx_smpl_cmp_start         : std_logic;
 signal      inst4_rx_smpl_cmp_cnt           : std_logic_vector(15 downto 0);
 signal      inst4_lms_reset                 : std_logic;
+
+signal      pps_internal                    : std_logic;
 
 
 begin
@@ -337,7 +343,8 @@ begin
    generic map (
       FPGACFG_START_ADDR   => g_FPGACFG_START_ADDR,
       PLLCFG_START_ADDR    => g_PLLCFG_START_ADDR,
-      TSTCFG_START_ADDR    => g_TSTCFG_START_ADDR
+      TSTCFG_START_ADDR    => g_TSTCFG_START_ADDR,
+      PERIPHCFG_START_ADDR => g_PERIPHCFG_START_ADDR
    )
    port map(
       clk                        => sys_clk,
@@ -393,17 +400,23 @@ begin
       to_pllcfg                  => inst1_to_pllcfg,
       from_tstcfg                => inst1_from_tstcfg,
       to_tstcfg                  => inst1_to_tstcfg,
-      
+      from_periphcfg             => inst1_from_periphcfg,
+      to_periphcfg               => inst1_to_periphcfg,
       to_memcfg                  => inst1_to_memcfg,
       from_memcfg                => inst1_from_memcfg,
       smpl_cmp_en                => inst1_smpl_cmp_en, 
       smpl_cmp_status            => inst1_smpl_cmp_status
    );
    
+   -- Connect HW_VER and BOM_VER to fpgacfg registers
+   inst1_to_fpgacfg.HW_VER    <= '0' & HW_VER;
+   inst1_to_fpgacfg.BOM_VER   <= '0' & BOM_VER; 
+   inst1_to_fpgacfg.PWR_SRC   <= '0';
+   
    inst1_spi_0_MISO  <= FPGA_SPI_MISO;
-   FPGA_SPI_MOSI       <= inst1_spi_0_MOSI;
-   FPGA_SPI_SCLK        <= inst1_spi_0_SCLK;
-   FPGA_SPI_LMS_SS        <= inst1_spi_0_SS_n(1);
+   FPGA_SPI_MOSI     <= inst1_spi_0_MOSI;
+   FPGA_SPI_SCLK     <= inst1_spi_0_SCLK;
+   FPGA_SPI_LMS_SS   <= inst1_spi_0_SS_n(1);
    
 
    
@@ -670,5 +683,20 @@ begin
    
    GNSS_HW_S <= '1';
    GNSS_HW_R <= '1';
+   
+   
+-- ----------------------------------------------------------------------------
+-- GPIOs
+-- 
+-- ----------------------------------------------------------------------------
+-- PPSO_GPIO2 is overriden by user and set to High Z by default. 
+-- To pass trough GNSS_1PPS: set 0x00C0(1) to '0'.
+   PPSO_GPIO2 <=  pps_internal                           when inst1_from_periphcfg.BOARD_GPIO_OVRD(1) = '0' else  
+                  inst1_from_periphcfg.BOARD_GPIO_VAL(1) when inst1_from_periphcfg.BOARD_GPIO_DIR(1)= '1' else 
+                  'Z';
+               
+-- Option to select pps between GPS and externaly connected PPS
+   pps_internal <= PPSI_GPIO1 when inst1_from_periphcfg.PERIPH_INPUT_SEL_0(1 downto 0) = "01" else GNSS_1PPS;
+
 
 end architecture Structural;

@@ -15,6 +15,7 @@ use ieee.numeric_std.all;
 use work.fpgacfg_pkg.all;
 use work.pllcfg_pkg.all;
 use work.tstcfg_pkg.all;
+use work.periphcfg_pkg.all;
 use work.memcfg_pkg.all;
 
 -- ----------------------------------------------------------------------------
@@ -26,6 +27,7 @@ entity cfg_top is
       FPGACFG_START_ADDR   : integer := 0;
       PLLCFG_START_ADDR    : integer := 32;
       TSTCFG_START_ADDR    : integer := 96;
+      PERIPHCFG_START_ADDR : integer := 192;
       MEMCFG_START_ADDR    : integer := 65504
       );
    port (
@@ -43,12 +45,14 @@ entity cfg_top is
       -- Signals coming from the pins or top level serial interface
       lreset               : in  std_logic;   -- Logic reset signal, resets logic cells only  (use only one reset)
       mreset               : in  std_logic;   -- Memory reset signal, resets configuration memory only (use only one reset)
-      to_fpgacfg         : in  t_TO_FPGACFG;
-      from_fpgacfg       : out t_FROM_FPGACFG;
+      to_fpgacfg           : in  t_TO_FPGACFG;
+      from_fpgacfg         : out t_FROM_FPGACFG;
       to_pllcfg            : in  t_TO_PLLCFG;
       from_pllcfg          : out t_FROM_PLLCFG;
       to_tstcfg            : in  t_TO_TSTCFG;
       from_tstcfg          : out t_FROM_TSTCFG;
+      to_periphcfg         : in  t_TO_PERIPHCFG;
+      from_periphcfg       : out t_FROM_PERIPHCFG;
       to_memcfg            : in  t_TO_MEMCFG;
       from_memcfg          : out t_FROM_MEMCFG
    );
@@ -67,6 +71,9 @@ signal inst1_sdoutA  : std_logic;
 
 --inst3
 signal inst3_sdout   : std_logic;
+
+--inst6
+signal inst6_sdout   : std_logic;
 
 --inst255
 signal inst255_sdout         : std_logic;
@@ -152,6 +159,29 @@ begin
       to_tstcfg            => to_tstcfg,
       from_tstcfg          => from_tstcfg
    );
+   
+-- ----------------------------------------------------------------------------
+-- periphcfg instance
+-- ----------------------------------------------------------------------------    
+   inst6_periphcfg : entity work.periphcfg
+   port map(
+      -- Address and location of this module
+      -- Will be hard wired at the top level
+      maddress    => std_logic_vector(to_unsigned(PERIPHCFG_START_ADDR/32,10)),
+      mimo_en     => '1',   
+      -- Serial port IOs
+      sdin        => sdin,
+      sclk        => sclk,
+      sen         => sen,
+      sdout       => inst6_sdout,  
+      -- Signals coming from the pins or top level serial interface
+      lreset      => lreset,   -- Logic reset signal, resets logic cells only  (use only one reset)
+      mreset      => mreset,   -- Memory reset signal, resets configuration memory only (use only one reset)      
+      oen         => open,
+      stateo      => open,    
+      to_periphcfg   => to_periphcfg,
+      from_periphcfg => from_periphcfg
+   );
  
 -- ----------------------------------------------------------------------------
 -- memcfg instance
@@ -183,7 +213,7 @@ from_memcfg       <= inst255_from_memcfg;
 -- Output ports
 -- ----------------------------------------------------------------------------    
    sdout <= inst0_sdout OR inst1_sdoutA OR 
-            inst3_sdout OR inst255_sdout;
+            inst3_sdout OR inst6_sdout OR inst255_sdout;
             
   
 end arch;   
