@@ -45,7 +45,7 @@
 #define MEMORY_MAP_REG_LSB 0xFF
 #define MEMOR_MAP_BIT 0x0
 #define I2C_DAC_ADDR 0x4C
-#define I2C_TERMO_ADDR 0x4A
+#define I2C_TERMO_ADDR 0x4B
 #define I2C_LP8758_ADDRESS 0x60
 // Since there is no eeprom on the XTRX board and the flash is too large for the gw
 // we use the top of the flash instead of eeprom, thus the offset to last sector
