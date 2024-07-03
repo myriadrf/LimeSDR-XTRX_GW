@@ -1,10 +1,15 @@
-Gateware version 1.12
+Gateware version 1.13
 
 # LimeSDR-XTRX FPGA gateware
 
 LimeSDR XTRX is Small form factor mini PCIe expansion card Software Defined Radio (SDR) board. It provides a hardware platform for developing and prototyping high-performance and logic-intensive digital and RF designs based on Xilinx’s XC7A50T-2CPG236I FPGA and Lime Microsystems transceiver chipsets.
 
-This repository contains the LimeSDR XTRX FPGA gateware project.
+This repository contains the LimeSDR XTRX FPGA gateware project, as well as a "gold" version of said project, which is
+modified to generate a fallback image for implementing multiboot functionality.
+It is not recommended to edit or generate the "gold" version of the project. Instructions below, if not specified 
+otherwise, refer only to the regular "user" project.
+
+More information on multiboot functionality can be found below.
 
 :warning: Please use specific branch according to your board version. 
 
@@ -54,6 +59,36 @@ The gateware can be built with the free version of the Xilinx Vivado v2022.1 (64
 
 * If projects were imported as directed, no special actions should be needed
 
+## Multiboot functionality
+
+This repository contains images intended to implement multiboot functionality on the LimeSDR-XTRX board.
+Their functions are as follows:
+
+* **user_*_programming_file** - up-to-date gateware intended for regular use, referred to as **user** image
+* **gold_*_programming_file** - fallback image, should not be used under normal circumstances, referred to as **gold** image
+* **combined_flash_programming_file** - an image combining both **user** and **gold** images
+
+Multiboot functions as follows:
+
+* **gold** image is first loaded from the bottom of flash memory
+* **gold** image specifies the memory address offset for **user** image
+* If booting from the **user** image fails, the FPGA loads the **gold** image
+* If booting from the **user** image succeeds, the FPGA load the **user** image
+
+**Note!** **Gold** image can be recognized by its GW revision number (57005.57005) and LED blink pattern (both LEDs blink slowly and synchronously)
+
+### Choosing the right image for programming via LimeSuite
+
+If your GW version is v1.13 or higher, your board should already have the gold image written into the flash memory. In that case **user_flash_programming_file.bin** should be used.
+
+If your GW version is v1.12 or lower, use **combined_flash_programming_file.bin** to update your GW and add multiboot functionality.
+
+### Notes
+
+* If after updating from GW >v1.13 to a different version the gw version reported in LimeSuite does not change after a board power cycle, it is likely that your **gold** image was overwritten by **user** image. In this case you should write **gold_flash_programming_file.bin** or **combined_flash_programming_file.bin** using the gold image write function in software.  
+* The **gold** image takes a longer time to boot than the **user** image. For this reason, your OS may have issues recognizing the board. Entering the UEFI/BIOS settings while booting up and exiting may alleviate this. Powering the board via USB is also known to help. 
+* If for some reason you do not wish to use multiboot functionality, you can program your board using the **gold_image** programming function in software and the **user_flash_programming_file.bin** file.
+
 ## Programming the board
 
 ### Programming via LimeSuite 
@@ -71,7 +106,7 @@ The gateware can be built with the free version of the Xilinx Vivado v2022.1 (64
 * An FPGA device should be detected. Right click on it and select "Add configuration memory device"
 * Select "mx25l25673g-spi-x1_x2_x4"
 * Right click on the newly added memory device and choose "Program configuration memory device"
-* Select your configuration file and click OK
+* Select **combined_flash_programming_file.bin** in bitstream directory and click OK
 
 ## Branches
 This repository contains the following branches:
