@@ -9,10 +9,9 @@ set_property BITSTREAM.CONFIG.EXTMASTERCCLK_EN Disable [current_design]
 set_property BITSTREAM.CONFIG.CONFIGRATE 66 [current_design]
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
 set_property BITSTREAM.CONFIG.SPI_FALL_EDGE YES [current_design]
-set_property BITSTREAM.CONFIG.SPI_OPCODE 8'h6B [current_design]
+#set_property BITSTREAM.CONFIG.SPI_OPCODE 8'h6B [current_design]
 set_property CFGBVS VCCO [current_design]
 set_property CONFIG_VOLTAGE 3.3 [current_design]
-
 
 set_false_path -from [get_ports PERST]
 

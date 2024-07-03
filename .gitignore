@@ -11,6 +11,7 @@
 # VIVADO project
 # ----------------------------------------------------------------------------
 LimeSDR-XTRX/*
+LimeSDR-XTRX_gold/*
 .Xil
 .Xiltemp
 

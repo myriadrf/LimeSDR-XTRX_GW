@@ -896,7 +896,7 @@ int main()
 
 
 
-	uint8_t regvals2[1];
+	uint8_t regvals2[2];
     //Waste time to make sure voltage regulator is done settling
     //TODO:: use something else to create a delay
     for (uint8_t i = 1; i<=35; i++)
@@ -908,7 +908,16 @@ int main()
 
 	// Init flash SPI
 	Init_flash_qspi(QSPI_DEVICE_ID, &CFG_QSPI, XSP_MASTER_OPTION | XSP_MANUAL_SSELECT_OPTION);
-
+	// Read status register, control register
+	FlashQspi_CMD_ReadRDSR(&CFG_QSPI,&regvals2[0]);
+	FlashQspi_CMD_ReadRDCR(&CFG_QSPI,&regvals2[1]);
+	// Set QPI enable bit
+	regvals2[0] = regvals2[0] | 0x40;
+	// Write status register and control register
+	FlashQspi_CMD_WREN(&CFG_QSPI);
+	FlashQspi_CMD_WRSR(&CFG_QSPI,regvals2[0],regvals2[1]);
+	FlashQspi_CMD_ReadRDSR(&CFG_QSPI,&regvals2[0]);
+	FlashQspi_CMD_ReadRDCR(&CFG_QSPI,&regvals2[1]);
 
 	// Write config to DAC
 //	i2c_buf[0] = 0x04; // cmd
@@ -1241,27 +1250,38 @@ int main()
 					0 - Bitstream to FPGA
 					1 - Bitstream to Flash
 					2 - Bitstream from FLASH
+					3 - Golden image to Flash
+					4 - User image to Flash
 					*/
 					// TODO: Add return value checks
-
-				case 1: // write data to Flash from PC
+				case 1:
+				case 3:
+				case 4:
+				// write data to Flash from PC
 					// Reset spirez
 					spirez = 0;
 					// Start of programming? reset variables
 					if (current_portion == 0)
-					{
-						address = 0;
+					{	// Gold image must be written at address 0x0
+						if (LMS_Ctrl_Packet_Rx->Data_field[0] == 3)
+						{
+							address = 0;
+						}
+						else
+						{ // User image must be written at offset
+							address = 0x220000;
+						}
 						page_buffer_cnt = 0;
 						total_data = 0;
-						// Erase firt sector
-						spirez = spirez || FlashQspi_EraseSector(&CFG_QSPI, 0);
+						// Erase first sector
+						spirez = spirez || FlashQspi_EraseSector(&CFG_QSPI, address);
 					}
 
 					inc_data_count = LMS_Ctrl_Packet_Rx->Data_field[5];
 
 					// Check if final packet
 					if (inc_data_count == 0)
-					{ // Flush letftover data, if any
+					{ // Flush leftover data, if any
 						if (page_buffer_cnt > 0)
 						{
 							// Fill unused page data with 1 (no write)

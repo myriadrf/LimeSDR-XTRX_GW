@@ -153,7 +153,7 @@ int FlashQspi_CMD_WRSR(XSpi *InstancePtr, u8 StatusReg, u8 ConfigReg)
 	sendbuf[1] = StatusReg;
 	sendbuf[2] = ConfigReg;
 
-	return XSpi_Transfer(InstancePtr, sendbuf, NULL, 1);
+	return XSpi_Transfer(InstancePtr, sendbuf, NULL, 3);
 }
 
 int FlashQspi_CMD_ReadRDCR(XSpi *InstancePtr, u8* Data)

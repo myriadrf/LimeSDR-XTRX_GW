@@ -16,8 +16,10 @@
 set script_path [file dirname [file normalize [info script]]]
 puts $script_path
 
+set proj_name [get_property NAME [current_project]]
+
 # Set output file path and name
-set output_path "[file normalize "$script_path/LimeSDR-XTRX.tcl"]"
+set output_path "[file normalize "$script_path/$proj_name.tcl"]"
 puts $output_path
 
 # Generate project build script
