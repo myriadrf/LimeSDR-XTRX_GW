@@ -70,9 +70,9 @@ Their functions are as follows:
 
 Multiboot functions as follows:
 
-* **gold** image is first loaded from the bottom of flash memory
-* **gold** image specifies the memory address offset for **user** image
-* If booting from the **user** image fails, the FPGA loads the **gold** image
+* **gold** image header is read from the bottom of flash memory
+* **gold** image header specifies the memory address offset for **user** image
+* If booting from the **user** image fails or times out, the FPGA loads the **gold** image
 * If booting from the **user** image succeeds, the FPGA load the **user** image
 
 **Note!** **Gold** image can be recognized by its GW revision number (57005.57005) and LED blink pattern (both LEDs blink slowly and synchronously)
@@ -86,7 +86,7 @@ If your GW version is v1.12 or lower, use **combined_flash_programming_file.bin*
 ### Notes
 
 * If after updating from GW >v1.13 to a different version the gw version reported in LimeSuite does not change after a board power cycle, it is likely that your **gold** image was overwritten by **user** image. In this case you should write **gold_flash_programming_file.bin** or **combined_flash_programming_file.bin** using the gold image write function in software.  
-* The **gold** image takes a longer time to boot than the **user** image. For this reason, your OS may have issues recognizing the board. Entering the UEFI/BIOS settings while booting up and exiting may alleviate this. Powering the board via USB is also known to help. 
+* Loading **gold** image when **user** image loading fails takes more time than successfully loading **user** image. For this reason, in fallback mode, your OS may have issues recognizing the board. Entering the UEFI/BIOS settings while booting up and exiting may alleviate this. Powering the board via USB is also known to help. 
 * If for some reason you do not wish to use multiboot functionality, you can program your board using the **gold_image** programming function in software and the **user_flash_programming_file.bin** file.
 
 ## Programming the board
