@@ -17,6 +17,10 @@ USE altera_mf.all;
 use work.pllcfg_pkg.all;
 use work.pll_top_blackbox_pkg.all;
 use work.axi_pkg.all;
+
+
+Library UNISIM;
+use UNISIM.vcomponents.all;
 ----------------------------------------------------------------------------
 -- Entity declaration
 ----------------------------------------------------------------------------
@@ -161,64 +165,15 @@ signal inst5_dataout             : std_logic_vector(0 downto 0);
 signal drct_c0_dly_chain         : std_logic_vector(drct_c0_ndly-1 downto 0);
 signal drct_c1_dly_chain         : std_logic_vector(drct_c1_ndly-1 downto 0);
 
-signal c0_mux, c1_mux            : std_logic;
-signal locked_mux                : std_logic;		
+signal c0_mux, c1_mux, c1_mux_bufg  : std_logic;
+signal c0_dly, c1_dly               : std_logic;
+signal c0_oddr                      : std_logic;
+signal locked_mux                   : std_logic;	
 
 begin
    
 pll_areset_n   <= not pll_areset;
    
-----------------------------------------------------------------------------
--- Synchronization registers
-----------------------------------------------------------------------------  
--- sync_reg0 : entity work.sync_reg 
--- port map(rcnfg_clk, pll_logic_reset_n, rcnfig_en, rcnfig_en_sync); 
- 
--- sync_reg1 : entity work.sync_reg 
--- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_en, dynps_en_sync); 
- 
--- sync_reg2 : entity work.sync_reg 
--- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_dir, dynps_dir_sync); 
- 
--- sync_reg3 : entity work.sync_reg 
--- port map(inst1_pll_scanclk, pll_logic_reset_n, rcnfig_en, rcnfig_en_sync_scanclk);
- 
--- sync_reg4 : entity work.sync_reg 
--- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_mode, dynps_mode_sync);
- 
--- sync_reg5 : entity work.sync_reg 
--- port map(inst1_pll_scanclk, pll_logic_reset_n, smpl_cmp_done, smpl_cmp_done_sync);
-
--- sync_reg6 : entity work.sync_reg 
--- port map(inst1_pll_scanclk, pll_logic_reset_n, smpl_cmp_error, smpl_cmp_error_sync);
- 
--- sync_reg7 : entity work.sync_reg 
--- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_areset_n, dynps_areset_n_sync);
- 
--- sync_reg8 : entity work.sync_reg 
--- port map(rcnfg_clk, pll_logic_reset_n, rcnfig_areset, rcnfig_areset_sync);
- 
--- sync_reg9 : entity work.sync_reg 
--- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_tst, dynps_tst_sync);
- 
--- sync_reg10 : entity work.sync_reg 
--- port map(inst1_pll_scanclk, pll_logic_reset_n, inst3_locked, inst3_locked_scanclk);
- 
--- bus_sync_reg0 : entity work.bus_sync_reg
--- generic map (144) 
--- port map(rcnfg_clk, pll_logic_reset_n, rcnfig_data, rcnfig_data_sync);
- 
--- bus_sync_reg1 : entity work.bus_sync_reg
--- generic map (3) 
--- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_cnt_sel, dynps_cnt_sel_sync);
- 
--- bus_sync_reg2 : entity work.bus_sync_reg
--- generic map (10) 
--- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_phase, dynps_phase_sync);
- 
---bus_sync_reg3 : entity work.bus_sync_reg
--- generic map (10) 
--- port map(inst1_pll_scanclk, pll_logic_reset_n, dynps_step_size, dynps_step_size_sync);
  
 ----------------------------------------------------------------------------
 -- pll_reconfig_module instance
@@ -226,162 +181,144 @@ pll_areset_n   <= not pll_areset;
 inst1_pll_areset_in <= pll_areset OR inst2_pll_reset_req;
 
 XILINX_MMCM : if vendor = "XILINX" generate
+   
+   -- Global buffer for PLL input clock
+   BUFG_inst : BUFG
+   port map (
+      O => pll_inclk_global,  -- 1-bit output: Clock output
+      I => pll_inclk          -- 1-bit input: Clock input
+   );
+   
 
-inst1_pll_scanclk <= rcnfg_clk;
-
---MMCM_inst1 : top_mmcme2
---generic map(
---BANDWIDTH => bandwidth_type,
---DIVCLK_DIVIDE => XIL_DIVCLK_DIVIDE,
---CLKFBOUT_MULT_F => XIL_CLK_MULT,
---CLKFBOUT_PHASE  => XIL_MMCM_PHASE,
---CLKFBOUT_USE_FINE_PS => XIL_MMCM_PS_EN,
---
---CLKIN1_PERIOD => real(inclk0_input_frequency)*0.001,
---REF_JITTER1 => 0.01,-- default value
---
---CLKOUT0_DIVIDE_F  => clk0_divide_by,
---CLKOUT0_DUTY_CYCLE => real(clk0_duty_cycle)*0.01,
---CLKOUT0_PHASE      => 0.0,
---CLKOUT0_USE_FINE_PS => "FALSE",
---
---CLKOUT1_DIVIDE => clk1_divide_by,
---CLKOUT1_DUTY_CYCLE => real(clk1_duty_cycle)*0.01,
---CLKOUT1_PHASE => 0.0,
---CLKOUT1_USE_FINE_PS => "TRUE"
---)
---port map(
---      SSTEP     =>rcnfig_en_sync_scanclk,
---      SCLK      =>inst1_pll_scanclk,
-----RST will reset the entire reference design including the MMCM_ADV
---      RST       =>inst1_pll_areset_in,
---      -- CLKIN is the input clock that feeds the MMCM_ADV CLKIN as well as the
---      -- clock for the MMCM_DRP module
---      CLKIN     =>pll_inclk,
---
---      -- SRDY pulses for one clock cycle after the MMCM_ADV is locked and the
---      -- MMCM_DRP module is ready to start another re-configuration
---      SRDY      =>inst4_rcfig_complete,
---	  LOCKED    =>inst3_locked,
---      
---      -- clock config inputs
---      c0_cnt    =>from_pllcfg.c0_cnt,
---      c1_cnt    =>from_pllcfg.c1_cnt,
---      c2_cnt    =>from_pllcfg.c2_cnt,
---      c3_cnt    =>from_pllcfg.c3_cnt,
---      c4_cnt    =>from_pllcfg.c4_cnt,
---      c5_cnt    =>(others => '0'),
---      c6_cnt    =>(others => '0'),
---      c0_oddiv  =>from_pllcfg.c0_odddiv,
---      c1_oddiv  =>from_pllcfg.c1_odddiv,
---      c2_oddiv  =>from_pllcfg.c2_odddiv,
---      c3_oddiv  =>from_pllcfg.c3_odddiv,
---      c4_oddiv  =>from_pllcfg.c4_odddiv,
---      c5_oddiv  =>'0',
---      c6_oddiv  =>'0',
---      c0_byp    =>from_pllcfg.c0_byp,
---      c1_byp    =>from_pllcfg.c1_byp,
---      c2_byp    =>from_pllcfg.c2_byp,
---      c3_byp    =>from_pllcfg.c3_byp,
---      c4_byp    =>from_pllcfg.c4_byp,
---      c5_byp    =>'1',
---      c6_byp    =>'1',
---      m_cnt     =>from_pllcfg.m_cnt,
---      m_oddiv   =>from_pllcfg.m_odddiv,
---      m_byp     =>from_pllcfg.m_byp,
---      n_cnt     =>from_pllcfg.n_cnt,
---      n_oddiv   =>from_pllcfg.n_odddiv,
---      n_byp     =>from_pllcfg.n_byp,
---      xil_cm_f  =>from_pllcfg.xil_cm_f,
---      
---      -- These are the clock outputs from the MMCM_ADV.
---      CLK0OUT   =>inst3_clk(0),
---      CLK1OUT   =>inst3_clk(1),
---      CLK2OUT   =>inst3_clk(2),
---      CLK3OUT   =>inst3_clk(3),
---      CLK4OUT   =>inst3_clk(4),
---      CLK5OUT   =>open,
---      CLK6OUT   =>open,
---      
---      -- fine phase shift ports
---      PSDONE    =>inst3_phasedone,    
---      PSCLK     =>inst1_pll_scanclk,
---      PSEN      =>inst2_pll_phasestep,        
---      PSINCDEC  =>inst2_pll_phaseupdown,
---      PS_CNT_SEL=>inst2_pll_phasecounterselect
---);
-
-  MMCM_inst1 : entity work.rx_pll
-  port map(
-      clk_in1        => pll_inclk,
+   -- MMCM instance when frequency is >5MHz
+   MMCM_inst1 : entity work.rx_pll
+   port map(
+      clk_in1        => pll_inclk_global,
       --reset          => inst1_pll_areset_in,
       clk_out1       => inst3_clk(0),
       clk_out2       => inst3_clk(1),
       locked         => inst3_locked,
       
-      s_axi_aclk     => rcnfg_axi_clk,           -- in
-      s_axi_aresetn  => rcfig_axi_reset_n,        -- in
+      s_axi_aclk     => rcnfg_axi_clk,       
+      s_axi_aresetn  => rcfig_axi_reset_n,      
          
-      s_axi_awaddr   => rcnfig_from_axim.awaddr(10 downto 0),         -- in
-      s_axi_awvalid  => rcnfig_from_axim.awvalid(0),        -- in
-      s_axi_awready  => rcnfig_to_axim.awready(0),        -- out
-      s_axi_wdata    => rcnfig_from_axim.wdata,          -- in
-      s_axi_wstrb    => rcnfig_from_axim.wstrb,          -- in
-      s_axi_wvalid   => rcnfig_from_axim.wvalid(0),         -- in
-      s_axi_wready   => rcnfig_to_axim.wready(0),         -- out
-      s_axi_bresp    => rcnfig_to_axim.bresp,          -- out
-      s_axi_bvalid   => rcnfig_to_axim.bvalid(0),         -- out
-      s_axi_bready   => rcnfig_from_axim.bready(0),         -- in
+      s_axi_awaddr   => rcnfig_from_axim.awaddr(10 downto 0),         
+      s_axi_awvalid  => rcnfig_from_axim.awvalid(0),       
+      s_axi_awready  => rcnfig_to_axim.awready(0),       
+      s_axi_wdata    => rcnfig_from_axim.wdata,          
+      s_axi_wstrb    => rcnfig_from_axim.wstrb,          
+      s_axi_wvalid   => rcnfig_from_axim.wvalid(0),        
+      s_axi_wready   => rcnfig_to_axim.wready(0),         
+      s_axi_bresp    => rcnfig_to_axim.bresp,          
+      s_axi_bvalid   => rcnfig_to_axim.bvalid(0),         
+      s_axi_bready   => rcnfig_from_axim.bready(0),         
          
-      s_axi_araddr   => rcnfig_from_axim.araddr(10 downto 0),         -- in
-      s_axi_arvalid  => rcnfig_from_axim.arvalid(0),        -- in
-      s_axi_arready  => rcnfig_to_axim.arready(0),        -- out
-      s_axi_rdata    => rcnfig_to_axim.rdata,          -- out
-      s_axi_rresp    => rcnfig_to_axim.rresp,          -- out
-      s_axi_rvalid   => rcnfig_to_axim.rvalid(0),         -- out
-      s_axi_rready   => rcnfig_from_axim.rready(0)         -- in
-      
---      psclk          => inst1_pll_scanclk,
---      psen           => inst2_pll_phasestep,
---      psincdec       => inst2_pll_phaseupdown,
---      psdone         => inst3_phasedone 
+      s_axi_araddr   => rcnfig_from_axim.araddr(10 downto 0),        
+      s_axi_arvalid  => rcnfig_from_axim.arvalid(0),        
+      s_axi_arready  => rcnfig_to_axim.arready(0),        
+      s_axi_rdata    => rcnfig_to_axim.rdata,          
+      s_axi_rresp    => rcnfig_to_axim.rresp,          
+      s_axi_rvalid   => rcnfig_to_axim.rvalid(0),         
+      s_axi_rready   => rcnfig_from_axim.rready(0)         
   );
+  
 
+   -- C1 clock delay when frequency is <5MHz
+   IDELAYE2_c1 : IDELAYE2
+   generic map (
+      CINVCTRL_SEL            => "TRUE",     -- Enable dynamic clock inversion (FALSE, TRUE)
+      DELAY_SRC               => "DATAIN",   -- Delay input (IDATAIN, DATAIN)
+      HIGH_PERFORMANCE_MODE   => "TRUE",     -- Reduced jitter ("TRUE"), Reduced power ("FALSE")
+      IDELAY_TYPE             => "FIXED",    -- FIXED, VARIABLE, VAR_LOAD, VAR_LOAD_PIPE
+      IDELAY_VALUE            => 31,         -- Input delay tap setting (0-31)
+      PIPE_SEL                => "FALSE",    -- Select pipelined mode, FALSE, TRUE
+      REFCLK_FREQUENCY        => 200.0,      -- IDELAYCTRL clock input frequency in MHz (190.0-210.0, 290.0-310.0).
+      SIGNAL_PATTERN          => "CLOCK"     -- DATA, CLOCK input signal
+   )
+   port map (
+      CNTVALUEOUT => open,             -- 5-bit output: Counter value output
+      DATAOUT     => c1_dly,           -- 1-bit output: Delayed data output
+      C           => '0',              -- 1-bit input: Clock input
+      CE          => '0',              -- 1-bit input: Active high enable increment/decrement input
+      CINVCTRL    => '0',              -- 1-bit input: Dynamic clock inversion input
+      CNTVALUEIN  => (others=>'0'),    -- 5-bit input: Counter value input
+      DATAIN      => pll_inclk_global, -- 1-bit input: Internal delay data input
+      IDATAIN     => '0',              -- 1-bit input: Data input from the I/O
+      INC         => '0',              -- 1-bit input: Increment / Decrement tap delay input
+      LD          => '0',              -- 1-bit input: Load IDELAY_VALUE input
+      LDPIPEEN    => '0',              -- 1-bit input: Enable PIPELINE register to load data input
+      REGRST      => '0'               -- 1-bit input: Active-high reset tap-delay input
+   );
+   
+   
+   -- Asynchronous Mux for C0 output clock (MMCM output or delayed clock from global buffer)
+   BUFGCTRL_c0_mux : BUFGCTRL
+   generic map (
+      INIT_OUT => 0,         -- Initial value of BUFGCTRL output ($VALUES;)
+      PRESELECT_I0 => FALSE, -- BUFGCTRL output uses I0 input ($VALUES;)
+      PRESELECT_I1 => FALSE  -- BUFGCTRL output uses I1 input ($VALUES;)
+   )
+   port map (
+      O        => c0_mux,              -- 1-bit output: Clock output
+      CE0      => '1',                 -- 1-bit input: Clock enable input for I0
+      CE1      => '1',                 -- 1-bit input: Clock enable input for I1
+      I0       => inst3_clk(0),        -- 1-bit input: Primary clock
+      I1       => pll_inclk_global,    -- 1-bit input: Secondary clock
+      IGNORE0  => '1',                 -- 1-bit input: Clock ignore input for I0
+      IGNORE1  => '1',                 -- 1-bit input: Clock ignore input for I1
+      S0       => NOT drct_clk_en(0),  -- 1-bit input: Clock select for I0
+      S1       => drct_clk_en(0)       -- 1-bit input: Clock select for I1
+   );
+   
+   
+   -- Asynchronous Mux for C1 output clock (MMCM output or delayed clock from global buffer)
+   BUFGCTRL_c1_mux : BUFGCTRL
+   generic map (
+      INIT_OUT => 0,         -- Initial value of BUFGCTRL output ($VALUES;)
+      PRESELECT_I0 => FALSE, -- BUFGCTRL output uses I0 input ($VALUES;)
+      PRESELECT_I1 => FALSE  -- BUFGCTRL output uses I1 input ($VALUES;)
+   )
+   port map (
+      O        => c1_mux,              -- 1-bit output: Clock output
+      CE0      => '1',                 -- 1-bit input: Clock enable input for I0
+      CE1      => '1',                 -- 1-bit input: Clock enable input for I1
+      I0       => inst3_clk(1),        -- 1-bit input: Primary clock
+      I1       => c1_dly,              -- 1-bit input: Secondary clock
+      IGNORE0  => '1',                 -- 1-bit input: Clock ignore input for I0
+      IGNORE1  => '1',                 -- 1-bit input: Clock ignore input for I1
+      S0       => NOT drct_clk_en(1),  -- 1-bit input: Clock select for I0
+      S1       => drct_clk_en(1)       -- 1-bit input: Clock select for I1
+   );
+   
+   
+   -- Global buffer for PLL input clock
+   BUFG_c1_mux : BUFG
+   port map (
+      O => c1_mux_bufg, -- 1-bit output: Clock output
+      I => c1_mux       -- 1-bit input: Clock input
+   );
+   
+   
+   -- Final stage for C0. ODDR instance to have option to invert clock on c0
+   ODDR_inst : ODDR
+   generic map(
+      DDR_CLK_EDGE   => "OPPOSITE_EDGE",  -- "OPPOSITE_EDGE" or "SAME_EDGE" 
+      INIT           => '0',              -- Initial value for Q port ('1' or '0')
+      SRTYPE         => "ASYNC")           -- Reset Type ("ASYNC" or "SYNC")
+   port map (
+      Q  => c0_oddr,       -- 1-bit DDR output
+      C  => c0_mux,        -- 1-bit clock input
+      CE => '1',           -- 1-bit clock enable input
+      D1 => NOT inv_c0,    -- 1-bit data input (positive edge)
+      D2 => inv_c0,        -- 1-bit data input (negative edge)
+      R  => '0',           -- 1-bit reset input
+      S  => '0'            -- 1-bit set input
+   );
+   
+  
 end generate;
-
---    pll_ps_top_inst2 :  pll_ps_top
---       port map(
-    
---          clk                     => inst1_pll_scanclk,
---          reset_n                 => dynps_areset_n_sync,
---          --module control ports
---          ps_en                   => dynps_en_sync,
---          ps_mode                 => dynps_mode_sync,
---          ps_tst                  => dynps_tst_sync, 
---          ps_cnt                  => dynps_cnt_sel_sync,
---          ps_updwn                => dynps_dir_sync,
---          ps_phase                => dynps_phase_sync,
---          ps_step_size            => dynps_step_size_sync,
---          ps_busy                 => inst2_ps_busy,
---          ps_done                 => inst2_ps_done,
---          ps_status               => inst2_ps_status,
---          --pll ports
---          pll_phasecounterselect  => inst2_pll_phasecounterselect,
---          pll_phaseupdown         => inst2_pll_phaseupdown, 
---          pll_phasestep           => inst2_pll_phasestep,        
---          pll_phasedone           => inst3_phasedone,      
---          pll_locked              => inst3_locked_scanclk,
---          pll_reconfig            => rcnfig_en_sync_scanclk,
---          pll_reset_req           => inst2_pll_reset_req,
---          --sample compare module
---          smpl_cmp_en             => smpl_cmp_en,
---          smpl_cmp_done           => smpl_cmp_done_sync,
---          smpl_cmp_error          => smpl_cmp_error_sync
-                
---          );  
-    
-           
-       inst3_inclk <= '0' & pll_inclk;
+       
+   inst3_inclk <= '0' & pll_inclk;
 
 
 
@@ -586,17 +523,20 @@ end generate;
 -- ----------------------------------------------------------------------------
 -- c0 clk MUX
 -- ----------------------------------------------------------------------------
-c0_mux <=   inst3_clk(0) when drct_clk_en(0)='0' else 
-            drct_c0_dly_chain(drct_c0_ndly-1);
+   --c0_mux <=   inst3_clk(0) when drct_clk_en(0)='0' else 
+   --         drct_c0_dly_chain(drct_c0_ndly-1);
 
 -- ----------------------------------------------------------------------------
 -- c1 clk MUX
 -- ----------------------------------------------------------------------------
-c1_mux <=   inst3_clk(1) when drct_clk_en(1)='0' else 
-            drct_c1_dly_chain(drct_c1_ndly-1);
 
 
-locked_mux <=  pll_areset_n when (drct_clk_en(0)='1' OR drct_clk_en(1)='1') else
+
+   --c1_mux <=   inst3_clk(1) when drct_clk_en(1)='0' else 
+   --         drct_c1_dly_chain(drct_c1_ndly-1);
+
+
+locked_mux <=  '1' when (drct_clk_en(0)='1' OR drct_clk_en(1)='1') else
                inst3_locked;
 
 
@@ -657,13 +597,14 @@ port map(
    outclk   => c1_global
 );
 end generate;
+
 XILINX_PLL_CLKCTRL : if vendor = "XILINX" generate
-clkctrl_inst6 : BUFGCE_1
-port map(
-    I => pll_inclk,
-    CE=> '1',
-    O => pll_inclk_global
-    );
+--clkctrl_inst6 : BUFGCE_1
+--port map(
+--    I => pll_inclk,
+--    CE=> '1',
+--    O => pll_inclk_global
+--    );
 
 --clkctrl_inst7 : BUFGCE_1 
 --port map(
@@ -683,10 +624,8 @@ end generate;
 -- ----------------------------------------------------------------------------
 -- To output ports
 -- ----------------------------------------------------------------------------
---c0             <= inst5_dataout(0);
---c1             <= c1_global;
-c0             <= inst3_clk(0);
-c1             <= inst3_clk(1);
+c0             <= c0_oddr;
+c1             <= c1_mux_bufg;
 pll_locked     <= locked_mux;
 rcnfig_status  <= inst4_rcfig_complete;
 dynps_done     <= inst2_ps_done;

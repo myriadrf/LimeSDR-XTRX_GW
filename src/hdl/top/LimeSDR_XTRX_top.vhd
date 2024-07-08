@@ -500,7 +500,7 @@ begin
    port map(        
       sys_clk                 => sys_clk,                                     
       from_fpgacfg            => inst1_from_fpgacfg,
-      to_fpgacfg              => inst1_to_fpgacfg,  
+      to_fpgacfg              => open,  
       from_memcfg             => inst1_from_memcfg,
       to_memcfg               => inst1_to_memcfg,
       -- TX module signals
