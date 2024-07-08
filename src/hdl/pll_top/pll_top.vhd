@@ -16,6 +16,9 @@ use ieee.numeric_std.all;
 use work.pllcfg_pkg.all;
 use work.axi_pkg.all;
 
+Library UNISIM;
+use UNISIM.vcomponents.all;
+
 -- ----------------------------------------------------------------------------
 -- Entity declaration
 -- ----------------------------------------------------------------------------
@@ -125,6 +128,9 @@ architecture arch of pll_top is
    
    signal pllcfg_busy                  : std_logic;
    signal pllcfg_done                  : std_logic;
+   
+   signal idelay_refclk                : std_logic;
+   signal idelay_pll_locked            : std_logic;
  
 begin
 
@@ -138,6 +144,24 @@ begin
 -- ----------------------------------------------------------------------------
    -- MUX for AXI bus 
    inst0_rcnfig_from_axim <= rcnfg_from_axim when rcnfg_sel = "0000" else c_FROM_AXIM_32x32_ZERO;
+   
+   
+   -- 200MHz reference clock for IDELAYCTRL
+   isnt_idelay_refclk_pll : entity work.idelay_refclk_pll
+   port map( 
+      clk_out1 => idelay_refclk,
+      resetn   => '1',
+      locked   => idelay_pll_locked,
+      clk_in1  => rcnfg_axi_clk
+   );
+
+   -- IDELAYCTRL calibration module for IDELAYE2 (Used in rx_pll_top and tx_pll_top)
+   IDELAYCTRL_inst : IDELAYCTRL
+   port map (
+      RDY      => open,                   -- 1-bit output: Ready output
+      REFCLK   => idelay_refclk,          -- 1-bit input: Reference clock input
+      RST      => not idelay_pll_locked   -- 1-bit input: Active high reset input
+   );
    
 
 
