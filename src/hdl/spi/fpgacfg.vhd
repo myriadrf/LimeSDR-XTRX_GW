@@ -63,14 +63,18 @@ architecture fpgacfg_arch of fpgacfg is
    signal oe: std_logic;                              -- Tri state buffers control
    signal spi_config_data_rev	: std_logic_vector(143 downto 0);
    
-   signal BOARD_ID_reg        : std_logic_vector(15 downto 0);
-   signal MAJOR_REV_reg       : std_logic_vector(15 downto 0);
-   signal COMPILE_REV_reg     : std_logic_vector(15 downto 0);
+--   constant BOARD_ID_reg        : std_logic_vector(15 downto 0);
+--   constant MAJOR_REV_reg       : std_logic_vector(15 downto 0);
+--   constant COMPILE_REV_reg     : std_logic_vector(15 downto 0);
+   
+--   constant  : std_logic_vector(15 downto 0) := ;
+--   constant  : std_logic_vector(15 downto 0) := ;
+--   constant  : std_logic_vector(15 downto 0) := ;
 
-   attribute noprune          : boolean;
-   attribute noprune of BOARD_ID_reg      : signal is true;
-   attribute noprune of MAJOR_REV_reg     : signal is true;
-   attribute noprune of COMPILE_REV_reg   : signal is true;
+--   attribute noprune          : boolean;
+--   attribute noprune of BOARD_ID_reg      : signal is true;
+--   attribute noprune of MAJOR_REV_reg     : signal is true;
+--   attribute noprune of COMPILE_REV_reg   : signal is true;
    
    
 				
@@ -84,18 +88,18 @@ begin
    ---------------------------------------------------------------------------------------------
    -- To avoid optimizations
    -- ---------------------------------------------------------------------------------------------
-   process(sclk, lreset)
-   begin
-      if lreset = '0' then
-         BOARD_ID_reg      <= BOARD_ID;
-         MAJOR_REV_reg     <= std_logic_vector(to_unsigned(MAJOR_REV, 16));
-         COMPILE_REV_reg   <= std_logic_vector(to_unsigned(COMPILE_REV, 16));
-      elsif sclk'event and sclk = '1' then
-         BOARD_ID_reg      <= BOARD_ID;
-         MAJOR_REV_reg     <= std_logic_vector(to_unsigned(MAJOR_REV, 16));
-         COMPILE_REV_reg   <= std_logic_vector(to_unsigned(COMPILE_REV, 16));
-      end if;
-   end process;
+--   process(sclk, lreset)
+--   begin
+--      if lreset = '0' then
+--         BOARD_ID_reg      <= BOARD_ID;
+--         MAJOR_REV_reg     <= std_logic_vector(to_unsigned(MAJOR_REV, 16));
+--         COMPILE_REV_reg   <= std_logic_vector(to_unsigned(COMPILE_REV, 16));
+--      elsif sclk'event and sclk = '1' then
+--         BOARD_ID_reg      <= BOARD_ID;
+--         MAJOR_REV_reg     <= std_logic_vector(to_unsigned(MAJOR_REV, 16));
+--         COMPILE_REV_reg   <= std_logic_vector(to_unsigned(COMPILE_REV, 16));
+--      end if;
+--   end process;
 
 
    -- ---------------------------------------------------------------------------------------------
@@ -160,10 +164,10 @@ begin
          -- Load operation
          elsif dout_reg_len = '1' then
             case inst_reg(4 downto 0) is  -- mux read-only outputs
-               when "00000" => dout_reg <= BOARD_ID_reg;--0
-               when "00001" => dout_reg <= MAJOR_REV_reg;--1
+               when "00000" => dout_reg <= BOARD_ID;--0 (from revisions.vhd)
+               when "00001" => dout_reg <= std_logic_vector(to_unsigned(MAJOR_REV,16));--1 (from revisions.vhd)
 --               when "00010" => dout_reg <= (15 downto 8 => '0') & COMPILE_REV_reg;
-               when "00010" => dout_reg <= COMPILE_REV_reg;--2
+               when "00010" => dout_reg <= std_logic_vector(to_unsigned(COMPILE_REV,16));--2 (from revisions.vhd)
                when "00011" => dout_reg <= (15 downto 9 => '0') & to_fpgacfg.PWR_SRC & to_fpgacfg.BOM_VER & to_fpgacfg.HW_VER; --3
                when others  => dout_reg <= mem(to_integer(unsigned(inst_reg(4 downto 0))));
             end case;

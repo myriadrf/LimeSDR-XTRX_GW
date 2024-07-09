@@ -1360,24 +1360,20 @@ int main()
 						break;
 
 					case 1: // temperature
-						i2c_buf[0] = 1;
-						i2c_buf[1] = 0x25;
-						i2c_buf[2] = 0x10;
-						XIic_Send(XPAR_I2C_CORES_I2C1_BASEADDR,I2C_TERMO_ADDR,i2c_buf,3,XIIC_STOP);
-						int b = 0;
-						do
-						{	//Check if conversion is complete
-							b++;
-							XIic_Recv(XPAR_I2C_CORES_I2C1_BASEADDR,I2C_TERMO_ADDR,i2c_buf,2,XIIC_STOP);
-						} while ((i2c_buf[0] & 0x3) == 0);
+//						i2c_buf[0] = 1;
+//						i2c_buf[1] = 0x60;
+//						i2c_buf[2] = 0xA0;
+						// TMP1075 sensor performs periodical temperature readings by default
+						// we only need to read the most recent value
 						i2c_buf[0]=0;
-						XIic_Send(XPAR_I2C_CORES_I2C1_BASEADDR,I2C_TERMO_ADDR,i2c_buf,1,XIIC_STOP);
+						XIic_Send(XPAR_I2C_CORES_I2C1_BASEADDR,I2C_TERMO_ADDR,i2c_buf,1,XIIC_REPEATED_START);
 						XIic_Recv(XPAR_I2C_CORES_I2C1_BASEADDR,I2C_TERMO_ADDR,i2c_buf,2,XIIC_STOP);
 
 						LMS_Ctrl_Packet_Tx->Data_field[0 + (block * 4)] = LMS_Ctrl_Packet_Rx->Data_field[block]; //ch
 						LMS_Ctrl_Packet_Tx->Data_field[1 + (block * 4)] = 0x50; //0.1C //unit, power
 
 						int16_t converted_value = i2c_buf[1] | (i2c_buf[0] << 8);
+
 						converted_value = converted_value >> 4;
 						converted_value = converted_value * 10;
 						converted_value = converted_value >> 4;

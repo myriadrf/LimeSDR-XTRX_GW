@@ -9,29 +9,27 @@
 #
 # ----------------------------------------------------------------------------
 
-set clk_period        8.138; 
 # ----------------------------------------------------------------------------
 # Primary Clocks
 # ----------------------------------------------------------------------------
-create_clock -period $clk_period -name LMS_MCLK1 [get_ports LMS_MCLK1]
+create_clock -period 8.138 -name LMS_MCLK1 [get_ports LMS_MCLK1]
 
-create_clock -period $clk_period -name LMS_MCLK2 [get_ports LMS_MCLK2]
+create_clock -period 8.138 -name LMS_MCLK2 [get_ports LMS_MCLK2]
 
 # ----------------------------------------------------------------------------
 # Virtual clocks
 # ----------------------------------------------------------------------------
 #Adding an offset to the clock to satisfy timing analysis, since the phase can be changed during runtime
-create_clock -period 8.138 -name LMS1_MCLK2_VIRT -waveform {4.0 8.069}
+create_clock -period 8.138 -name LMS1_MCLK2_VIRT -waveform {4.000 8.069}
 # ----------------------------------------------------------------------------
 # Generated clocks
 # ----------------------------------------------------------------------------
 #Adding an offset to the clock to satisfy timing analysis, since the phase can be changed during runtime
 #create_generated_clock -name LMS1_FCLK1 -source [get_pins inst2_pll_top/inst0_tx_pll_top_cyc5/XILINX_PLL_DDIO.XILINX_PLL_DDIO/C] -multiply_by 1 [get_ports LMS_FCLK1]
- #-waveform {1 5.069}
-create_generated_clock -name LMS_FCLK1 -source [get_pins inst2_pll_top/inst0_tx_pll_top_cyc5/XILINX_PLL_DDIO.XILINX_PLL_DDIO/C] -edges {1 2 3} -edge_shift {-1.5 -1.5 -1.5} [get_ports LMS_FCLK1]
+#-waveform {1 5.069}
 
-create_generated_clock -name MCLK2_MUX_PLLC1    -divide_by 1 -source [get_pins inst2_pll_top/inst1_rx_pll_top_cyc5/XILINX_MMCM.BUFGCTRL_c1_mux/I0] [get_pins inst2_pll_top/inst1_rx_pll_top_cyc5/XILINX_MMCM.BUFGCTRL_c1_mux/O]
-create_generated_clock -name MCLK2_MUX_DIRECT   -divide_by 1 -add -master_clock LMS_MCLK2 -source [get_pins inst2_pll_top/inst1_rx_pll_top_cyc5/XILINX_MMCM.BUFGCTRL_c1_mux/I1] [get_pins inst2_pll_top/inst1_rx_pll_top_cyc5/XILINX_MMCM.BUFGCTRL_c1_mux/O]
+create_generated_clock -name MCLK2_MUX_PLLC1 -source [get_pins inst2_pll_top/inst1_rx_pll_top_cyc5/XILINX_MMCM.BUFGCTRL_c1_mux/I0] -divide_by 1 [get_pins inst2_pll_top/inst1_rx_pll_top_cyc5/XILINX_MMCM.BUFGCTRL_c1_mux/O]
+create_generated_clock -name MCLK2_MUX_DIRECT -source [get_pins inst2_pll_top/inst1_rx_pll_top_cyc5/XILINX_MMCM.BUFGCTRL_c1_mux/I1] -divide_by 1 -add -master_clock LMS_MCLK2 [get_pins inst2_pll_top/inst1_rx_pll_top_cyc5/XILINX_MMCM.BUFGCTRL_c1_mux/O]
 
 
 ##  B.J.
@@ -49,13 +47,13 @@ create_generated_clock -name MCLK2_MUX_DIRECT   -divide_by 1 -add -master_clock 
 #set MAX_DELAY_RX 5.050
 
 #LMS1
-set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -max 1 [get_ports {{LMS_DIQ2_D[*]} LMS_EN_IQSEL2}]
+set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -max 1.000 [get_ports {{LMS_DIQ2_D[*]} LMS_EN_IQSEL2}]
 
-set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -min -0.2 [get_ports {{LMS_DIQ2_D[*]} LMS_EN_IQSEL2}]
+set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -min -0.200 [get_ports {{LMS_DIQ2_D[*]} LMS_EN_IQSEL2}]
 
-set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -clock_fall -max -add_delay 1 [get_ports {{LMS_DIQ2_D[*]} LMS_EN_IQSEL2}]
+set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -clock_fall -max -add_delay 1.000 [get_ports {{LMS_DIQ2_D[*]} LMS_EN_IQSEL2}]
 
-set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -clock_fall -min -add_delay -0.2 [get_ports {{LMS_DIQ2_D[*]} LMS_EN_IQSEL2}]
+set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -clock_fall -min -add_delay -0.200 [get_ports {{LMS_DIQ2_D[*]} LMS_EN_IQSEL2}]
 
 
 # ----------------------------------------------------------------------------
@@ -70,18 +68,10 @@ set_input_delay -clock [get_clocks LMS1_MCLK2_VIRT] -clock_fall -min -add_delay 
 
 
 #LMS1
-set_output_delay -clock [get_clocks LMS_FCLK1] -max -0.5 [get_ports {{LMS_DIQ1_D[*]} LMS_EN_IQSEL1}]
-set_output_delay -clock [get_clocks LMS_FCLK1] -min -1.7 [get_ports {{LMS_DIQ1_D[*]} LMS_EN_IQSEL1}]
 
-set_output_delay -clock [get_clocks LMS_FCLK1] -clock_fall -max -add_delay -0.5 [get_ports {{LMS_DIQ1_D[*]} LMS_EN_IQSEL1}]
-set_output_delay -clock [get_clocks LMS_FCLK1] -clock_fall -min -add_delay -1.7 [get_ports {{LMS_DIQ1_D[*]} LMS_EN_IQSEL1}]
 
 #different values for high drive ports to satisfy timing analysis
-set_output_delay -clock [get_clocks LMS_FCLK1] -max 1 [get_ports {LMS_DIQ1_D[1] LMS_DIQ1_D[7] LMS_DIQ1_D[8] LMS_DIQ1_D[11] LMS_EN_IQSEL1 }]
-set_output_delay -clock [get_clocks LMS_FCLK1] -min -0.2 [get_ports {LMS_DIQ1_D[1] LMS_DIQ1_D[7] LMS_DIQ1_D[8] LMS_DIQ1_D[11] LMS_EN_IQSEL1 }]
 
-set_output_delay -clock [get_clocks LMS_FCLK1] -clock_fall -max -add_delay 1 [get_ports {LMS_DIQ1_D[1] LMS_DIQ1_D[7] LMS_DIQ1_D[8] LMS_DIQ1_D[11] LMS_EN_IQSEL1 }]
-set_output_delay -clock [get_clocks LMS_FCLK1] -clock_fall -min -add_delay -0.2 [get_ports {LMS_DIQ1_D[1] LMS_DIQ1_D[7] LMS_DIQ1_D[8] LMS_DIQ1_D[11] LMS_EN_IQSEL1 }]
 
 #set_output_delay -clock [get_clocks LMS_FCLK1] -max 3.800 [get_ports {LMS1_DIQ1_D[11]}]
 #set_output_delay -clock [get_clocks LMS_FCLK1] -min 2.000 [get_ports {LMS1_DIQ1_D[11]}]
@@ -105,9 +95,9 @@ set_false_path -to [get_ports LMS_FCLK1]
 ##
 ## Example of creating generated clock at clock output port
 ## create_generated_clock -name <gen_clock_name> -multiply_by 1 -source [get_pins <source_pin>] [get_ports <output_clock_port>]
-## gen_clock_name is the name of forwarded clock here. It should be used below for defining "fwclk".	
+## gen_clock_name is the name of forwarded clock here. It should be used below for defining "fwclk".
 
-#set fwclk        <clock-name>;     # forwarded clock name (generated using create_generated_clock at output clock port)        
+#set fwclk        <clock-name>;     # forwarded clock name (generated using create_generated_clock at output clock port)
 #set tsu_r        0.000;            # destination device setup time requirement for rising edge
 #set thd_r        0.000;            # destination device hold time requirement for rising edge
 #set tsu_f        0.000;            # destination device setup time requirement for falling edge
@@ -122,10 +112,11 @@ set_false_path -to [get_ports LMS_FCLK1]
 #set_output_delay -clock $fwclk -max [expr $trce_dly_max + $tsu_f] [get_ports $output_ports] -clock_fall -add_delay;
 #set_output_delay -clock $fwclk -min [expr $trce_dly_min - $thd_f] [get_ports $output_ports] -clock_fall -add_delay;
 
-set_clock_groups -logically_exclusive -group [get_clocks -include_generated_clocks {clk_out1_rx_pll}] -group [get_clocks -include_generated_clocks {LMS_MCLK2}]
-set_clock_groups -logically_exclusive -group [get_clocks -include_generated_clocks {clk_out2_rx_pll}] -group [get_clocks -include_generated_clocks {LMS_MCLK2}]
-set_clock_groups -logically_exclusive -group [get_clocks -include_generated_clocks {clk_out1_tx_pll}] -group [get_clocks -include_generated_clocks {LMS_MCLK1}]
-set_clock_groups -logically_exclusive -group [get_clocks -include_generated_clocks {clk_out2_tx_pll}] -group [get_clocks -include_generated_clocks {LMS_MCLK1}]
+set_clock_groups -logically_exclusive -group [get_clocks -include_generated_clocks clk_out1_rx_pll] -group [get_clocks -include_generated_clocks LMS_MCLK2]
+set_clock_groups -logically_exclusive -group [get_clocks -include_generated_clocks clk_out2_rx_pll] -group [get_clocks -include_generated_clocks LMS_MCLK2]
+set_clock_groups -logically_exclusive -group [get_clocks -include_generated_clocks clk_out1_tx_pll] -group [get_clocks -include_generated_clocks LMS_MCLK1]
+set_clock_groups -logically_exclusive -group [get_clocks -include_generated_clocks clk_out2_tx_pll] -group [get_clocks -include_generated_clocks LMS_MCLK1]
 
-# Setting false path for now on slow clock. TODO: FIX this 
+# Setting false path for now on slow clock. TODO: FIX this
 set_false_path -from [get_clocks LMS1_MCLK2_VIRT] -to [get_clocks MCLK2_MUX_DIRECT]
+
