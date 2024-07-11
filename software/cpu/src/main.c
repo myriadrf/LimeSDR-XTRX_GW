@@ -832,6 +832,7 @@ int main()
 	int spirez;
 	uint32_t *dest = (uint32_t *)glEp0Buffer_Tx;
 	u8 spi_ReadBuffer[4];
+	u8 spi_WriteBuffer[4];
 
 	int flash_page_addr = 0;
 
@@ -1030,7 +1031,15 @@ int main()
 				LMS_Ctrl_Packet_Tx->Data_field[0] = FW_VER;
 				LMS_Ctrl_Packet_Tx->Data_field[1] = DEV_TYPE;
 				LMS_Ctrl_Packet_Tx->Data_field[2] = LMS_PROTOCOL_VER;
-				LMS_Ctrl_Packet_Tx->Data_field[3] = HW_VER;
+
+				// Read HW_VER (FPGA register 0x0003)
+				spi_WriteBuffer[0] = 0x00;
+				spi_WriteBuffer[1] = 0x03;
+				spi_WriteBuffer[2] = 0x00;
+				spi_WriteBuffer[3] = 0x00;
+				spirez = XSpi_SetSlaveSelect(&Spi0, SPI0_FPGA_SS);
+				spirez = XSpi_Transfer(&Spi0, spi_WriteBuffer, spi_ReadBuffer, 4);
+				LMS_Ctrl_Packet_Tx->Data_field[3] = spi_ReadBuffer[3]; //HW_VER;
 				LMS_Ctrl_Packet_Tx->Data_field[4] = EXP_BOARD;
 
 				// Read Serial number from FLASH OTP region
