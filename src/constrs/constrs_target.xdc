@@ -19,7 +19,9 @@ set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
 
 set_property BITSTREAM.CONFIG.TIMER_CFG 32'h000493E0 [current_design]
 
-
-
-
-
+# USR_ACCESS Field at 00007C-00007F binfile For Bitstream identification:
+#[32:24] - DEVICE ID
+#[23:20] - HW_VER
+#[19:16] - Image identifier ( 0 - Gold image, 1- User image) 
+#[15: 0] - Reserved
+set_property BITSTREAM.CONFIG.USR_ACCESS 0X1B210000 [current_design]
