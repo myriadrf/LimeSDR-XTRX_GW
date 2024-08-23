@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
+/* SPDX-License-Identifier: GPL-2.0
+ *
  * LiteUART serial controller (LiteX) Driver
  *
  * Copyright (C) 2019-2020 Antmicro <www.antmicro.com>
@@ -11,11 +11,13 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_platform.h>
+#include <linux/platform_device.h>
 #include <linux/serial.h>
 #include <linux/serial_core.h>
 #include <linux/slab.h>
 #include <linux/timer.h>
 #include <linux/tty_flip.h>
+#include <linux/version.h>
 #include <linux/xarray.h>
 
 #include "litex.h"
@@ -197,7 +199,11 @@ static void liteuart_shutdown(struct uart_port *port)
 }
 
 static void liteuart_set_termios(struct uart_port *port, struct ktermios *new,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
 				 struct ktermios *old)
+#else
+				 const struct ktermios *old)
+#endif
 {
 	unsigned int baud;
 	unsigned long flags;

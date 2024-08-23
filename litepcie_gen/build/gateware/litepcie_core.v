@@ -8,8 +8,8 @@
 //
 // Filename   : litepcie_core.v
 // Device     : xc7a
-// LiteX sha1 : c8343879
-// Date       : 2023-01-12 18:00:51
+// LiteX sha1 : 1ad0f828b
+// Date       : 2024-08-23 09:51:27
 //------------------------------------------------------------------------------
 
 `timescale 1ns / 1ps
@@ -20,629 +20,694 @@
 
 module litepcie_core (
     output wire          clk,
-    output wire          rst,
-    input  wire          pcie_rst_n,
-    (* dont_touch = "true" *)
-    input  wire          pcie_clk_p,
-    input  wire          pcie_clk_n,
-    input  wire    [1:0] pcie_rx_p,
-    input  wire    [1:0] pcie_rx_n,
-    output wire    [1:0] pcie_tx_p,
-    output wire    [1:0] pcie_tx_n,
+    output wire          cntrl_enable,
     input  wire  [511:0] cntrl_reader_data,
     input  wire          cntrl_reader_valid,
     output wire  [511:0] cntrl_writer_data,
     output wire          cntrl_writer_valid,
-    output wire          cntrl_enable,
-    output wire          dma_writer0_valid,
-    input  wire          dma_writer0_ready,
-    output wire          dma_writer0_last,
-    output wire  [127:0] dma_writer0_data,
-    output wire          dma_writer0_enable,
-    input  wire          dma_reader0_valid,
-    output wire          dma_reader0_ready,
-    input  wire          dma_reader0_last,
     input  wire  [127:0] dma_reader0_data,
     output wire          dma_reader0_enable,
-    input  wire    [7:0] msi_irqs
+    input  wire          dma_reader0_last,
+    output wire          dma_reader0_ready,
+    input  wire          dma_reader0_valid,
+    output wire  [127:0] dma_writer0_data,
+    output wire          dma_writer0_enable,
+    output wire          dma_writer0_last,
+    input  wire          dma_writer0_ready,
+    output wire          dma_writer0_valid,
+    input  wire    [7:0] msi_irqs,
+    input  wire          pcie_clk_n,
+    (* dont_touch = "true" *)
+    input  wire          pcie_clk_p,
+    input  wire          pcie_rst_n,
+    input  wire    [1:0] pcie_rx_n,
+    input  wire    [1:0] pcie_rx_p,
+    output wire    [1:0] pcie_tx_n,
+    output wire    [1:0] pcie_tx_p,
+    output wire          rst
 );
 
+
+//------------------------------------------------------------------------------
+// Hierarchy
+//------------------------------------------------------------------------------
+
+/*
+LitePCIeCore
+└─── bus (SoCBusHandler)
+│    └─── _interconnect (InterconnectPointToPoint)
+└─── csr (SoCCSRHandler)
+└─── irq (SoCIRQHandler)
+└─── ctrl (SoCController)
+└─── cpu (CPUNone)
+└─── identifier (Identifier)
+└─── crg (LitePCIeCRG)
+└─── pcie_phy (S7PCIEPHY)
+│    └─── tx_datapath (PHYTXDatapath)
+│    │    └─── pipevalid_0* (PipeValid)
+│    │    └─── clockdomaincrossing_0* (ClockDomainCrossing)
+│    │    │    └─── asyncfifo_0* (AsyncFIFO)
+│    │    │    │    └─── fifo (AsyncFIFO)
+│    │    │    │    │    └─── graycounter_0* (GrayCounter)
+│    │    │    │    │    └─── graycounter_1* (GrayCounter)
+│    │    └─── strideconverter_0* (StrideConverter)
+│    │    │    └─── converter_0* (Converter)
+│    │    │    │    └─── _downconverter_0* (_DownConverter)
+│    │    └─── pipeready_0* (PipeReady)
+│    └─── rx_datapath (PHYRXDatapath)
+│    │    └─── pipeready_0* (PipeReady)
+│    │    └─── strideconverter_0* (StrideConverter)
+│    │    │    └─── converter_0* (Converter)
+│    │    │    │    └─── _upconverter_0* (_UpConverter)
+│    │    └─── clockdomaincrossing_0* (ClockDomainCrossing)
+│    │    │    └─── asyncfifo_0* (AsyncFIFO)
+│    │    │    │    └─── fifo (AsyncFIFO)
+│    │    │    │    │    └─── graycounter_0* (GrayCounter)
+│    │    │    │    │    └─── graycounter_1* (GrayCounter)
+│    │    └─── pipevalid_0* (PipeValid)
+│    └─── msi_cdc (ClockDomainCrossing)
+│    │    └─── asyncfifo_0* (AsyncFIFO)
+│    │    │    └─── fifo (AsyncFIFO)
+│    │    │    │    └─── graycounter_0* (GrayCounter)
+│    │    │    │    └─── graycounter_1* (GrayCounter)
+│    └─── mmcm (S7MMCM)
+│    │    └─── [FDCE]
+│    │    └─── [BUFG]
+│    │    └─── [FDCE]
+│    │    └─── [BUFG]
+│    │    └─── [FDCE]
+│    │    └─── [FDCE]
+│    │    └─── [BUFG]
+│    │    └─── [FDCE]
+│    │    └─── [MMCME2_ADV]
+│    │    └─── [FDCE]
+│    │    └─── [FDCE]
+│    │    └─── [FDCE]
+│    │    └─── [BUFG]
+│    └─── [BUFGCTRL]
+│    └─── [BUFG]
+│    └─── [IBUFDS_GTE2]
+│    └─── [pcie_s7]
+└─── pcie_endpoint (LitePCIeEndpoint)
+│    └─── phy (S7PCIEPHY)
+│    │    └─── tx_datapath (PHYTXDatapath)
+│    │    │    └─── pipevalid_0* (PipeValid)
+│    │    │    └─── clockdomaincrossing_0* (ClockDomainCrossing)
+│    │    │    │    └─── asyncfifo_0* (AsyncFIFO)
+│    │    │    │    │    └─── fifo (AsyncFIFO)
+│    │    │    │    │    │    └─── graycounter_0* (GrayCounter)
+│    │    │    │    │    │    └─── graycounter_1* (GrayCounter)
+│    │    │    └─── strideconverter_0* (StrideConverter)
+│    │    │    │    └─── converter_0* (Converter)
+│    │    │    │    │    └─── _downconverter_0* (_DownConverter)
+│    │    │    └─── pipeready_0* (PipeReady)
+│    │    └─── rx_datapath (PHYRXDatapath)
+│    │    │    └─── pipeready_0* (PipeReady)
+│    │    │    └─── strideconverter_0* (StrideConverter)
+│    │    │    │    └─── converter_0* (Converter)
+│    │    │    │    │    └─── _upconverter_0* (_UpConverter)
+│    │    │    └─── clockdomaincrossing_0* (ClockDomainCrossing)
+│    │    │    │    └─── asyncfifo_0* (AsyncFIFO)
+│    │    │    │    │    └─── fifo (AsyncFIFO)
+│    │    │    │    │    │    └─── graycounter_0* (GrayCounter)
+│    │    │    │    │    │    └─── graycounter_1* (GrayCounter)
+│    │    │    └─── pipevalid_0* (PipeValid)
+│    │    └─── msi_cdc (ClockDomainCrossing)
+│    │    │    └─── asyncfifo_0* (AsyncFIFO)
+│    │    │    │    └─── fifo (AsyncFIFO)
+│    │    │    │    │    └─── graycounter_0* (GrayCounter)
+│    │    │    │    │    └─── graycounter_1* (GrayCounter)
+│    │    └─── mmcm (S7MMCM)
+│    │    │    └─── [FDCE]
+│    │    │    └─── [BUFG]
+│    │    │    └─── [FDCE]
+│    │    │    └─── [BUFG]
+│    │    │    └─── [FDCE]
+│    │    │    └─── [FDCE]
+│    │    │    └─── [BUFG]
+│    │    │    └─── [FDCE]
+│    │    │    └─── [MMCME2_ADV]
+│    │    │    └─── [FDCE]
+│    │    │    └─── [FDCE]
+│    │    │    └─── [FDCE]
+│    │    │    └─── [BUFG]
+│    │    └─── [BUFGCTRL]
+│    │    └─── [BUFG]
+│    │    └─── [IBUFDS_GTE2]
+│    │    └─── [pcie_s7]
+│    └─── depacketizer (LitePCIeTLPDepacketizer)
+│    │    └─── header_extracter (LitePCIeTLPHeaderExtracter128b)
+│    │    │    └─── fsm (FSM)
+│    │    └─── dispatcher (Dispatcher)
+│    │    │    └─── status_0* (Status)
+│    └─── packetizer (LitePCIeTLPPacketizer)
+│    │    └─── arbitrer (Arbiter)
+│    │    │    └─── rr (RoundRobin)
+│    │    │    └─── status_0* (Status)
+│    │    │    └─── status_1* (Status)
+│    │    └─── litepcietlpheaderinserter128b_0* (LitePCIeTLPHeaderInserter128b)
+│    │    │    └─── litepcietlpheaderinserter128b3dws_0* (LitePCIeTLPHeaderInserter128b3DWs)
+│    │    │    │    └─── fsm (FSM)
+│    │    │    └─── litepcietlpheaderinserter128b4dws_0* (LitePCIeTLPHeaderInserter128b4DWs)
+│    │    │    │    └─── fsm (FSM)
+│    └─── crossbar (LitePCIeCrossbar)
+│    │    └─── dispatcher_0* (Dispatcher)
+│    │    │    └─── status_0* (Status)
+│    │    └─── arbiter_0* (Arbiter)
+│    │    └─── controller (LitePCIeTLPController)
+│    │    │    └─── tag_queue (SyncFIFO)
+│    │    │    │    └─── fifo (SyncFIFOBuffered)
+│    │    │    │    │    └─── fifo (SyncFIFO)
+│    │    │    └─── req_queue (SyncFIFO)
+│    │    │    │    └─── fifo (SyncFIFOBuffered)
+│    │    │    │    │    └─── fifo (SyncFIFO)
+│    │    │    └─── req_fsm (FSM)
+│    │    │    └─── syncfifo_0* (SyncFIFO)
+│    │    │    │    └─── fifo (SyncFIFOBuffered)
+│    │    │    │    │    └─── fifo (SyncFIFO)
+│    │    │    └─── syncfifo_1* (SyncFIFO)
+│    │    │    │    └─── fifo (SyncFIFOBuffered)
+│    │    │    │    │    └─── fifo (SyncFIFO)
+│    │    │    └─── syncfifo_2* (SyncFIFO)
+│    │    │    │    └─── fifo (SyncFIFOBuffered)
+│    │    │    │    │    └─── fifo (SyncFIFO)
+│    │    │    └─── syncfifo_3* (SyncFIFO)
+│    │    │    │    └─── fifo (SyncFIFOBuffered)
+│    │    │    │    │    └─── fifo (SyncFIFO)
+│    │    │    └─── cmp_fsm (FSM)
+│    │    └─── arbiter_1* (Arbiter)
+│    │    └─── dispatcher_1* (Dispatcher)
+│    │    │    └─── status_0* (Status)
+│    │    └─── arbiter_2* (Arbiter)
+│    │    └─── dispatcher_2* (Dispatcher)
+│    │    │    └─── status_0* (Status)
+│    │    └─── arbiter_3* (Arbiter)
+│    │    │    └─── rr (RoundRobin)
+│    │    │    └─── status_0* (Status)
+│    │    │    └─── status_1* (Status)
+└─── litepciewishbonemaster_0* (LitePCIeWishboneMaster)
+│    └─── fsm (FSM)
+└─── CNTRL (CNTRL_CSR)
+└─── pcie_dma0 (LitePCIeDMA)
+│    └─── writer (LitePCIeDMAWriter)
+│    │    └─── table (LitePCIeDMAScatterGather)
+│    │    │    └─── syncfifo_0* (SyncFIFO)
+│    │    │    │    └─── fifo (SyncFIFO)
+│    │    └─── splitter (LitePCIeDMADescriptorSplitter)
+│    │    │    └─── fsm (FSM)
+│    │    └─── data_conv (Converter)
+│    │    │    └─── _identityconverter_0* (_IdentityConverter)
+│    │    └─── data_fifo (SyncFIFO)
+│    │    │    └─── fifo (SyncFIFOBuffered)
+│    │    │    │    └─── fifo (SyncFIFO)
+│    │    └─── fsm (FSM)
+│    └─── reader (LitePCIeDMAReader)
+│    │    └─── table (LitePCIeDMAScatterGather)
+│    │    │    └─── syncfifo_0* (SyncFIFO)
+│    │    │    │    └─── fifo (SyncFIFO)
+│    │    └─── splitter (LitePCIeDMADescriptorSplitter)
+│    │    │    └─── fsm (FSM)
+│    │    └─── data_conv (Converter)
+│    │    │    └─── _identityconverter_0* (_IdentityConverter)
+│    │    └─── data_fifo (SyncFIFO)
+│    │    │    └─── fifo (SyncFIFOBuffered)
+│    │    │    │    └─── fifo (SyncFIFO)
+│    │    └─── fsm (FSM)
+│    └─── buffering (LitePCIeDMABuffering)
+│    │    └─── syncfifo_0* (SyncFIFO)
+│    │    │    └─── fifo (SyncFIFOBuffered)
+│    │    │    │    └─── fifo (SyncFIFO)
+│    │    └─── syncfifo_1* (SyncFIFO)
+│    │    │    └─── fifo (SyncFIFOBuffered)
+│    │    │    │    └─── fifo (SyncFIFO)
+│    └─── buffer_0* (Buffer)
+│    │    └─── pipe_valid (PipeValid)
+│    │    └─── pipeline (Pipeline)
+│    └─── buffer_1* (Buffer)
+│    │    └─── pipe_valid (PipeValid)
+│    │    └─── pipeline (Pipeline)
+└─── pcie_msi (LitePCIeMSI)
+└─── csr_bridge (Wishbone2CSR)
+│    └─── fsm (FSM)
+└─── csr_bankarray (CSRBankArray)
+│    └─── csrbank_0* (CSRBank)
+│    │    └─── csrstorage_0* (CSRStorage)
+│    │    └─── csrstorage_1* (CSRStorage)
+│    │    └─── csrstorage_2* (CSRStorage)
+│    │    └─── csrstatus_0* (CSRStatus)
+│    │    └─── csrstorage_3* (CSRStorage)
+│    └─── csrbank_1* (CSRBank)
+│    │    └─── csrstorage_0* (CSRStorage)
+│    │    └─── csrstorage_1* (CSRStorage)
+│    │    └─── csrstatus_0* (CSRStatus)
+│    └─── sram_0* (SRAM)
+│    └─── csrbank_2* (CSRBank)
+│    │    └─── csrstorage_0* (CSRStorage)
+│    │    └─── csrstorage_1* (CSRStorage)
+│    │    └─── csrstorage_2* (CSRStorage)
+│    │    └─── csrstorage_3* (CSRStorage)
+│    │    └─── csrstatus_0* (CSRStatus)
+│    │    └─── csrstatus_1* (CSRStatus)
+│    │    └─── csrstorage_4* (CSRStorage)
+│    │    └─── csrstorage_5* (CSRStorage)
+│    │    └─── csrstorage_6* (CSRStorage)
+│    │    └─── csrstorage_7* (CSRStorage)
+│    │    └─── csrstorage_8* (CSRStorage)
+│    │    └─── csrstatus_2* (CSRStatus)
+│    │    └─── csrstatus_3* (CSRStatus)
+│    │    └─── csrstorage_9* (CSRStorage)
+│    │    └─── csrstorage_10* (CSRStorage)
+│    │    └─── csrstatus_4* (CSRStatus)
+│    │    └─── csrstorage_11* (CSRStorage)
+│    │    └─── csrstatus_5* (CSRStatus)
+│    └─── csrbank_3* (CSRBank)
+│    │    └─── csrstatus_0* (CSRStatus)
+│    │    └─── csrstatus_1* (CSRStatus)
+│    │    └─── csrstatus_2* (CSRStatus)
+│    │    └─── csrstatus_3* (CSRStatus)
+│    │    └─── csrstatus_4* (CSRStatus)
+│    │    └─── csrstatus_5* (CSRStatus)
+│    └─── csrbank_4* (CSRBank)
+│    │    └─── csrstorage_0* (CSRStorage)
+│    │    └─── csrstorage_1* (CSRStorage)
+│    │    └─── csrstatus_0* (CSRStatus)
+│    └─── csrbank_5* (CSRBank)
+│    │    └─── csrstatus_0* (CSRStatus)
+│    │    └─── csrstatus_1* (CSRStatus)
+│    │    └─── csrstatus_2* (CSRStatus)
+│    │    └─── csrstatus_3* (CSRStatus)
+│    │    └─── csrstatus_4* (CSRStatus)
+│    │    └─── csrstatus_5* (CSRStatus)
+└─── csr_interconnect (InterconnectShared)
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+└─── [FDPE]
+* : Generated name.
+[]: BlackBox.
+*/
 
 //------------------------------------------------------------------------------
 // Signals
 //------------------------------------------------------------------------------
 
-reg           soc_rst = 1'd0;
-wire          cpu_rst;
-reg     [1:0] reset_storage = 2'd0;
-reg           reset_re = 1'd0;
-reg    [31:0] scratch_storage = 32'd305419896;
-reg           scratch_re = 1'd0;
-wire   [31:0] bus_errors_status;
-wire          bus_errors_we;
-reg           bus_errors_re = 1'd0;
+wire  [511:0] CNTRL_cntrl_dat_w;
+reg           CNTRL_cntrl_re = 1'd0;
+reg   [511:0] CNTRL_cntrl_storage = 512'd0;
+wire          CNTRL_cntrl_we;
+reg           CNTRL_enable_both_re = 1'd0;
+reg           CNTRL_enable_both_storage = 1'd0;
+reg           CNTRL_enable_re = 1'd0;
+reg           CNTRL_enable_storage = 1'd0;
+reg           CNTRL_ndma_re = 1'd0;
+reg     [3:0] CNTRL_ndma_status = 4'd1;
+wire          CNTRL_ndma_we;
+reg           CNTRL_test_re = 1'd0;
+reg    [31:0] CNTRL_test_storage = 32'd0;
 reg           bus_error = 1'd0;
 reg    [31:0] bus_errors = 32'd0;
-wire          sys_clk;
-wire          sys_rst;
-wire          s7pciephy_sink_valid;
-wire          s7pciephy_sink_ready;
-wire          s7pciephy_sink_first;
-wire          s7pciephy_sink_last;
-wire  [127:0] s7pciephy_sink_payload_dat;
-wire   [15:0] s7pciephy_sink_payload_be;
-wire          s7pciephy_source_valid;
-wire          s7pciephy_source_ready;
-wire          s7pciephy_source_first;
-wire          s7pciephy_source_last;
-wire  [127:0] s7pciephy_source_payload_dat;
-wire   [15:0] s7pciephy_source_payload_be;
-wire          s7pciephy_msi_valid;
-wire          s7pciephy_msi_ready;
-wire          s7pciephy_msi_first;
-wire          s7pciephy_msi_last;
-wire    [7:0] s7pciephy_msi_payload_dat;
-wire          s7pciephy_csrfield_status;
-wire          s7pciephy_csrfield_rate;
-wire    [1:0] s7pciephy_csrfield_width;
-wire    [5:0] s7pciephy_csrfield_ltssm;
-reg     [9:0] s7pciephy_link_status_status = 10'd0;
-wire          s7pciephy_link_status_we;
-reg           s7pciephy_link_status_re = 1'd0;
-wire          s7pciephy_msi_enable_status;
-wire          s7pciephy_msi_enable_we;
-reg           s7pciephy_msi_enable_re = 1'd0;
-wire          s7pciephy_msix_enable_status;
-wire          s7pciephy_msix_enable_we;
-reg           s7pciephy_msix_enable_re = 1'd0;
-wire          s7pciephy_bus_master_enable_status;
-wire          s7pciephy_bus_master_enable_we;
-reg           s7pciephy_bus_master_enable_re = 1'd0;
-wire   [15:0] s7pciephy_max_request_size_status;
-wire          s7pciephy_max_request_size_we;
-reg           s7pciephy_max_request_size_re = 1'd0;
-wire   [15:0] s7pciephy_max_payload_size_status;
-wire          s7pciephy_max_payload_size_we;
-reg           s7pciephy_max_payload_size_re = 1'd0;
-reg    [15:0] s7pciephy_id = 16'd0;
-reg    [15:0] s7pciephy_max_request_size = 16'd0;
-reg    [15:0] s7pciephy_max_payload_size = 16'd0;
-wire          s7pciephy_pcie_refclk;
-wire          s7pciephy_pcie_rst_n;
-wire          pcie_clk;
-wire          pcie_rst;
-wire          s7pciephy_tx_datapath_sink_sink_valid;
-wire          s7pciephy_tx_datapath_sink_sink_ready;
-wire          s7pciephy_tx_datapath_sink_sink_first;
-wire          s7pciephy_tx_datapath_sink_sink_last;
-wire  [127:0] s7pciephy_tx_datapath_sink_sink_payload_dat;
-wire   [15:0] s7pciephy_tx_datapath_sink_sink_payload_be;
-wire          s7pciephy_tx_datapath_source_source_valid;
-wire          s7pciephy_tx_datapath_source_source_ready;
-wire          s7pciephy_tx_datapath_source_source_first;
-wire          s7pciephy_tx_datapath_source_source_last;
-wire   [63:0] s7pciephy_tx_datapath_source_source_payload_dat;
-wire    [7:0] s7pciephy_tx_datapath_source_source_payload_be;
-wire          s7pciephy_tx_datapath_pipe_valid_sink_valid;
-wire          s7pciephy_tx_datapath_pipe_valid_sink_ready;
-wire          s7pciephy_tx_datapath_pipe_valid_sink_first;
-wire          s7pciephy_tx_datapath_pipe_valid_sink_last;
-wire  [127:0] s7pciephy_tx_datapath_pipe_valid_sink_payload_dat;
-wire   [15:0] s7pciephy_tx_datapath_pipe_valid_sink_payload_be;
-reg           s7pciephy_tx_datapath_pipe_valid_source_valid = 1'd0;
-wire          s7pciephy_tx_datapath_pipe_valid_source_ready;
-reg           s7pciephy_tx_datapath_pipe_valid_source_first = 1'd0;
-reg           s7pciephy_tx_datapath_pipe_valid_source_last = 1'd0;
-reg   [127:0] s7pciephy_tx_datapath_pipe_valid_source_payload_dat = 128'd0;
-reg    [15:0] s7pciephy_tx_datapath_pipe_valid_source_payload_be = 16'd0;
-wire          s7pciephy_tx_datapath_cdc_sink_sink_valid;
-wire          s7pciephy_tx_datapath_cdc_sink_sink_ready;
-wire          s7pciephy_tx_datapath_cdc_sink_sink_first;
-wire          s7pciephy_tx_datapath_cdc_sink_sink_last;
-wire  [127:0] s7pciephy_tx_datapath_cdc_sink_sink_payload_dat;
-wire   [15:0] s7pciephy_tx_datapath_cdc_sink_sink_payload_be;
-wire          s7pciephy_tx_datapath_cdc_source_source_valid;
-wire          s7pciephy_tx_datapath_cdc_source_source_ready;
-wire          s7pciephy_tx_datapath_cdc_source_source_first;
-wire          s7pciephy_tx_datapath_cdc_source_source_last;
-wire  [127:0] s7pciephy_tx_datapath_cdc_source_source_payload_dat;
-wire   [15:0] s7pciephy_tx_datapath_cdc_source_source_payload_be;
-wire          s7pciephy_tx_datapath_cdc_cd_rst;
-wire          from2526333147296_clk;
-wire          from2526333147296_rst;
-wire          to2526333147296_clk;
-wire          to2526333147296_rst;
-wire          s7pciephy_tx_datapath_cdc_cdc_sink_valid;
-wire          s7pciephy_tx_datapath_cdc_cdc_sink_ready;
-wire          s7pciephy_tx_datapath_cdc_cdc_sink_first;
-wire          s7pciephy_tx_datapath_cdc_cdc_sink_last;
-wire  [127:0] s7pciephy_tx_datapath_cdc_cdc_sink_payload_dat;
-wire   [15:0] s7pciephy_tx_datapath_cdc_cdc_sink_payload_be;
-wire          s7pciephy_tx_datapath_cdc_cdc_source_valid;
-wire          s7pciephy_tx_datapath_cdc_cdc_source_ready;
-wire          s7pciephy_tx_datapath_cdc_cdc_source_first;
-wire          s7pciephy_tx_datapath_cdc_cdc_source_last;
-wire  [127:0] s7pciephy_tx_datapath_cdc_cdc_source_payload_dat;
-wire   [15:0] s7pciephy_tx_datapath_cdc_cdc_source_payload_be;
-wire          s7pciephy_tx_datapath_cdc_cdc_asyncfifo_we;
-wire          s7pciephy_tx_datapath_cdc_cdc_asyncfifo_writable;
-wire          s7pciephy_tx_datapath_cdc_cdc_asyncfifo_re;
-wire          s7pciephy_tx_datapath_cdc_cdc_asyncfifo_readable;
-wire  [145:0] s7pciephy_tx_datapath_cdc_cdc_asyncfifo_din;
-wire  [145:0] s7pciephy_tx_datapath_cdc_cdc_asyncfifo_dout;
-wire          s7pciephy_tx_datapath_cdc_cdc_graycounter0_ce;
-(* dont_touch = "true" *)
-reg     [4:0] s7pciephy_tx_datapath_cdc_cdc_graycounter0_q = 5'd0;
-wire    [4:0] s7pciephy_tx_datapath_cdc_cdc_graycounter0_q_next;
-reg     [4:0] s7pciephy_tx_datapath_cdc_cdc_graycounter0_q_binary = 5'd0;
-reg     [4:0] s7pciephy_tx_datapath_cdc_cdc_graycounter0_q_next_binary = 5'd0;
-wire          s7pciephy_tx_datapath_cdc_cdc_graycounter1_ce;
-(* dont_touch = "true" *)
-reg     [4:0] s7pciephy_tx_datapath_cdc_cdc_graycounter1_q = 5'd0;
-wire    [4:0] s7pciephy_tx_datapath_cdc_cdc_graycounter1_q_next;
-reg     [4:0] s7pciephy_tx_datapath_cdc_cdc_graycounter1_q_binary = 5'd0;
-reg     [4:0] s7pciephy_tx_datapath_cdc_cdc_graycounter1_q_next_binary = 5'd0;
-wire    [4:0] s7pciephy_tx_datapath_cdc_cdc_produce_rdomain;
-wire    [4:0] s7pciephy_tx_datapath_cdc_cdc_consume_wdomain;
-wire    [3:0] s7pciephy_tx_datapath_cdc_cdc_wrport_adr;
-wire  [145:0] s7pciephy_tx_datapath_cdc_cdc_wrport_dat_r;
-wire          s7pciephy_tx_datapath_cdc_cdc_wrport_we;
-wire  [145:0] s7pciephy_tx_datapath_cdc_cdc_wrport_dat_w;
-wire    [3:0] s7pciephy_tx_datapath_cdc_cdc_rdport_adr;
-wire  [145:0] s7pciephy_tx_datapath_cdc_cdc_rdport_dat_r;
-wire  [127:0] s7pciephy_tx_datapath_cdc_cdc_fifo_in_payload_dat;
-wire   [15:0] s7pciephy_tx_datapath_cdc_cdc_fifo_in_payload_be;
-wire          s7pciephy_tx_datapath_cdc_cdc_fifo_in_first;
-wire          s7pciephy_tx_datapath_cdc_cdc_fifo_in_last;
-wire  [127:0] s7pciephy_tx_datapath_cdc_cdc_fifo_out_payload_dat;
-wire   [15:0] s7pciephy_tx_datapath_cdc_cdc_fifo_out_payload_be;
-wire          s7pciephy_tx_datapath_cdc_cdc_fifo_out_first;
-wire          s7pciephy_tx_datapath_cdc_cdc_fifo_out_last;
-wire          s7pciephy_tx_datapath_converter_sink_valid;
-wire          s7pciephy_tx_datapath_converter_sink_ready;
-wire          s7pciephy_tx_datapath_converter_sink_first;
-wire          s7pciephy_tx_datapath_converter_sink_last;
-wire  [127:0] s7pciephy_tx_datapath_converter_sink_payload_dat;
-wire   [15:0] s7pciephy_tx_datapath_converter_sink_payload_be;
-wire          s7pciephy_tx_datapath_converter_source_valid;
-wire          s7pciephy_tx_datapath_converter_source_ready;
-wire          s7pciephy_tx_datapath_converter_source_first;
-wire          s7pciephy_tx_datapath_converter_source_last;
-wire   [63:0] s7pciephy_tx_datapath_converter_source_payload_dat;
-wire    [7:0] s7pciephy_tx_datapath_converter_source_payload_be;
-wire          s7pciephy_tx_datapath_converter_converter_sink_valid;
-wire          s7pciephy_tx_datapath_converter_converter_sink_ready;
-wire          s7pciephy_tx_datapath_converter_converter_sink_first;
-wire          s7pciephy_tx_datapath_converter_converter_sink_last;
-reg   [143:0] s7pciephy_tx_datapath_converter_converter_sink_payload_data = 144'd0;
-wire          s7pciephy_tx_datapath_converter_converter_source_valid;
-wire          s7pciephy_tx_datapath_converter_converter_source_ready;
-wire          s7pciephy_tx_datapath_converter_converter_source_first;
-wire          s7pciephy_tx_datapath_converter_converter_source_last;
-reg    [71:0] s7pciephy_tx_datapath_converter_converter_source_payload_data = 72'd0;
-wire          s7pciephy_tx_datapath_converter_converter_source_payload_valid_token_count;
-reg           s7pciephy_tx_datapath_converter_converter_mux = 1'd0;
-wire          s7pciephy_tx_datapath_converter_converter_first;
-wire          s7pciephy_tx_datapath_converter_converter_last;
-wire          s7pciephy_tx_datapath_converter_source_source_valid;
-wire          s7pciephy_tx_datapath_converter_source_source_ready;
-wire          s7pciephy_tx_datapath_converter_source_source_first;
-wire          s7pciephy_tx_datapath_converter_source_source_last;
-wire   [71:0] s7pciephy_tx_datapath_converter_source_source_payload_data;
-wire          s7pciephy_tx_datapath_pipe_ready_sink_valid;
-wire          s7pciephy_tx_datapath_pipe_ready_sink_ready;
-wire          s7pciephy_tx_datapath_pipe_ready_sink_first;
-wire          s7pciephy_tx_datapath_pipe_ready_sink_last;
-wire   [63:0] s7pciephy_tx_datapath_pipe_ready_sink_payload_dat;
-wire    [7:0] s7pciephy_tx_datapath_pipe_ready_sink_payload_be;
-reg           s7pciephy_tx_datapath_pipe_ready_source_valid = 1'd0;
-wire          s7pciephy_tx_datapath_pipe_ready_source_ready;
-reg           s7pciephy_tx_datapath_pipe_ready_source_first = 1'd0;
-reg           s7pciephy_tx_datapath_pipe_ready_source_last = 1'd0;
-reg    [63:0] s7pciephy_tx_datapath_pipe_ready_source_payload_dat = 64'd0;
-reg     [7:0] s7pciephy_tx_datapath_pipe_ready_source_payload_be = 8'd0;
-reg           s7pciephy_tx_datapath_pipe_ready_valid = 1'd0;
-reg           s7pciephy_tx_datapath_pipe_ready_sink_d_valid = 1'd0;
-reg           s7pciephy_tx_datapath_pipe_ready_sink_d_ready = 1'd0;
-reg           s7pciephy_tx_datapath_pipe_ready_sink_d_first = 1'd0;
-reg           s7pciephy_tx_datapath_pipe_ready_sink_d_last = 1'd0;
-reg    [63:0] s7pciephy_tx_datapath_pipe_ready_sink_d_payload_dat = 64'd0;
-reg     [7:0] s7pciephy_tx_datapath_pipe_ready_sink_d_payload_be = 8'd0;
-wire          s7pciephy_rx_datapath_sink_sink_valid;
-wire          s7pciephy_rx_datapath_sink_sink_ready;
-wire          s7pciephy_rx_datapath_sink_sink_first;
-wire          s7pciephy_rx_datapath_sink_sink_last;
-wire   [63:0] s7pciephy_rx_datapath_sink_sink_payload_dat;
-wire    [7:0] s7pciephy_rx_datapath_sink_sink_payload_be;
-wire          s7pciephy_rx_datapath_source_source_valid;
-wire          s7pciephy_rx_datapath_source_source_ready;
-wire          s7pciephy_rx_datapath_source_source_first;
-wire          s7pciephy_rx_datapath_source_source_last;
-wire  [127:0] s7pciephy_rx_datapath_source_source_payload_dat;
-wire   [15:0] s7pciephy_rx_datapath_source_source_payload_be;
-wire          s7pciephy_rx_datapath_pipe_ready_sink_valid;
-wire          s7pciephy_rx_datapath_pipe_ready_sink_ready;
-wire          s7pciephy_rx_datapath_pipe_ready_sink_first;
-wire          s7pciephy_rx_datapath_pipe_ready_sink_last;
-wire  [127:0] s7pciephy_rx_datapath_pipe_ready_sink_payload_dat;
-wire   [15:0] s7pciephy_rx_datapath_pipe_ready_sink_payload_be;
-reg           s7pciephy_rx_datapath_pipe_ready_source_valid = 1'd0;
-wire          s7pciephy_rx_datapath_pipe_ready_source_ready;
-reg           s7pciephy_rx_datapath_pipe_ready_source_first = 1'd0;
-reg           s7pciephy_rx_datapath_pipe_ready_source_last = 1'd0;
-reg   [127:0] s7pciephy_rx_datapath_pipe_ready_source_payload_dat = 128'd0;
-reg    [15:0] s7pciephy_rx_datapath_pipe_ready_source_payload_be = 16'd0;
-reg           s7pciephy_rx_datapath_pipe_ready_valid = 1'd0;
-reg           s7pciephy_rx_datapath_pipe_ready_sink_d_valid = 1'd0;
-reg           s7pciephy_rx_datapath_pipe_ready_sink_d_ready = 1'd0;
-reg           s7pciephy_rx_datapath_pipe_ready_sink_d_first = 1'd0;
-reg           s7pciephy_rx_datapath_pipe_ready_sink_d_last = 1'd0;
-reg   [127:0] s7pciephy_rx_datapath_pipe_ready_sink_d_payload_dat = 128'd0;
-reg    [15:0] s7pciephy_rx_datapath_pipe_ready_sink_d_payload_be = 16'd0;
-wire          s7pciephy_rx_datapath_converter_sink_valid;
-wire          s7pciephy_rx_datapath_converter_sink_ready;
-wire          s7pciephy_rx_datapath_converter_sink_first;
-wire          s7pciephy_rx_datapath_converter_sink_last;
-wire   [63:0] s7pciephy_rx_datapath_converter_sink_payload_dat;
-wire    [7:0] s7pciephy_rx_datapath_converter_sink_payload_be;
-wire          s7pciephy_rx_datapath_converter_source_valid;
-wire          s7pciephy_rx_datapath_converter_source_ready;
-wire          s7pciephy_rx_datapath_converter_source_first;
-wire          s7pciephy_rx_datapath_converter_source_last;
-reg   [127:0] s7pciephy_rx_datapath_converter_source_payload_dat = 128'd0;
-reg    [15:0] s7pciephy_rx_datapath_converter_source_payload_be = 16'd0;
-wire          s7pciephy_rx_datapath_converter_converter_sink_valid;
-wire          s7pciephy_rx_datapath_converter_converter_sink_ready;
-wire          s7pciephy_rx_datapath_converter_converter_sink_first;
-wire          s7pciephy_rx_datapath_converter_converter_sink_last;
-wire   [71:0] s7pciephy_rx_datapath_converter_converter_sink_payload_data;
-wire          s7pciephy_rx_datapath_converter_converter_source_valid;
-wire          s7pciephy_rx_datapath_converter_converter_source_ready;
-reg           s7pciephy_rx_datapath_converter_converter_source_first = 1'd0;
-reg           s7pciephy_rx_datapath_converter_converter_source_last = 1'd0;
-reg   [143:0] s7pciephy_rx_datapath_converter_converter_source_payload_data = 144'd0;
-reg     [1:0] s7pciephy_rx_datapath_converter_converter_source_payload_valid_token_count = 2'd0;
-reg           s7pciephy_rx_datapath_converter_converter_demux = 1'd0;
-wire          s7pciephy_rx_datapath_converter_converter_load_part;
-reg           s7pciephy_rx_datapath_converter_converter_strobe_all = 1'd0;
-wire          s7pciephy_rx_datapath_converter_source_source_valid;
-wire          s7pciephy_rx_datapath_converter_source_source_ready;
-wire          s7pciephy_rx_datapath_converter_source_source_first;
-wire          s7pciephy_rx_datapath_converter_source_source_last;
-wire  [143:0] s7pciephy_rx_datapath_converter_source_source_payload_data;
-wire          s7pciephy_rx_datapath_cdc_sink_sink_valid;
-wire          s7pciephy_rx_datapath_cdc_sink_sink_ready;
-wire          s7pciephy_rx_datapath_cdc_sink_sink_first;
-wire          s7pciephy_rx_datapath_cdc_sink_sink_last;
-wire  [127:0] s7pciephy_rx_datapath_cdc_sink_sink_payload_dat;
-wire   [15:0] s7pciephy_rx_datapath_cdc_sink_sink_payload_be;
-wire          s7pciephy_rx_datapath_cdc_source_source_valid;
-wire          s7pciephy_rx_datapath_cdc_source_source_ready;
-wire          s7pciephy_rx_datapath_cdc_source_source_first;
-wire          s7pciephy_rx_datapath_cdc_source_source_last;
-wire  [127:0] s7pciephy_rx_datapath_cdc_source_source_payload_dat;
-wire   [15:0] s7pciephy_rx_datapath_cdc_source_source_payload_be;
-wire          s7pciephy_rx_datapath_cdc_cd_rst;
-wire          from2526333901200_clk;
-wire          from2526333901200_rst;
-wire          to2526333901200_clk;
-wire          to2526333901200_rst;
-wire          s7pciephy_rx_datapath_cdc_cdc_sink_valid;
-wire          s7pciephy_rx_datapath_cdc_cdc_sink_ready;
-wire          s7pciephy_rx_datapath_cdc_cdc_sink_first;
-wire          s7pciephy_rx_datapath_cdc_cdc_sink_last;
-wire  [127:0] s7pciephy_rx_datapath_cdc_cdc_sink_payload_dat;
-wire   [15:0] s7pciephy_rx_datapath_cdc_cdc_sink_payload_be;
-wire          s7pciephy_rx_datapath_cdc_cdc_source_valid;
-wire          s7pciephy_rx_datapath_cdc_cdc_source_ready;
-wire          s7pciephy_rx_datapath_cdc_cdc_source_first;
-wire          s7pciephy_rx_datapath_cdc_cdc_source_last;
-wire  [127:0] s7pciephy_rx_datapath_cdc_cdc_source_payload_dat;
-wire   [15:0] s7pciephy_rx_datapath_cdc_cdc_source_payload_be;
-wire          s7pciephy_rx_datapath_cdc_cdc_asyncfifo_we;
-wire          s7pciephy_rx_datapath_cdc_cdc_asyncfifo_writable;
-wire          s7pciephy_rx_datapath_cdc_cdc_asyncfifo_re;
-wire          s7pciephy_rx_datapath_cdc_cdc_asyncfifo_readable;
-wire  [145:0] s7pciephy_rx_datapath_cdc_cdc_asyncfifo_din;
-wire  [145:0] s7pciephy_rx_datapath_cdc_cdc_asyncfifo_dout;
-wire          s7pciephy_rx_datapath_cdc_cdc_graycounter0_ce;
-(* dont_touch = "true" *)
-reg     [4:0] s7pciephy_rx_datapath_cdc_cdc_graycounter0_q = 5'd0;
-wire    [4:0] s7pciephy_rx_datapath_cdc_cdc_graycounter0_q_next;
-reg     [4:0] s7pciephy_rx_datapath_cdc_cdc_graycounter0_q_binary = 5'd0;
-reg     [4:0] s7pciephy_rx_datapath_cdc_cdc_graycounter0_q_next_binary = 5'd0;
-wire          s7pciephy_rx_datapath_cdc_cdc_graycounter1_ce;
-(* dont_touch = "true" *)
-reg     [4:0] s7pciephy_rx_datapath_cdc_cdc_graycounter1_q = 5'd0;
-wire    [4:0] s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_next;
-reg     [4:0] s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_binary = 5'd0;
-reg     [4:0] s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_next_binary = 5'd0;
-wire    [4:0] s7pciephy_rx_datapath_cdc_cdc_produce_rdomain;
-wire    [4:0] s7pciephy_rx_datapath_cdc_cdc_consume_wdomain;
-wire    [3:0] s7pciephy_rx_datapath_cdc_cdc_wrport_adr;
-wire  [145:0] s7pciephy_rx_datapath_cdc_cdc_wrport_dat_r;
-wire          s7pciephy_rx_datapath_cdc_cdc_wrport_we;
-wire  [145:0] s7pciephy_rx_datapath_cdc_cdc_wrport_dat_w;
-wire    [3:0] s7pciephy_rx_datapath_cdc_cdc_rdport_adr;
-wire  [145:0] s7pciephy_rx_datapath_cdc_cdc_rdport_dat_r;
-wire  [127:0] s7pciephy_rx_datapath_cdc_cdc_fifo_in_payload_dat;
-wire   [15:0] s7pciephy_rx_datapath_cdc_cdc_fifo_in_payload_be;
-wire          s7pciephy_rx_datapath_cdc_cdc_fifo_in_first;
-wire          s7pciephy_rx_datapath_cdc_cdc_fifo_in_last;
-wire  [127:0] s7pciephy_rx_datapath_cdc_cdc_fifo_out_payload_dat;
-wire   [15:0] s7pciephy_rx_datapath_cdc_cdc_fifo_out_payload_be;
-wire          s7pciephy_rx_datapath_cdc_cdc_fifo_out_first;
-wire          s7pciephy_rx_datapath_cdc_cdc_fifo_out_last;
-wire          s7pciephy_rx_datapath_pipe_valid_sink_valid;
-wire          s7pciephy_rx_datapath_pipe_valid_sink_ready;
-wire          s7pciephy_rx_datapath_pipe_valid_sink_first;
-wire          s7pciephy_rx_datapath_pipe_valid_sink_last;
-wire  [127:0] s7pciephy_rx_datapath_pipe_valid_sink_payload_dat;
-wire   [15:0] s7pciephy_rx_datapath_pipe_valid_sink_payload_be;
-reg           s7pciephy_rx_datapath_pipe_valid_source_valid = 1'd0;
-wire          s7pciephy_rx_datapath_pipe_valid_source_ready;
-reg           s7pciephy_rx_datapath_pipe_valid_source_first = 1'd0;
-reg           s7pciephy_rx_datapath_pipe_valid_source_last = 1'd0;
-reg   [127:0] s7pciephy_rx_datapath_pipe_valid_source_payload_dat = 128'd0;
-reg    [15:0] s7pciephy_rx_datapath_pipe_valid_source_payload_be = 16'd0;
-wire          s7pciephy_msi_cdc_sink_sink_valid;
-wire          s7pciephy_msi_cdc_sink_sink_ready;
-wire          s7pciephy_msi_cdc_sink_sink_first;
-wire          s7pciephy_msi_cdc_sink_sink_last;
-wire    [7:0] s7pciephy_msi_cdc_sink_sink_payload_dat;
-wire          s7pciephy_msi_cdc_source_source_valid;
-wire          s7pciephy_msi_cdc_source_source_ready;
-wire          s7pciephy_msi_cdc_source_source_first;
-wire          s7pciephy_msi_cdc_source_source_last;
-wire    [7:0] s7pciephy_msi_cdc_source_source_payload_dat;
-wire          s7pciephy_msi_cdc_cd_rst;
-wire          from2526333595040_clk;
-wire          from2526333595040_rst;
-wire          to2526333595040_clk;
-wire          to2526333595040_rst;
-wire          s7pciephy_msi_cdc_cdc_sink_valid;
-wire          s7pciephy_msi_cdc_cdc_sink_ready;
-wire          s7pciephy_msi_cdc_cdc_sink_first;
-wire          s7pciephy_msi_cdc_cdc_sink_last;
-wire    [7:0] s7pciephy_msi_cdc_cdc_sink_payload_dat;
-wire          s7pciephy_msi_cdc_cdc_source_valid;
-wire          s7pciephy_msi_cdc_cdc_source_ready;
-wire          s7pciephy_msi_cdc_cdc_source_first;
-wire          s7pciephy_msi_cdc_cdc_source_last;
-wire    [7:0] s7pciephy_msi_cdc_cdc_source_payload_dat;
-wire          s7pciephy_msi_cdc_cdc_asyncfifo_we;
-wire          s7pciephy_msi_cdc_cdc_asyncfifo_writable;
-wire          s7pciephy_msi_cdc_cdc_asyncfifo_re;
-wire          s7pciephy_msi_cdc_cdc_asyncfifo_readable;
-wire    [9:0] s7pciephy_msi_cdc_cdc_asyncfifo_din;
-wire    [9:0] s7pciephy_msi_cdc_cdc_asyncfifo_dout;
-wire          s7pciephy_msi_cdc_cdc_graycounter0_ce;
-(* dont_touch = "true" *)
-reg     [2:0] s7pciephy_msi_cdc_cdc_graycounter0_q = 3'd0;
-wire    [2:0] s7pciephy_msi_cdc_cdc_graycounter0_q_next;
-reg     [2:0] s7pciephy_msi_cdc_cdc_graycounter0_q_binary = 3'd0;
-reg     [2:0] s7pciephy_msi_cdc_cdc_graycounter0_q_next_binary = 3'd0;
-wire          s7pciephy_msi_cdc_cdc_graycounter1_ce;
-(* dont_touch = "true" *)
-reg     [2:0] s7pciephy_msi_cdc_cdc_graycounter1_q = 3'd0;
-wire    [2:0] s7pciephy_msi_cdc_cdc_graycounter1_q_next;
-reg     [2:0] s7pciephy_msi_cdc_cdc_graycounter1_q_binary = 3'd0;
-reg     [2:0] s7pciephy_msi_cdc_cdc_graycounter1_q_next_binary = 3'd0;
-wire    [2:0] s7pciephy_msi_cdc_cdc_produce_rdomain;
-wire    [2:0] s7pciephy_msi_cdc_cdc_consume_wdomain;
-wire    [1:0] s7pciephy_msi_cdc_cdc_wrport_adr;
-wire    [9:0] s7pciephy_msi_cdc_cdc_wrport_dat_r;
-wire          s7pciephy_msi_cdc_cdc_wrport_we;
-wire    [9:0] s7pciephy_msi_cdc_cdc_wrport_dat_w;
-wire    [1:0] s7pciephy_msi_cdc_cdc_rdport_adr;
-wire    [9:0] s7pciephy_msi_cdc_cdc_rdport_dat_r;
-wire    [7:0] s7pciephy_msi_cdc_cdc_fifo_in_payload_dat;
-wire          s7pciephy_msi_cdc_cdc_fifo_in_first;
-wire          s7pciephy_msi_cdc_cdc_fifo_in_last;
-wire    [7:0] s7pciephy_msi_cdc_cdc_fifo_out_payload_dat;
-wire          s7pciephy_msi_cdc_cdc_fifo_out_first;
-wire          s7pciephy_msi_cdc_cdc_fifo_out_last;
-wire    [7:0] s7pciephy_bus_number;
-wire    [4:0] s7pciephy_device_number;
-wire    [2:0] s7pciephy_function_number;
-wire   [15:0] s7pciephy_command;
-wire   [15:0] s7pciephy_dcommand;
-wire          s7pciephy_m_axis_rx_tlast;
-wire   [31:0] s7pciephy_m_axis_rx_tuser;
-wire          s7pciephy0;
-wire          s7pciephy1;
-wire          s7pciephy2;
-wire          s7pciephy3;
-wire          s7pciephy4;
-wire          s7pciephy5;
-wire          s7pciephy6;
-wire          s7pciephy7;
-wire          s7pciephy8;
-wire          s7pciephy9;
-wire          s7pciephy10;
-wire          s7pciephy11;
-wire          s7pciephy12;
-wire          s7pciephy13;
-wire          s7pciephy14;
-wire          s7pciephy15;
-wire          s7pciephy16;
-wire          s7pciephy17;
-wire          s7pciephy18;
-wire          s7pciephy19;
-wire          s7pciephy20;
-wire          s7pciephy21;
-wire          s7pciephy22;
-wire          s7pciephy23;
-wire          s7pciephy24;
-wire          s7pciephy25;
-wire          s7pciephy26;
-wire          s7pciephy27;
-wire          s7pciephy28;
-wire          s7pciephy29;
-wire          s7pciephy30;
-wire          s7pciephy31;
-wire          s7pciephy32;
-wire          s7pciephy33;
-wire          s7pciephy34;
-wire          s7pciephy35;
-wire          s7pciephy36;
-wire          s7pciephy37;
-wire          s7pciephy38;
-wire          s7pciephy39;
-wire          s7pciephy40;
-wire          s7pciephy41;
-wire          s7pciephy42;
-wire          s7pciephy43;
-wire          s7pciephy44;
-wire          s7pciephy45;
-wire          s7pciephy46;
-wire          s7pciephy47;
-wire          s7pciephy48;
-wire          s7pciephy49;
-wire          s7pciephy50;
-wire          s7pciephy51;
-wire          s7pciephy52;
-wire          s7pciephy53;
-wire          s7pciephy54;
-wire          s7pciephy55;
-wire          s7pciephy56;
-wire          s7pciephy57;
-wire          s7pciephy58;
-wire          s7pciephy59;
-wire          s7pciephy60;
-wire          s7pciephy61;
-wire          s7pciephy62;
-wire          s7pciephy63;
-wire          s7pciephy64;
-wire          s7pciephy65;
-wire          s7pciephy66;
-wire          s7pciephy67;
-wire          s7pciephy68;
-wire          s7pciephy69;
-wire          s7pciephy70;
-wire          s7pciephy71;
-wire          s7pciephy72;
-wire          s7pciephy73;
-wire          s7pciephy74;
-wire          s7pciephy75;
-wire          s7pciephy76;
-wire          s7pciephy77;
-wire          s7pciephy78;
-wire          s7pciephy79;
-wire          depacketizer_sink_sink_valid;
-wire          depacketizer_sink_sink_ready;
-wire          depacketizer_sink_sink_first;
-wire          depacketizer_sink_sink_last;
-wire  [127:0] depacketizer_sink_sink_payload_dat;
-wire   [15:0] depacketizer_sink_sink_payload_be;
-wire          depacketizer_req_source_valid;
-wire          depacketizer_req_source_ready;
-wire          depacketizer_req_source_first;
-wire          depacketizer_req_source_last;
-wire   [15:0] depacketizer_req_source_payload_req_id;
-wire          depacketizer_req_source_payload_we;
-wire   [31:0] depacketizer_req_source_payload_adr;
-wire    [9:0] depacketizer_req_source_payload_len;
-wire    [7:0] depacketizer_req_source_payload_tag;
-wire  [127:0] depacketizer_req_source_payload_dat;
-reg     [7:0] depacketizer_req_source_payload_channel = 8'd0;
-reg     [7:0] depacketizer_req_source_payload_user_id = 8'd0;
-wire          depacketizer_cmp_source_valid;
-wire          depacketizer_cmp_source_ready;
+reg           bus_errors_re = 1'd0;
+wire   [31:0] bus_errors_status;
+wire          bus_errors_we;
+wire          clk125_clk;
+wire          clk125_rst;
+wire          clk250_clk;
+wire          clk250_rst;
+wire          cpu_rst;
+wire    [5:0] csr_bankarray_adr;
+wire   [31:0] csr_bankarray_csrbank0_cntrl0_r;
+reg           csr_bankarray_csrbank0_cntrl0_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl0_w;
+reg           csr_bankarray_csrbank0_cntrl0_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl10_r;
+reg           csr_bankarray_csrbank0_cntrl10_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl10_w;
+reg           csr_bankarray_csrbank0_cntrl10_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl11_r;
+reg           csr_bankarray_csrbank0_cntrl11_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl11_w;
+reg           csr_bankarray_csrbank0_cntrl11_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl12_r;
+reg           csr_bankarray_csrbank0_cntrl12_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl12_w;
+reg           csr_bankarray_csrbank0_cntrl12_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl13_r;
+reg           csr_bankarray_csrbank0_cntrl13_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl13_w;
+reg           csr_bankarray_csrbank0_cntrl13_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl14_r;
+reg           csr_bankarray_csrbank0_cntrl14_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl14_w;
+reg           csr_bankarray_csrbank0_cntrl14_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl15_r;
+reg           csr_bankarray_csrbank0_cntrl15_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl15_w;
+reg           csr_bankarray_csrbank0_cntrl15_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl1_r;
+reg           csr_bankarray_csrbank0_cntrl1_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl1_w;
+reg           csr_bankarray_csrbank0_cntrl1_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl2_r;
+reg           csr_bankarray_csrbank0_cntrl2_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl2_w;
+reg           csr_bankarray_csrbank0_cntrl2_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl3_r;
+reg           csr_bankarray_csrbank0_cntrl3_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl3_w;
+reg           csr_bankarray_csrbank0_cntrl3_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl4_r;
+reg           csr_bankarray_csrbank0_cntrl4_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl4_w;
+reg           csr_bankarray_csrbank0_cntrl4_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl5_r;
+reg           csr_bankarray_csrbank0_cntrl5_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl5_w;
+reg           csr_bankarray_csrbank0_cntrl5_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl6_r;
+reg           csr_bankarray_csrbank0_cntrl6_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl6_w;
+reg           csr_bankarray_csrbank0_cntrl6_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl7_r;
+reg           csr_bankarray_csrbank0_cntrl7_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl7_w;
+reg           csr_bankarray_csrbank0_cntrl7_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl8_r;
+reg           csr_bankarray_csrbank0_cntrl8_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl8_w;
+reg           csr_bankarray_csrbank0_cntrl8_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl9_r;
+reg           csr_bankarray_csrbank0_cntrl9_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_cntrl9_w;
+reg           csr_bankarray_csrbank0_cntrl9_we = 1'd0;
+wire          csr_bankarray_csrbank0_enable0_r;
+reg           csr_bankarray_csrbank0_enable0_re = 1'd0;
+wire          csr_bankarray_csrbank0_enable0_w;
+reg           csr_bankarray_csrbank0_enable0_we = 1'd0;
+wire          csr_bankarray_csrbank0_enable_both0_r;
+reg           csr_bankarray_csrbank0_enable_both0_re = 1'd0;
+wire          csr_bankarray_csrbank0_enable_both0_w;
+reg           csr_bankarray_csrbank0_enable_both0_we = 1'd0;
+wire    [3:0] csr_bankarray_csrbank0_ndma_r;
+reg           csr_bankarray_csrbank0_ndma_re = 1'd0;
+wire    [3:0] csr_bankarray_csrbank0_ndma_w;
+reg           csr_bankarray_csrbank0_ndma_we = 1'd0;
+wire          csr_bankarray_csrbank0_sel;
+wire   [31:0] csr_bankarray_csrbank0_test0_r;
+reg           csr_bankarray_csrbank0_test0_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank0_test0_w;
+reg           csr_bankarray_csrbank0_test0_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank1_bus_errors_r;
+reg           csr_bankarray_csrbank1_bus_errors_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank1_bus_errors_w;
+reg           csr_bankarray_csrbank1_bus_errors_we = 1'd0;
+wire    [1:0] csr_bankarray_csrbank1_reset0_r;
+reg           csr_bankarray_csrbank1_reset0_re = 1'd0;
+wire    [1:0] csr_bankarray_csrbank1_reset0_w;
+reg           csr_bankarray_csrbank1_reset0_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank1_scratch0_r;
+reg           csr_bankarray_csrbank1_scratch0_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank1_scratch0_w;
+reg           csr_bankarray_csrbank1_scratch0_we = 1'd0;
+wire          csr_bankarray_csrbank1_sel;
+wire   [31:0] csr_bankarray_csrbank2_buffering_reader_fifo_control0_r;
+reg           csr_bankarray_csrbank2_buffering_reader_fifo_control0_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank2_buffering_reader_fifo_control0_w;
+reg           csr_bankarray_csrbank2_buffering_reader_fifo_control0_we = 1'd0;
+wire   [23:0] csr_bankarray_csrbank2_buffering_reader_fifo_status_r;
+reg           csr_bankarray_csrbank2_buffering_reader_fifo_status_re = 1'd0;
+wire   [23:0] csr_bankarray_csrbank2_buffering_reader_fifo_status_w;
+reg           csr_bankarray_csrbank2_buffering_reader_fifo_status_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank2_buffering_writer_fifo_control0_r;
+reg           csr_bankarray_csrbank2_buffering_writer_fifo_control0_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank2_buffering_writer_fifo_control0_w;
+reg           csr_bankarray_csrbank2_buffering_writer_fifo_control0_we = 1'd0;
+wire   [23:0] csr_bankarray_csrbank2_buffering_writer_fifo_status_r;
+reg           csr_bankarray_csrbank2_buffering_writer_fifo_status_re = 1'd0;
+wire   [23:0] csr_bankarray_csrbank2_buffering_writer_fifo_status_w;
+reg           csr_bankarray_csrbank2_buffering_writer_fifo_status_we = 1'd0;
+wire    [1:0] csr_bankarray_csrbank2_reader_enable0_r;
+reg           csr_bankarray_csrbank2_reader_enable0_re = 1'd0;
+wire    [1:0] csr_bankarray_csrbank2_reader_enable0_w;
+reg           csr_bankarray_csrbank2_reader_enable0_we = 1'd0;
+wire    [8:0] csr_bankarray_csrbank2_reader_table_level_r;
+reg           csr_bankarray_csrbank2_reader_table_level_re = 1'd0;
+wire    [8:0] csr_bankarray_csrbank2_reader_table_level_w;
+reg           csr_bankarray_csrbank2_reader_table_level_we = 1'd0;
+wire          csr_bankarray_csrbank2_reader_table_loop_prog_n0_r;
+reg           csr_bankarray_csrbank2_reader_table_loop_prog_n0_re = 1'd0;
+wire          csr_bankarray_csrbank2_reader_table_loop_prog_n0_w;
+reg           csr_bankarray_csrbank2_reader_table_loop_prog_n0_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank2_reader_table_loop_status_r;
+reg           csr_bankarray_csrbank2_reader_table_loop_status_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank2_reader_table_loop_status_w;
+reg           csr_bankarray_csrbank2_reader_table_loop_status_we = 1'd0;
+wire          csr_bankarray_csrbank2_reader_table_reset0_r;
+reg           csr_bankarray_csrbank2_reader_table_reset0_re = 1'd0;
+wire          csr_bankarray_csrbank2_reader_table_reset0_w;
+reg           csr_bankarray_csrbank2_reader_table_reset0_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank2_reader_table_value0_r;
+reg           csr_bankarray_csrbank2_reader_table_value0_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank2_reader_table_value0_w;
+reg           csr_bankarray_csrbank2_reader_table_value0_we = 1'd0;
+wire   [25:0] csr_bankarray_csrbank2_reader_table_value1_r;
+reg           csr_bankarray_csrbank2_reader_table_value1_re = 1'd0;
+wire   [25:0] csr_bankarray_csrbank2_reader_table_value1_w;
+reg           csr_bankarray_csrbank2_reader_table_value1_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank2_reader_table_we0_r;
+reg           csr_bankarray_csrbank2_reader_table_we0_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank2_reader_table_we0_w;
+reg           csr_bankarray_csrbank2_reader_table_we0_we = 1'd0;
+wire          csr_bankarray_csrbank2_sel;
+wire    [1:0] csr_bankarray_csrbank2_writer_enable0_r;
+reg           csr_bankarray_csrbank2_writer_enable0_re = 1'd0;
+wire    [1:0] csr_bankarray_csrbank2_writer_enable0_w;
+reg           csr_bankarray_csrbank2_writer_enable0_we = 1'd0;
+wire    [8:0] csr_bankarray_csrbank2_writer_table_level_r;
+reg           csr_bankarray_csrbank2_writer_table_level_re = 1'd0;
+wire    [8:0] csr_bankarray_csrbank2_writer_table_level_w;
+reg           csr_bankarray_csrbank2_writer_table_level_we = 1'd0;
+wire          csr_bankarray_csrbank2_writer_table_loop_prog_n0_r;
+reg           csr_bankarray_csrbank2_writer_table_loop_prog_n0_re = 1'd0;
+wire          csr_bankarray_csrbank2_writer_table_loop_prog_n0_w;
+reg           csr_bankarray_csrbank2_writer_table_loop_prog_n0_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank2_writer_table_loop_status_r;
+reg           csr_bankarray_csrbank2_writer_table_loop_status_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank2_writer_table_loop_status_w;
+reg           csr_bankarray_csrbank2_writer_table_loop_status_we = 1'd0;
+wire          csr_bankarray_csrbank2_writer_table_reset0_r;
+reg           csr_bankarray_csrbank2_writer_table_reset0_re = 1'd0;
+wire          csr_bankarray_csrbank2_writer_table_reset0_w;
+reg           csr_bankarray_csrbank2_writer_table_reset0_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank2_writer_table_value0_r;
+reg           csr_bankarray_csrbank2_writer_table_value0_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank2_writer_table_value0_w;
+reg           csr_bankarray_csrbank2_writer_table_value0_we = 1'd0;
+wire   [25:0] csr_bankarray_csrbank2_writer_table_value1_r;
+reg           csr_bankarray_csrbank2_writer_table_value1_re = 1'd0;
+wire   [25:0] csr_bankarray_csrbank2_writer_table_value1_w;
+reg           csr_bankarray_csrbank2_writer_table_value1_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank2_writer_table_we0_r;
+reg           csr_bankarray_csrbank2_writer_table_we0_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank2_writer_table_we0_w;
+reg           csr_bankarray_csrbank2_writer_table_we0_we = 1'd0;
+reg           csr_bankarray_csrbank3_phy_bus_master_enable_r = 1'd0;
+reg           csr_bankarray_csrbank3_phy_bus_master_enable_re = 1'd0;
+wire          csr_bankarray_csrbank3_phy_bus_master_enable_w;
+reg           csr_bankarray_csrbank3_phy_bus_master_enable_we = 1'd0;
+reg     [9:0] csr_bankarray_csrbank3_phy_link_status_r = 10'd0;
+reg           csr_bankarray_csrbank3_phy_link_status_re = 1'd0;
+wire    [9:0] csr_bankarray_csrbank3_phy_link_status_w;
+reg           csr_bankarray_csrbank3_phy_link_status_we = 1'd0;
+reg    [15:0] csr_bankarray_csrbank3_phy_max_payload_size_r = 16'd0;
+reg           csr_bankarray_csrbank3_phy_max_payload_size_re = 1'd0;
+wire   [15:0] csr_bankarray_csrbank3_phy_max_payload_size_w;
+reg           csr_bankarray_csrbank3_phy_max_payload_size_we = 1'd0;
+reg    [15:0] csr_bankarray_csrbank3_phy_max_request_size_r = 16'd0;
+reg           csr_bankarray_csrbank3_phy_max_request_size_re = 1'd0;
+wire   [15:0] csr_bankarray_csrbank3_phy_max_request_size_w;
+reg           csr_bankarray_csrbank3_phy_max_request_size_we = 1'd0;
+reg           csr_bankarray_csrbank3_phy_msi_enable_r = 1'd0;
+reg           csr_bankarray_csrbank3_phy_msi_enable_re = 1'd0;
+wire          csr_bankarray_csrbank3_phy_msi_enable_w;
+reg           csr_bankarray_csrbank3_phy_msi_enable_we = 1'd0;
+reg           csr_bankarray_csrbank3_phy_msix_enable_r = 1'd0;
+reg           csr_bankarray_csrbank3_phy_msix_enable_re = 1'd0;
+wire          csr_bankarray_csrbank3_phy_msix_enable_w;
+reg           csr_bankarray_csrbank3_phy_msix_enable_we = 1'd0;
+wire          csr_bankarray_csrbank3_sel;
+wire   [31:0] csr_bankarray_csrbank4_clear0_r;
+reg           csr_bankarray_csrbank4_clear0_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank4_clear0_w;
+reg           csr_bankarray_csrbank4_clear0_we = 1'd0;
+wire   [31:0] csr_bankarray_csrbank4_enable0_r;
+reg           csr_bankarray_csrbank4_enable0_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank4_enable0_w;
+reg           csr_bankarray_csrbank4_enable0_we = 1'd0;
+wire          csr_bankarray_csrbank4_sel;
+wire   [31:0] csr_bankarray_csrbank4_vector_r;
+reg           csr_bankarray_csrbank4_vector_re = 1'd0;
+wire   [31:0] csr_bankarray_csrbank4_vector_w;
+reg           csr_bankarray_csrbank4_vector_we = 1'd0;
+wire          csr_bankarray_csrbank5_sel;
+wire    [7:0] csr_bankarray_dat_r;
+wire   [13:0] csr_bankarray_interface0_bank_bus_adr;
+reg    [31:0] csr_bankarray_interface0_bank_bus_dat_r = 32'd0;
+wire   [31:0] csr_bankarray_interface0_bank_bus_dat_w;
+wire          csr_bankarray_interface0_bank_bus_re;
+wire          csr_bankarray_interface0_bank_bus_we;
+wire   [13:0] csr_bankarray_interface1_bank_bus_adr;
+reg    [31:0] csr_bankarray_interface1_bank_bus_dat_r = 32'd0;
+wire   [31:0] csr_bankarray_interface1_bank_bus_dat_w;
+wire          csr_bankarray_interface1_bank_bus_re;
+wire          csr_bankarray_interface1_bank_bus_we;
+wire   [13:0] csr_bankarray_interface2_bank_bus_adr;
+reg    [31:0] csr_bankarray_interface2_bank_bus_dat_r = 32'd0;
+wire   [31:0] csr_bankarray_interface2_bank_bus_dat_w;
+wire          csr_bankarray_interface2_bank_bus_re;
+wire          csr_bankarray_interface2_bank_bus_we;
+wire   [13:0] csr_bankarray_interface3_bank_bus_adr;
+reg    [31:0] csr_bankarray_interface3_bank_bus_dat_r = 32'd0;
+wire   [31:0] csr_bankarray_interface3_bank_bus_dat_w;
+wire          csr_bankarray_interface3_bank_bus_re;
+wire          csr_bankarray_interface3_bank_bus_we;
+wire   [13:0] csr_bankarray_interface4_bank_bus_adr;
+reg    [31:0] csr_bankarray_interface4_bank_bus_dat_r = 32'd0;
+wire   [31:0] csr_bankarray_interface4_bank_bus_dat_w;
+wire          csr_bankarray_interface4_bank_bus_re;
+wire          csr_bankarray_interface4_bank_bus_we;
+wire   [13:0] csr_bankarray_interface5_bank_bus_adr;
+reg    [31:0] csr_bankarray_interface5_bank_bus_dat_r = 32'd0;
+wire   [31:0] csr_bankarray_interface5_bank_bus_dat_w;
+wire          csr_bankarray_interface5_bank_bus_re;
+wire          csr_bankarray_interface5_bank_bus_we;
+wire          csr_bankarray_sel;
+reg           csr_bankarray_sel_r = 1'd0;
+wire   [13:0] csr_bankarray_sram_bus_adr;
+reg    [31:0] csr_bankarray_sram_bus_dat_r = 32'd0;
+wire   [31:0] csr_bankarray_sram_bus_dat_w;
+wire          csr_bankarray_sram_bus_re;
+wire          csr_bankarray_sram_bus_we;
+wire   [13:0] csr_interconnect_adr;
+wire   [31:0] csr_interconnect_dat_r;
+wire   [31:0] csr_interconnect_dat_w;
+wire          csr_interconnect_re;
+wire          csr_interconnect_we;
 wire          depacketizer_cmp_source_first;
 wire          depacketizer_cmp_source_last;
-wire   [15:0] depacketizer_cmp_source_payload_req_id;
-wire   [15:0] depacketizer_cmp_source_payload_cmp_id;
 wire   [31:0] depacketizer_cmp_source_payload_adr;
-wire    [9:0] depacketizer_cmp_source_payload_len;
+reg     [7:0] depacketizer_cmp_source_payload_channel = 8'd0;
+wire   [15:0] depacketizer_cmp_source_payload_cmp_id;
+wire  [127:0] depacketizer_cmp_source_payload_dat;
 wire          depacketizer_cmp_source_payload_end;
 wire          depacketizer_cmp_source_payload_err;
+wire    [9:0] depacketizer_cmp_source_payload_len;
+wire   [15:0] depacketizer_cmp_source_payload_req_id;
 wire    [7:0] depacketizer_cmp_source_payload_tag;
-wire  [127:0] depacketizer_cmp_source_payload_dat;
-reg     [7:0] depacketizer_cmp_source_payload_channel = 8'd0;
 reg     [7:0] depacketizer_cmp_source_payload_user_id = 8'd0;
-wire          depacketizer_header_extracter_sink_valid;
-reg           depacketizer_header_extracter_sink_ready = 1'd0;
-wire          depacketizer_header_extracter_sink_first;
-wire          depacketizer_header_extracter_sink_last;
-wire  [127:0] depacketizer_header_extracter_sink_payload_dat;
-wire   [15:0] depacketizer_header_extracter_sink_payload_be;
-reg           depacketizer_header_extracter_source_valid = 1'd0;
-wire          depacketizer_header_extracter_source_ready;
-reg           depacketizer_header_extracter_source_first = 1'd0;
-reg           depacketizer_header_extracter_source_last = 1'd0;
-reg   [127:0] depacketizer_header_extracter_source_payload_header = 128'd0;
-reg   [127:0] depacketizer_header_extracter_source_payload_dat = 128'd0;
-reg    [15:0] depacketizer_header_extracter_source_payload_be = 16'd0;
-reg           depacketizer_header_extracter_first = 1'd0;
-reg           depacketizer_header_extracter_last = 1'd0;
-reg   [127:0] depacketizer_header_extracter_dat = 128'd0;
-reg    [15:0] depacketizer_header_extracter_be = 16'd0;
-wire          depacketizer_dispatch_source_valid;
-reg           depacketizer_dispatch_source_ready = 1'd0;
-wire          depacketizer_dispatch_source_first;
-wire          depacketizer_dispatch_source_last;
-wire    [1:0] depacketizer_dispatch_source_payload_fmt;
-wire    [4:0] depacketizer_dispatch_source_payload_type;
-reg   [127:0] depacketizer_dispatch_source_payload_dat = 128'd0;
-reg    [15:0] depacketizer_dispatch_source_payload_be = 16'd0;
-reg           depacketizer_endpoint0_valid = 1'd0;
-wire          depacketizer_endpoint0_ready;
-reg           depacketizer_endpoint0_first = 1'd0;
-reg           depacketizer_endpoint0_last = 1'd0;
-reg     [1:0] depacketizer_endpoint0_payload_fmt = 2'd0;
-reg     [4:0] depacketizer_endpoint0_payload_type = 5'd0;
-reg   [127:0] depacketizer_endpoint0_payload_dat = 128'd0;
-reg    [15:0] depacketizer_endpoint0_payload_be = 16'd0;
-reg           depacketizer_endpoint1_valid = 1'd0;
-wire          depacketizer_endpoint1_ready;
-reg           depacketizer_endpoint1_first = 1'd0;
-reg           depacketizer_endpoint1_last = 1'd0;
-reg     [1:0] depacketizer_endpoint1_payload_fmt = 2'd0;
-reg     [4:0] depacketizer_endpoint1_payload_type = 5'd0;
-reg   [127:0] depacketizer_endpoint1_payload_dat = 128'd0;
-reg    [15:0] depacketizer_endpoint1_payload_be = 16'd0;
-reg           depacketizer_endpoint2_valid = 1'd0;
-wire          depacketizer_endpoint2_ready;
-reg           depacketizer_endpoint2_first = 1'd0;
-reg           depacketizer_endpoint2_last = 1'd0;
-reg     [1:0] depacketizer_endpoint2_payload_fmt = 2'd0;
-reg     [4:0] depacketizer_endpoint2_payload_type = 5'd0;
-reg   [127:0] depacketizer_endpoint2_payload_dat = 128'd0;
-reg    [15:0] depacketizer_endpoint2_payload_be = 16'd0;
-reg     [1:0] depacketizer_dispatcher_sel0 = 2'd0;
+wire          depacketizer_cmp_source_ready;
+wire          depacketizer_cmp_source_valid;
+wire          depacketizer_dispatch_sink_first;
+wire          depacketizer_dispatch_sink_last;
+reg    [15:0] depacketizer_dispatch_sink_payload_be = 16'd0;
+reg   [127:0] depacketizer_dispatch_sink_payload_dat = 128'd0;
+wire    [1:0] depacketizer_dispatch_sink_payload_fmt;
+wire    [4:0] depacketizer_dispatch_sink_payload_type;
+reg           depacketizer_dispatch_sink_ready = 1'd0;
+wire          depacketizer_dispatch_sink_valid;
 reg           depacketizer_dispatcher_first = 1'd1;
-reg           depacketizer_dispatcher_last = 1'd0;
+wire          depacketizer_dispatcher_last;
 wire          depacketizer_dispatcher_ongoing0;
 reg           depacketizer_dispatcher_ongoing1 = 1'd0;
+reg     [1:0] depacketizer_dispatcher_sel0 = 2'd0;
 reg     [1:0] depacketizer_dispatcher_sel1 = 2'd0;
 reg     [1:0] depacketizer_dispatcher_sel_ongoing = 2'd0;
-wire          depacketizer_tlp_req_valid;
-wire          depacketizer_tlp_req_ready;
-wire          depacketizer_tlp_req_first;
-wire          depacketizer_tlp_req_last;
-wire   [63:0] depacketizer_tlp_req_payload_address;
-wire    [1:0] depacketizer_tlp_req_payload_attr;
-wire          depacketizer_tlp_req_payload_ep;
-wire    [3:0] depacketizer_tlp_req_payload_first_be;
-reg     [1:0] depacketizer_tlp_req_payload_fmt = 2'd0;
-wire    [3:0] depacketizer_tlp_req_payload_last_be;
-wire    [9:0] depacketizer_tlp_req_payload_length;
-wire   [15:0] depacketizer_tlp_req_payload_requester_id;
-wire    [7:0] depacketizer_tlp_req_payload_tag;
-wire    [2:0] depacketizer_tlp_req_payload_tc;
-wire          depacketizer_tlp_req_payload_td;
-reg     [4:0] depacketizer_tlp_req_payload_type = 5'd0;
-wire  [127:0] depacketizer_tlp_req_payload_dat;
-wire   [15:0] depacketizer_tlp_req_payload_be;
-wire          depacketizer_tlp_cmp_valid;
-wire          depacketizer_tlp_cmp_ready;
+reg           depacketizer_endpoint0_first = 1'd0;
+reg           depacketizer_endpoint0_last = 1'd0;
+reg    [15:0] depacketizer_endpoint0_payload_be = 16'd0;
+reg   [127:0] depacketizer_endpoint0_payload_dat = 128'd0;
+reg     [1:0] depacketizer_endpoint0_payload_fmt = 2'd0;
+reg     [4:0] depacketizer_endpoint0_payload_type = 5'd0;
+wire          depacketizer_endpoint0_ready;
+reg           depacketizer_endpoint0_valid = 1'd0;
+reg           depacketizer_endpoint1_first = 1'd0;
+reg           depacketizer_endpoint1_last = 1'd0;
+reg    [15:0] depacketizer_endpoint1_payload_be = 16'd0;
+reg   [127:0] depacketizer_endpoint1_payload_dat = 128'd0;
+reg     [1:0] depacketizer_endpoint1_payload_fmt = 2'd0;
+reg     [4:0] depacketizer_endpoint1_payload_type = 5'd0;
+wire          depacketizer_endpoint1_ready;
+reg           depacketizer_endpoint1_valid = 1'd0;
+reg           depacketizer_endpoint2_first = 1'd0;
+reg           depacketizer_endpoint2_last = 1'd0;
+reg    [15:0] depacketizer_endpoint2_payload_be = 16'd0;
+reg   [127:0] depacketizer_endpoint2_payload_dat = 128'd0;
+reg     [1:0] depacketizer_endpoint2_payload_fmt = 2'd0;
+reg     [4:0] depacketizer_endpoint2_payload_type = 5'd0;
+wire          depacketizer_endpoint2_ready;
+reg           depacketizer_endpoint2_valid = 1'd0;
+reg    [15:0] depacketizer_header_extracter_be = 16'd0;
+reg   [127:0] depacketizer_header_extracter_dat = 128'd0;
+reg           depacketizer_header_extracter_first = 1'd0;
+reg           depacketizer_header_extracter_first_litepcietlpdepacketizer_next_value0 = 1'd0;
+reg           depacketizer_header_extracter_first_litepcietlpdepacketizer_next_value_ce0 = 1'd0;
+reg           depacketizer_header_extracter_last = 1'd0;
+reg           depacketizer_header_extracter_last_litepcietlpdepacketizer_next_value1 = 1'd0;
+reg           depacketizer_header_extracter_last_litepcietlpdepacketizer_next_value_ce1 = 1'd0;
+wire          depacketizer_header_extracter_sink_first;
+wire          depacketizer_header_extracter_sink_last;
+wire   [15:0] depacketizer_header_extracter_sink_payload_be;
+wire  [127:0] depacketizer_header_extracter_sink_payload_dat;
+reg           depacketizer_header_extracter_sink_ready = 1'd0;
+wire          depacketizer_header_extracter_sink_valid;
+reg           depacketizer_header_extracter_source_first = 1'd0;
+reg           depacketizer_header_extracter_source_last = 1'd0;
+reg    [15:0] depacketizer_header_extracter_source_payload_be = 16'd0;
+reg   [127:0] depacketizer_header_extracter_source_payload_dat = 128'd0;
+reg   [127:0] depacketizer_header_extracter_source_payload_header = 128'd0;
+wire          depacketizer_header_extracter_source_ready;
+reg           depacketizer_header_extracter_source_valid = 1'd0;
+wire          depacketizer_req_source_first;
+wire          depacketizer_req_source_last;
+wire   [31:0] depacketizer_req_source_payload_adr;
+reg     [7:0] depacketizer_req_source_payload_channel = 8'd0;
+wire  [127:0] depacketizer_req_source_payload_dat;
+wire    [9:0] depacketizer_req_source_payload_len;
+wire   [15:0] depacketizer_req_source_payload_req_id;
+wire    [7:0] depacketizer_req_source_payload_tag;
+reg     [7:0] depacketizer_req_source_payload_user_id = 8'd0;
+wire          depacketizer_req_source_payload_we;
+wire          depacketizer_req_source_ready;
+wire          depacketizer_req_source_valid;
+wire          depacketizer_sink_sink_first;
+wire          depacketizer_sink_sink_last;
+wire   [15:0] depacketizer_sink_sink_payload_be;
+wire  [127:0] depacketizer_sink_sink_payload_dat;
+wire          depacketizer_sink_sink_ready;
+wire          depacketizer_sink_sink_valid;
 wire          depacketizer_tlp_cmp_first;
 wire          depacketizer_tlp_cmp_last;
 wire    [1:0] depacketizer_tlp_cmp_payload_attr;
 wire          depacketizer_tlp_cmp_payload_bcm;
+wire   [15:0] depacketizer_tlp_cmp_payload_be;
 wire   [11:0] depacketizer_tlp_cmp_payload_byte_count;
 wire   [15:0] depacketizer_tlp_cmp_payload_completer_id;
+wire  [127:0] depacketizer_tlp_cmp_payload_dat;
 wire          depacketizer_tlp_cmp_payload_ep;
 reg     [1:0] depacketizer_tlp_cmp_payload_fmt = 2'd0;
 wire    [9:0] depacketizer_tlp_cmp_payload_length;
@@ -653,75 +718,699 @@ wire    [7:0] depacketizer_tlp_cmp_payload_tag;
 wire    [2:0] depacketizer_tlp_cmp_payload_tc;
 wire          depacketizer_tlp_cmp_payload_td;
 reg     [4:0] depacketizer_tlp_cmp_payload_type = 5'd0;
-wire  [127:0] depacketizer_tlp_cmp_payload_dat;
-wire   [15:0] depacketizer_tlp_cmp_payload_be;
-wire          packetizer_req_sink_valid;
-wire          packetizer_req_sink_ready;
-wire          packetizer_req_sink_first;
-wire          packetizer_req_sink_last;
-wire   [15:0] packetizer_req_sink_payload_req_id;
-wire          packetizer_req_sink_payload_we;
-wire   [31:0] packetizer_req_sink_payload_adr;
-wire    [9:0] packetizer_req_sink_payload_len;
-wire    [7:0] packetizer_req_sink_payload_tag;
-wire  [127:0] packetizer_req_sink_payload_dat;
-wire    [7:0] packetizer_req_sink_payload_channel;
-wire    [7:0] packetizer_req_sink_payload_user_id;
-wire          packetizer_cmp_sink_valid;
-wire          packetizer_cmp_sink_ready;
+wire          depacketizer_tlp_cmp_ready;
+wire          depacketizer_tlp_cmp_valid;
+wire          depacketizer_tlp_req_first;
+wire          depacketizer_tlp_req_last;
+wire   [63:0] depacketizer_tlp_req_payload_address;
+wire    [1:0] depacketizer_tlp_req_payload_attr;
+wire   [15:0] depacketizer_tlp_req_payload_be;
+wire  [127:0] depacketizer_tlp_req_payload_dat;
+wire          depacketizer_tlp_req_payload_ep;
+wire    [3:0] depacketizer_tlp_req_payload_first_be;
+reg     [1:0] depacketizer_tlp_req_payload_fmt = 2'd0;
+wire    [3:0] depacketizer_tlp_req_payload_last_be;
+wire    [9:0] depacketizer_tlp_req_payload_length;
+wire   [15:0] depacketizer_tlp_req_payload_requester_id;
+wire    [7:0] depacketizer_tlp_req_payload_tag;
+wire    [2:0] depacketizer_tlp_req_payload_tc;
+wire          depacketizer_tlp_req_payload_td;
+reg     [4:0] depacketizer_tlp_req_payload_type = 5'd0;
+wire          depacketizer_tlp_req_ready;
+wire          depacketizer_tlp_req_valid;
+wire          from221_clk;
+wire          from221_rst;
+wire          from685_clk;
+wire          from685_rst;
+wire          from876_clk;
+wire          from876_rst;
+reg           interface0_ack = 1'd0;
+wire   [29:0] interface0_adr;
+wire    [1:0] interface0_bte;
+wire    [2:0] interface0_cti;
+wire          interface0_cyc;
+reg    [31:0] interface0_dat_r = 32'd0;
+wire   [31:0] interface0_dat_w;
+reg           interface0_err = 1'd0;
+wire    [3:0] interface0_sel;
+wire          interface0_stb;
+wire          interface0_we;
+reg    [13:0] interface1_adr = 14'd0;
+wire   [31:0] interface1_dat_r;
+reg    [31:0] interface1_dat_w = 32'd0;
+reg           interface1_re = 1'd0;
+reg           interface1_we = 1'd0;
+reg           litepciedmareader_fsm_next_state = 1'd0;
+reg           litepciedmareader_fsm_state = 1'd0;
+reg           litepciedmareader_resetinserter_next_state = 1'd0;
+reg           litepciedmareader_resetinserter_state = 1'd0;
+reg           litepciedmawriter_fsm_next_state = 1'd0;
+reg           litepciedmawriter_fsm_state = 1'd0;
+reg           litepciedmawriter_resetinserter_next_state = 1'd0;
+reg           litepciedmawriter_resetinserter_state = 1'd0;
+wire          litepcieendpoint_cmp_reorder_first;
+wire          litepcieendpoint_cmp_reorder_last;
+wire   [31:0] litepcieendpoint_cmp_reorder_payload_adr;
+wire    [7:0] litepcieendpoint_cmp_reorder_payload_channel;
+wire   [15:0] litepcieendpoint_cmp_reorder_payload_cmp_id;
+wire  [127:0] litepcieendpoint_cmp_reorder_payload_dat;
+wire          litepcieendpoint_cmp_reorder_payload_end;
+wire          litepcieendpoint_cmp_reorder_payload_err;
+wire    [9:0] litepcieendpoint_cmp_reorder_payload_len;
+wire   [15:0] litepcieendpoint_cmp_reorder_payload_req_id;
+wire    [7:0] litepcieendpoint_cmp_reorder_payload_tag;
+wire    [7:0] litepcieendpoint_cmp_reorder_payload_user_id;
+reg           litepcieendpoint_cmp_reorder_ready = 1'd0;
+reg           litepcieendpoint_cmp_reorder_valid = 1'd0;
+reg           litepcieendpoint_dispatcher0_first = 1'd1;
+wire          litepcieendpoint_dispatcher0_last;
+wire          litepcieendpoint_dispatcher0_ongoing0;
+reg           litepcieendpoint_dispatcher0_ongoing1 = 1'd0;
+reg           litepcieendpoint_dispatcher0_sel0 = 1'd0;
+reg           litepcieendpoint_dispatcher0_sel1 = 1'd0;
+reg           litepcieendpoint_dispatcher0_sel_ongoing = 1'd0;
+reg           litepcieendpoint_dispatcher1_first = 1'd1;
+wire          litepcieendpoint_dispatcher1_last;
+wire          litepcieendpoint_dispatcher1_ongoing0;
+reg           litepcieendpoint_dispatcher1_ongoing1 = 1'd0;
+reg           litepcieendpoint_dispatcher1_sel0 = 1'd0;
+reg           litepcieendpoint_dispatcher1_sel1 = 1'd0;
+reg           litepcieendpoint_dispatcher1_sel_ongoing = 1'd0;
+reg     [1:0] litepcieendpoint_fill_tag = 2'd0;
+reg     [1:0] litepcieendpoint_fill_tag_litepciecrossbar_next_value = 2'd0;
+reg           litepcieendpoint_fill_tag_litepciecrossbar_next_value_ce = 1'd0;
+reg           litepcieendpoint_first = 1'd1;
+reg     [1:0] litepcieendpoint_fsm0_next_state = 2'd0;
+reg     [1:0] litepcieendpoint_fsm0_state = 2'd0;
+reg     [1:0] litepcieendpoint_fsm1_next_state = 2'd0;
+reg     [1:0] litepcieendpoint_fsm1_state = 2'd0;
+reg           litepcieendpoint_grant = 1'd0;
+wire          litepcieendpoint_last;
+reg           litepcieendpoint_litepcietlpheaderinserter128b3dws_next_state = 1'd0;
+reg           litepcieendpoint_litepcietlpheaderinserter128b3dws_state = 1'd0;
+reg           litepcieendpoint_litepcietlpheaderinserter128b4dws_next_state = 1'd0;
+reg           litepcieendpoint_litepcietlpheaderinserter128b4dws_state = 1'd0;
+wire          litepcieendpoint_master_in_sink_first;
+wire          litepcieendpoint_master_in_sink_last;
+wire   [63:0] litepcieendpoint_master_in_sink_payload_adr;
+wire    [7:0] litepcieendpoint_master_in_sink_payload_channel;
+wire  [127:0] litepcieendpoint_master_in_sink_payload_dat;
+wire    [9:0] litepcieendpoint_master_in_sink_payload_len;
+wire   [15:0] litepcieendpoint_master_in_sink_payload_req_id;
+wire    [7:0] litepcieendpoint_master_in_sink_payload_tag;
+wire    [7:0] litepcieendpoint_master_in_sink_payload_user_id;
+wire          litepcieendpoint_master_in_sink_payload_we;
+reg           litepcieendpoint_master_in_sink_ready = 1'd0;
+wire          litepcieendpoint_master_in_sink_valid;
+reg           litepcieendpoint_master_in_source_first = 1'd0;
+reg           litepcieendpoint_master_in_source_last = 1'd0;
+reg    [31:0] litepcieendpoint_master_in_source_payload_adr = 32'd0;
+reg     [7:0] litepcieendpoint_master_in_source_payload_channel = 8'd0;
+reg    [15:0] litepcieendpoint_master_in_source_payload_cmp_id = 16'd0;
+reg   [127:0] litepcieendpoint_master_in_source_payload_dat = 128'd0;
+reg           litepcieendpoint_master_in_source_payload_end = 1'd0;
+reg           litepcieendpoint_master_in_source_payload_err = 1'd0;
+reg     [9:0] litepcieendpoint_master_in_source_payload_len = 10'd0;
+reg    [15:0] litepcieendpoint_master_in_source_payload_req_id = 16'd0;
+reg     [7:0] litepcieendpoint_master_in_source_payload_tag = 8'd0;
+reg     [7:0] litepcieendpoint_master_in_source_payload_user_id = 8'd0;
+reg           litepcieendpoint_master_in_source_ready = 1'd0;
+reg           litepcieendpoint_master_in_source_valid = 1'd0;
+wire          litepcieendpoint_master_out_sink_first;
+wire          litepcieendpoint_master_out_sink_last;
+wire   [63:0] litepcieendpoint_master_out_sink_payload_adr;
+wire    [7:0] litepcieendpoint_master_out_sink_payload_channel;
+wire  [127:0] litepcieendpoint_master_out_sink_payload_dat;
+wire    [9:0] litepcieendpoint_master_out_sink_payload_len;
+wire   [15:0] litepcieendpoint_master_out_sink_payload_req_id;
+reg     [7:0] litepcieendpoint_master_out_sink_payload_tag = 8'd0;
+wire    [7:0] litepcieendpoint_master_out_sink_payload_user_id;
+wire          litepcieendpoint_master_out_sink_payload_we;
+reg           litepcieendpoint_master_out_sink_ready = 1'd0;
+reg           litepcieendpoint_master_out_sink_valid = 1'd0;
+wire          litepcieendpoint_master_out_source_first;
+wire          litepcieendpoint_master_out_source_last;
+wire   [31:0] litepcieendpoint_master_out_source_payload_adr;
+wire    [7:0] litepcieendpoint_master_out_source_payload_channel;
+wire   [15:0] litepcieendpoint_master_out_source_payload_cmp_id;
+wire  [127:0] litepcieendpoint_master_out_source_payload_dat;
+wire          litepcieendpoint_master_out_source_payload_end;
+wire          litepcieendpoint_master_out_source_payload_err;
+wire    [9:0] litepcieendpoint_master_out_source_payload_len;
+wire   [15:0] litepcieendpoint_master_out_source_payload_req_id;
+wire    [7:0] litepcieendpoint_master_out_source_payload_tag;
+wire    [7:0] litepcieendpoint_master_out_source_payload_user_id;
+reg           litepcieendpoint_master_out_source_ready = 1'd0;
+wire          litepcieendpoint_master_out_source_valid;
+reg     [1:0] litepcieendpoint_next_state = 2'd0;
+reg    [31:0] litepcieendpoint_next_value0 = 32'd0;
+reg    [31:0] litepcieendpoint_next_value1 = 32'd0;
+reg    [31:0] litepcieendpoint_next_value2 = 32'd0;
+reg    [31:0] litepcieendpoint_next_value3 = 32'd0;
+reg           litepcieendpoint_next_value_ce0 = 1'd0;
+reg           litepcieendpoint_next_value_ce1 = 1'd0;
+reg           litepcieendpoint_next_value_ce2 = 1'd0;
+reg           litepcieendpoint_next_value_ce3 = 1'd0;
+wire          litepcieendpoint_ongoing0;
+reg           litepcieendpoint_ongoing1 = 1'd0;
+reg     [1:0] litepcieendpoint_req_queue_consume = 2'd0;
+wire          litepcieendpoint_req_queue_do_read;
+wire          litepcieendpoint_req_queue_fifo_in_first;
+wire          litepcieendpoint_req_queue_fifo_in_last;
+wire    [7:0] litepcieendpoint_req_queue_fifo_in_payload_channel;
+wire    [1:0] litepcieendpoint_req_queue_fifo_in_payload_tag;
+wire    [7:0] litepcieendpoint_req_queue_fifo_in_payload_user_id;
+wire          litepcieendpoint_req_queue_fifo_out_first;
+wire          litepcieendpoint_req_queue_fifo_out_last;
+wire    [7:0] litepcieendpoint_req_queue_fifo_out_payload_channel;
+wire    [1:0] litepcieendpoint_req_queue_fifo_out_payload_tag;
+wire    [7:0] litepcieendpoint_req_queue_fifo_out_payload_user_id;
+reg     [2:0] litepcieendpoint_req_queue_level0 = 3'd0;
+wire    [2:0] litepcieendpoint_req_queue_level1;
+reg     [1:0] litepcieendpoint_req_queue_produce = 2'd0;
+wire    [1:0] litepcieendpoint_req_queue_rdport_adr;
+wire   [19:0] litepcieendpoint_req_queue_rdport_dat_r;
+wire          litepcieendpoint_req_queue_rdport_re;
+wire          litepcieendpoint_req_queue_re;
+reg           litepcieendpoint_req_queue_readable = 1'd0;
+reg           litepcieendpoint_req_queue_replace = 1'd0;
+reg           litepcieendpoint_req_queue_sink_first = 1'd0;
+reg           litepcieendpoint_req_queue_sink_last = 1'd0;
+wire    [7:0] litepcieendpoint_req_queue_sink_payload_channel;
+wire    [1:0] litepcieendpoint_req_queue_sink_payload_tag;
+wire    [7:0] litepcieendpoint_req_queue_sink_payload_user_id;
+wire          litepcieendpoint_req_queue_sink_ready;
+reg           litepcieendpoint_req_queue_sink_valid = 1'd0;
+wire          litepcieendpoint_req_queue_source_first;
+wire          litepcieendpoint_req_queue_source_last;
+wire    [7:0] litepcieendpoint_req_queue_source_payload_channel;
+wire    [1:0] litepcieendpoint_req_queue_source_payload_tag;
+wire    [7:0] litepcieendpoint_req_queue_source_payload_user_id;
+reg           litepcieendpoint_req_queue_source_ready = 1'd0;
+wire          litepcieendpoint_req_queue_source_valid;
+wire   [19:0] litepcieendpoint_req_queue_syncfifo_din;
+wire   [19:0] litepcieendpoint_req_queue_syncfifo_dout;
+wire          litepcieendpoint_req_queue_syncfifo_re;
+wire          litepcieendpoint_req_queue_syncfifo_readable;
+wire          litepcieendpoint_req_queue_syncfifo_we;
+wire          litepcieendpoint_req_queue_syncfifo_writable;
+reg     [1:0] litepcieendpoint_req_queue_wrport_adr = 2'd0;
+wire   [19:0] litepcieendpoint_req_queue_wrport_dat_r;
+wire   [19:0] litepcieendpoint_req_queue_wrport_dat_w;
+wire          litepcieendpoint_req_queue_wrport_we;
+reg     [1:0] litepcieendpoint_request = 2'd0;
+reg           litepcieendpoint_sel0 = 1'd0;
+reg           litepcieendpoint_sel1 = 1'd0;
+reg           litepcieendpoint_sel_ongoing = 1'd0;
+wire          litepcieendpoint_sink_first;
+wire          litepcieendpoint_sink_last;
+wire   [63:0] litepcieendpoint_sink_payload_adr;
+wire    [7:0] litepcieendpoint_sink_payload_channel;
+wire  [127:0] litepcieendpoint_sink_payload_dat;
+wire    [9:0] litepcieendpoint_sink_payload_len;
+wire   [15:0] litepcieendpoint_sink_payload_req_id;
+wire    [7:0] litepcieendpoint_sink_payload_tag;
+wire    [7:0] litepcieendpoint_sink_payload_user_id;
+wire          litepcieendpoint_sink_payload_we;
+reg           litepcieendpoint_sink_ready = 1'd0;
+wire          litepcieendpoint_sink_valid;
+reg           litepcieendpoint_source_first = 1'd0;
+reg           litepcieendpoint_source_last = 1'd0;
+reg    [31:0] litepcieendpoint_source_payload_adr = 32'd0;
+reg     [7:0] litepcieendpoint_source_payload_channel = 8'd0;
+reg    [15:0] litepcieendpoint_source_payload_cmp_id = 16'd0;
+reg   [127:0] litepcieendpoint_source_payload_dat = 128'd0;
+reg           litepcieendpoint_source_payload_end = 1'd0;
+reg           litepcieendpoint_source_payload_err = 1'd0;
+reg     [9:0] litepcieendpoint_source_payload_len = 10'd0;
+reg    [15:0] litepcieendpoint_source_payload_req_id = 16'd0;
+reg     [7:0] litepcieendpoint_source_payload_tag = 8'd0;
+reg     [7:0] litepcieendpoint_source_payload_user_id = 8'd0;
+reg           litepcieendpoint_source_ready = 1'd0;
+reg           litepcieendpoint_source_valid = 1'd0;
+reg     [1:0] litepcieendpoint_state = 2'd0;
+reg           litepcieendpoint_status0_first = 1'd1;
+wire          litepcieendpoint_status0_last;
+wire          litepcieendpoint_status0_ongoing0;
+reg           litepcieendpoint_status0_ongoing1 = 1'd0;
+reg           litepcieendpoint_status1_first = 1'd1;
+wire          litepcieendpoint_status1_last;
+wire          litepcieendpoint_status1_ongoing0;
+reg           litepcieendpoint_status1_ongoing1 = 1'd0;
+reg     [6:0] litepcieendpoint_syncfifo0_consume = 7'd0;
+wire          litepcieendpoint_syncfifo0_do_read;
+wire          litepcieendpoint_syncfifo0_fifo_in_first;
+wire          litepcieendpoint_syncfifo0_fifo_in_last;
+wire   [31:0] litepcieendpoint_syncfifo0_fifo_in_payload_adr;
+wire    [7:0] litepcieendpoint_syncfifo0_fifo_in_payload_channel;
+wire   [15:0] litepcieendpoint_syncfifo0_fifo_in_payload_cmp_id;
+wire  [127:0] litepcieendpoint_syncfifo0_fifo_in_payload_dat;
+wire          litepcieendpoint_syncfifo0_fifo_in_payload_end;
+wire          litepcieendpoint_syncfifo0_fifo_in_payload_err;
+wire    [9:0] litepcieendpoint_syncfifo0_fifo_in_payload_len;
+wire   [15:0] litepcieendpoint_syncfifo0_fifo_in_payload_req_id;
+wire    [7:0] litepcieendpoint_syncfifo0_fifo_in_payload_tag;
+wire    [7:0] litepcieendpoint_syncfifo0_fifo_in_payload_user_id;
+wire          litepcieendpoint_syncfifo0_fifo_out_first;
+wire          litepcieendpoint_syncfifo0_fifo_out_last;
+wire   [31:0] litepcieendpoint_syncfifo0_fifo_out_payload_adr;
+wire    [7:0] litepcieendpoint_syncfifo0_fifo_out_payload_channel;
+wire   [15:0] litepcieendpoint_syncfifo0_fifo_out_payload_cmp_id;
+wire  [127:0] litepcieendpoint_syncfifo0_fifo_out_payload_dat;
+wire          litepcieendpoint_syncfifo0_fifo_out_payload_end;
+wire          litepcieendpoint_syncfifo0_fifo_out_payload_err;
+wire    [9:0] litepcieendpoint_syncfifo0_fifo_out_payload_len;
+wire   [15:0] litepcieendpoint_syncfifo0_fifo_out_payload_req_id;
+wire    [7:0] litepcieendpoint_syncfifo0_fifo_out_payload_tag;
+wire    [7:0] litepcieendpoint_syncfifo0_fifo_out_payload_user_id;
+reg     [7:0] litepcieendpoint_syncfifo0_level0 = 8'd0;
+wire    [7:0] litepcieendpoint_syncfifo0_level1;
+reg     [6:0] litepcieendpoint_syncfifo0_produce = 7'd0;
+wire    [6:0] litepcieendpoint_syncfifo0_rdport_adr;
+wire  [229:0] litepcieendpoint_syncfifo0_rdport_dat_r;
+wire          litepcieendpoint_syncfifo0_rdport_re;
+wire          litepcieendpoint_syncfifo0_re;
+reg           litepcieendpoint_syncfifo0_readable = 1'd0;
+reg           litepcieendpoint_syncfifo0_replace = 1'd0;
+reg           litepcieendpoint_syncfifo0_sink_first = 1'd0;
+reg           litepcieendpoint_syncfifo0_sink_last = 1'd0;
+reg    [31:0] litepcieendpoint_syncfifo0_sink_payload_adr = 32'd0;
+reg     [7:0] litepcieendpoint_syncfifo0_sink_payload_channel = 8'd0;
+reg    [15:0] litepcieendpoint_syncfifo0_sink_payload_cmp_id = 16'd0;
+reg   [127:0] litepcieendpoint_syncfifo0_sink_payload_dat = 128'd0;
+reg           litepcieendpoint_syncfifo0_sink_payload_end = 1'd0;
+reg           litepcieendpoint_syncfifo0_sink_payload_err = 1'd0;
+reg     [9:0] litepcieendpoint_syncfifo0_sink_payload_len = 10'd0;
+reg    [15:0] litepcieendpoint_syncfifo0_sink_payload_req_id = 16'd0;
+reg     [7:0] litepcieendpoint_syncfifo0_sink_payload_tag = 8'd0;
+reg     [7:0] litepcieendpoint_syncfifo0_sink_payload_user_id = 8'd0;
+wire          litepcieendpoint_syncfifo0_sink_ready;
+reg           litepcieendpoint_syncfifo0_sink_valid = 1'd0;
+wire          litepcieendpoint_syncfifo0_source_first;
+wire          litepcieendpoint_syncfifo0_source_last;
+wire   [31:0] litepcieendpoint_syncfifo0_source_payload_adr;
+wire    [7:0] litepcieendpoint_syncfifo0_source_payload_channel;
+wire   [15:0] litepcieendpoint_syncfifo0_source_payload_cmp_id;
+wire  [127:0] litepcieendpoint_syncfifo0_source_payload_dat;
+wire          litepcieendpoint_syncfifo0_source_payload_end;
+wire          litepcieendpoint_syncfifo0_source_payload_err;
+wire    [9:0] litepcieendpoint_syncfifo0_source_payload_len;
+wire   [15:0] litepcieendpoint_syncfifo0_source_payload_req_id;
+wire    [7:0] litepcieendpoint_syncfifo0_source_payload_tag;
+wire    [7:0] litepcieendpoint_syncfifo0_source_payload_user_id;
+reg           litepcieendpoint_syncfifo0_source_ready = 1'd0;
+wire          litepcieendpoint_syncfifo0_source_valid;
+wire  [229:0] litepcieendpoint_syncfifo0_syncfifo0_din;
+wire  [229:0] litepcieendpoint_syncfifo0_syncfifo0_dout;
+wire          litepcieendpoint_syncfifo0_syncfifo0_re;
+wire          litepcieendpoint_syncfifo0_syncfifo0_readable;
+wire          litepcieendpoint_syncfifo0_syncfifo0_we;
+wire          litepcieendpoint_syncfifo0_syncfifo0_writable;
+reg     [6:0] litepcieendpoint_syncfifo0_wrport_adr = 7'd0;
+wire  [229:0] litepcieendpoint_syncfifo0_wrport_dat_r;
+wire  [229:0] litepcieendpoint_syncfifo0_wrport_dat_w;
+wire          litepcieendpoint_syncfifo0_wrport_we;
+reg     [6:0] litepcieendpoint_syncfifo1_consume = 7'd0;
+wire          litepcieendpoint_syncfifo1_do_read;
+wire          litepcieendpoint_syncfifo1_fifo_in_first;
+wire          litepcieendpoint_syncfifo1_fifo_in_last;
+wire   [31:0] litepcieendpoint_syncfifo1_fifo_in_payload_adr;
+wire    [7:0] litepcieendpoint_syncfifo1_fifo_in_payload_channel;
+wire   [15:0] litepcieendpoint_syncfifo1_fifo_in_payload_cmp_id;
+wire  [127:0] litepcieendpoint_syncfifo1_fifo_in_payload_dat;
+wire          litepcieendpoint_syncfifo1_fifo_in_payload_end;
+wire          litepcieendpoint_syncfifo1_fifo_in_payload_err;
+wire    [9:0] litepcieendpoint_syncfifo1_fifo_in_payload_len;
+wire   [15:0] litepcieendpoint_syncfifo1_fifo_in_payload_req_id;
+wire    [7:0] litepcieendpoint_syncfifo1_fifo_in_payload_tag;
+wire    [7:0] litepcieendpoint_syncfifo1_fifo_in_payload_user_id;
+wire          litepcieendpoint_syncfifo1_fifo_out_first;
+wire          litepcieendpoint_syncfifo1_fifo_out_last;
+wire   [31:0] litepcieendpoint_syncfifo1_fifo_out_payload_adr;
+wire    [7:0] litepcieendpoint_syncfifo1_fifo_out_payload_channel;
+wire   [15:0] litepcieendpoint_syncfifo1_fifo_out_payload_cmp_id;
+wire  [127:0] litepcieendpoint_syncfifo1_fifo_out_payload_dat;
+wire          litepcieendpoint_syncfifo1_fifo_out_payload_end;
+wire          litepcieendpoint_syncfifo1_fifo_out_payload_err;
+wire    [9:0] litepcieendpoint_syncfifo1_fifo_out_payload_len;
+wire   [15:0] litepcieendpoint_syncfifo1_fifo_out_payload_req_id;
+wire    [7:0] litepcieendpoint_syncfifo1_fifo_out_payload_tag;
+wire    [7:0] litepcieendpoint_syncfifo1_fifo_out_payload_user_id;
+reg     [7:0] litepcieendpoint_syncfifo1_level0 = 8'd0;
+wire    [7:0] litepcieendpoint_syncfifo1_level1;
+reg     [6:0] litepcieendpoint_syncfifo1_produce = 7'd0;
+wire    [6:0] litepcieendpoint_syncfifo1_rdport_adr;
+wire  [229:0] litepcieendpoint_syncfifo1_rdport_dat_r;
+wire          litepcieendpoint_syncfifo1_rdport_re;
+wire          litepcieendpoint_syncfifo1_re;
+reg           litepcieendpoint_syncfifo1_readable = 1'd0;
+reg           litepcieendpoint_syncfifo1_replace = 1'd0;
+reg           litepcieendpoint_syncfifo1_sink_first = 1'd0;
+reg           litepcieendpoint_syncfifo1_sink_last = 1'd0;
+reg    [31:0] litepcieendpoint_syncfifo1_sink_payload_adr = 32'd0;
+reg     [7:0] litepcieendpoint_syncfifo1_sink_payload_channel = 8'd0;
+reg    [15:0] litepcieendpoint_syncfifo1_sink_payload_cmp_id = 16'd0;
+reg   [127:0] litepcieendpoint_syncfifo1_sink_payload_dat = 128'd0;
+reg           litepcieendpoint_syncfifo1_sink_payload_end = 1'd0;
+reg           litepcieendpoint_syncfifo1_sink_payload_err = 1'd0;
+reg     [9:0] litepcieendpoint_syncfifo1_sink_payload_len = 10'd0;
+reg    [15:0] litepcieendpoint_syncfifo1_sink_payload_req_id = 16'd0;
+reg     [7:0] litepcieendpoint_syncfifo1_sink_payload_tag = 8'd0;
+reg     [7:0] litepcieendpoint_syncfifo1_sink_payload_user_id = 8'd0;
+wire          litepcieendpoint_syncfifo1_sink_ready;
+reg           litepcieendpoint_syncfifo1_sink_valid = 1'd0;
+wire          litepcieendpoint_syncfifo1_source_first;
+wire          litepcieendpoint_syncfifo1_source_last;
+wire   [31:0] litepcieendpoint_syncfifo1_source_payload_adr;
+wire    [7:0] litepcieendpoint_syncfifo1_source_payload_channel;
+wire   [15:0] litepcieendpoint_syncfifo1_source_payload_cmp_id;
+wire  [127:0] litepcieendpoint_syncfifo1_source_payload_dat;
+wire          litepcieendpoint_syncfifo1_source_payload_end;
+wire          litepcieendpoint_syncfifo1_source_payload_err;
+wire    [9:0] litepcieendpoint_syncfifo1_source_payload_len;
+wire   [15:0] litepcieendpoint_syncfifo1_source_payload_req_id;
+wire    [7:0] litepcieendpoint_syncfifo1_source_payload_tag;
+wire    [7:0] litepcieendpoint_syncfifo1_source_payload_user_id;
+reg           litepcieendpoint_syncfifo1_source_ready = 1'd0;
+wire          litepcieendpoint_syncfifo1_source_valid;
+wire  [229:0] litepcieendpoint_syncfifo1_syncfifo1_din;
+wire  [229:0] litepcieendpoint_syncfifo1_syncfifo1_dout;
+wire          litepcieendpoint_syncfifo1_syncfifo1_re;
+wire          litepcieendpoint_syncfifo1_syncfifo1_readable;
+wire          litepcieendpoint_syncfifo1_syncfifo1_we;
+wire          litepcieendpoint_syncfifo1_syncfifo1_writable;
+reg     [6:0] litepcieendpoint_syncfifo1_wrport_adr = 7'd0;
+wire  [229:0] litepcieendpoint_syncfifo1_wrport_dat_r;
+wire  [229:0] litepcieendpoint_syncfifo1_wrport_dat_w;
+wire          litepcieendpoint_syncfifo1_wrport_we;
+reg     [6:0] litepcieendpoint_syncfifo2_consume = 7'd0;
+wire          litepcieendpoint_syncfifo2_do_read;
+wire          litepcieendpoint_syncfifo2_fifo_in_first;
+wire          litepcieendpoint_syncfifo2_fifo_in_last;
+wire   [31:0] litepcieendpoint_syncfifo2_fifo_in_payload_adr;
+wire    [7:0] litepcieendpoint_syncfifo2_fifo_in_payload_channel;
+wire   [15:0] litepcieendpoint_syncfifo2_fifo_in_payload_cmp_id;
+wire  [127:0] litepcieendpoint_syncfifo2_fifo_in_payload_dat;
+wire          litepcieendpoint_syncfifo2_fifo_in_payload_end;
+wire          litepcieendpoint_syncfifo2_fifo_in_payload_err;
+wire    [9:0] litepcieendpoint_syncfifo2_fifo_in_payload_len;
+wire   [15:0] litepcieendpoint_syncfifo2_fifo_in_payload_req_id;
+wire    [7:0] litepcieendpoint_syncfifo2_fifo_in_payload_tag;
+wire    [7:0] litepcieendpoint_syncfifo2_fifo_in_payload_user_id;
+wire          litepcieendpoint_syncfifo2_fifo_out_first;
+wire          litepcieendpoint_syncfifo2_fifo_out_last;
+wire   [31:0] litepcieendpoint_syncfifo2_fifo_out_payload_adr;
+wire    [7:0] litepcieendpoint_syncfifo2_fifo_out_payload_channel;
+wire   [15:0] litepcieendpoint_syncfifo2_fifo_out_payload_cmp_id;
+wire  [127:0] litepcieendpoint_syncfifo2_fifo_out_payload_dat;
+wire          litepcieendpoint_syncfifo2_fifo_out_payload_end;
+wire          litepcieendpoint_syncfifo2_fifo_out_payload_err;
+wire    [9:0] litepcieendpoint_syncfifo2_fifo_out_payload_len;
+wire   [15:0] litepcieendpoint_syncfifo2_fifo_out_payload_req_id;
+wire    [7:0] litepcieendpoint_syncfifo2_fifo_out_payload_tag;
+wire    [7:0] litepcieendpoint_syncfifo2_fifo_out_payload_user_id;
+reg     [7:0] litepcieendpoint_syncfifo2_level0 = 8'd0;
+wire    [7:0] litepcieendpoint_syncfifo2_level1;
+reg     [6:0] litepcieendpoint_syncfifo2_produce = 7'd0;
+wire    [6:0] litepcieendpoint_syncfifo2_rdport_adr;
+wire  [229:0] litepcieendpoint_syncfifo2_rdport_dat_r;
+wire          litepcieendpoint_syncfifo2_rdport_re;
+wire          litepcieendpoint_syncfifo2_re;
+reg           litepcieendpoint_syncfifo2_readable = 1'd0;
+reg           litepcieendpoint_syncfifo2_replace = 1'd0;
+reg           litepcieendpoint_syncfifo2_sink_first = 1'd0;
+reg           litepcieendpoint_syncfifo2_sink_last = 1'd0;
+reg    [31:0] litepcieendpoint_syncfifo2_sink_payload_adr = 32'd0;
+reg     [7:0] litepcieendpoint_syncfifo2_sink_payload_channel = 8'd0;
+reg    [15:0] litepcieendpoint_syncfifo2_sink_payload_cmp_id = 16'd0;
+reg   [127:0] litepcieendpoint_syncfifo2_sink_payload_dat = 128'd0;
+reg           litepcieendpoint_syncfifo2_sink_payload_end = 1'd0;
+reg           litepcieendpoint_syncfifo2_sink_payload_err = 1'd0;
+reg     [9:0] litepcieendpoint_syncfifo2_sink_payload_len = 10'd0;
+reg    [15:0] litepcieendpoint_syncfifo2_sink_payload_req_id = 16'd0;
+reg     [7:0] litepcieendpoint_syncfifo2_sink_payload_tag = 8'd0;
+reg     [7:0] litepcieendpoint_syncfifo2_sink_payload_user_id = 8'd0;
+wire          litepcieendpoint_syncfifo2_sink_ready;
+reg           litepcieendpoint_syncfifo2_sink_valid = 1'd0;
+wire          litepcieendpoint_syncfifo2_source_first;
+wire          litepcieendpoint_syncfifo2_source_last;
+wire   [31:0] litepcieendpoint_syncfifo2_source_payload_adr;
+wire    [7:0] litepcieendpoint_syncfifo2_source_payload_channel;
+wire   [15:0] litepcieendpoint_syncfifo2_source_payload_cmp_id;
+wire  [127:0] litepcieendpoint_syncfifo2_source_payload_dat;
+wire          litepcieendpoint_syncfifo2_source_payload_end;
+wire          litepcieendpoint_syncfifo2_source_payload_err;
+wire    [9:0] litepcieendpoint_syncfifo2_source_payload_len;
+wire   [15:0] litepcieendpoint_syncfifo2_source_payload_req_id;
+wire    [7:0] litepcieendpoint_syncfifo2_source_payload_tag;
+wire    [7:0] litepcieendpoint_syncfifo2_source_payload_user_id;
+reg           litepcieendpoint_syncfifo2_source_ready = 1'd0;
+wire          litepcieendpoint_syncfifo2_source_valid;
+wire  [229:0] litepcieendpoint_syncfifo2_syncfifo2_din;
+wire  [229:0] litepcieendpoint_syncfifo2_syncfifo2_dout;
+wire          litepcieendpoint_syncfifo2_syncfifo2_re;
+wire          litepcieendpoint_syncfifo2_syncfifo2_readable;
+wire          litepcieendpoint_syncfifo2_syncfifo2_we;
+wire          litepcieendpoint_syncfifo2_syncfifo2_writable;
+reg     [6:0] litepcieendpoint_syncfifo2_wrport_adr = 7'd0;
+wire  [229:0] litepcieendpoint_syncfifo2_wrport_dat_r;
+wire  [229:0] litepcieendpoint_syncfifo2_wrport_dat_w;
+wire          litepcieendpoint_syncfifo2_wrport_we;
+reg     [6:0] litepcieendpoint_syncfifo3_consume = 7'd0;
+wire          litepcieendpoint_syncfifo3_do_read;
+wire          litepcieendpoint_syncfifo3_fifo_in_first;
+wire          litepcieendpoint_syncfifo3_fifo_in_last;
+wire   [31:0] litepcieendpoint_syncfifo3_fifo_in_payload_adr;
+wire    [7:0] litepcieendpoint_syncfifo3_fifo_in_payload_channel;
+wire   [15:0] litepcieendpoint_syncfifo3_fifo_in_payload_cmp_id;
+wire  [127:0] litepcieendpoint_syncfifo3_fifo_in_payload_dat;
+wire          litepcieendpoint_syncfifo3_fifo_in_payload_end;
+wire          litepcieendpoint_syncfifo3_fifo_in_payload_err;
+wire    [9:0] litepcieendpoint_syncfifo3_fifo_in_payload_len;
+wire   [15:0] litepcieendpoint_syncfifo3_fifo_in_payload_req_id;
+wire    [7:0] litepcieendpoint_syncfifo3_fifo_in_payload_tag;
+wire    [7:0] litepcieendpoint_syncfifo3_fifo_in_payload_user_id;
+wire          litepcieendpoint_syncfifo3_fifo_out_first;
+wire          litepcieendpoint_syncfifo3_fifo_out_last;
+wire   [31:0] litepcieendpoint_syncfifo3_fifo_out_payload_adr;
+wire    [7:0] litepcieendpoint_syncfifo3_fifo_out_payload_channel;
+wire   [15:0] litepcieendpoint_syncfifo3_fifo_out_payload_cmp_id;
+wire  [127:0] litepcieendpoint_syncfifo3_fifo_out_payload_dat;
+wire          litepcieendpoint_syncfifo3_fifo_out_payload_end;
+wire          litepcieendpoint_syncfifo3_fifo_out_payload_err;
+wire    [9:0] litepcieendpoint_syncfifo3_fifo_out_payload_len;
+wire   [15:0] litepcieendpoint_syncfifo3_fifo_out_payload_req_id;
+wire    [7:0] litepcieendpoint_syncfifo3_fifo_out_payload_tag;
+wire    [7:0] litepcieendpoint_syncfifo3_fifo_out_payload_user_id;
+reg     [7:0] litepcieendpoint_syncfifo3_level0 = 8'd0;
+wire    [7:0] litepcieendpoint_syncfifo3_level1;
+reg     [6:0] litepcieendpoint_syncfifo3_produce = 7'd0;
+wire    [6:0] litepcieendpoint_syncfifo3_rdport_adr;
+wire  [229:0] litepcieendpoint_syncfifo3_rdport_dat_r;
+wire          litepcieendpoint_syncfifo3_rdport_re;
+wire          litepcieendpoint_syncfifo3_re;
+reg           litepcieendpoint_syncfifo3_readable = 1'd0;
+reg           litepcieendpoint_syncfifo3_replace = 1'd0;
+reg           litepcieendpoint_syncfifo3_sink_first = 1'd0;
+reg           litepcieendpoint_syncfifo3_sink_last = 1'd0;
+reg    [31:0] litepcieendpoint_syncfifo3_sink_payload_adr = 32'd0;
+reg     [7:0] litepcieendpoint_syncfifo3_sink_payload_channel = 8'd0;
+reg    [15:0] litepcieendpoint_syncfifo3_sink_payload_cmp_id = 16'd0;
+reg   [127:0] litepcieendpoint_syncfifo3_sink_payload_dat = 128'd0;
+reg           litepcieendpoint_syncfifo3_sink_payload_end = 1'd0;
+reg           litepcieendpoint_syncfifo3_sink_payload_err = 1'd0;
+reg     [9:0] litepcieendpoint_syncfifo3_sink_payload_len = 10'd0;
+reg    [15:0] litepcieendpoint_syncfifo3_sink_payload_req_id = 16'd0;
+reg     [7:0] litepcieendpoint_syncfifo3_sink_payload_tag = 8'd0;
+reg     [7:0] litepcieendpoint_syncfifo3_sink_payload_user_id = 8'd0;
+wire          litepcieendpoint_syncfifo3_sink_ready;
+reg           litepcieendpoint_syncfifo3_sink_valid = 1'd0;
+wire          litepcieendpoint_syncfifo3_source_first;
+wire          litepcieendpoint_syncfifo3_source_last;
+wire   [31:0] litepcieendpoint_syncfifo3_source_payload_adr;
+wire    [7:0] litepcieendpoint_syncfifo3_source_payload_channel;
+wire   [15:0] litepcieendpoint_syncfifo3_source_payload_cmp_id;
+wire  [127:0] litepcieendpoint_syncfifo3_source_payload_dat;
+wire          litepcieendpoint_syncfifo3_source_payload_end;
+wire          litepcieendpoint_syncfifo3_source_payload_err;
+wire    [9:0] litepcieendpoint_syncfifo3_source_payload_len;
+wire   [15:0] litepcieendpoint_syncfifo3_source_payload_req_id;
+wire    [7:0] litepcieendpoint_syncfifo3_source_payload_tag;
+wire    [7:0] litepcieendpoint_syncfifo3_source_payload_user_id;
+reg           litepcieendpoint_syncfifo3_source_ready = 1'd0;
+wire          litepcieendpoint_syncfifo3_source_valid;
+wire  [229:0] litepcieendpoint_syncfifo3_syncfifo3_din;
+wire  [229:0] litepcieendpoint_syncfifo3_syncfifo3_dout;
+wire          litepcieendpoint_syncfifo3_syncfifo3_re;
+wire          litepcieendpoint_syncfifo3_syncfifo3_readable;
+wire          litepcieendpoint_syncfifo3_syncfifo3_we;
+wire          litepcieendpoint_syncfifo3_syncfifo3_writable;
+reg     [6:0] litepcieendpoint_syncfifo3_wrport_adr = 7'd0;
+wire  [229:0] litepcieendpoint_syncfifo3_wrport_dat_r;
+wire  [229:0] litepcieendpoint_syncfifo3_wrport_dat_w;
+wire          litepcieendpoint_syncfifo3_wrport_we;
+reg     [1:0] litepcieendpoint_tag_queue_consume = 2'd0;
+wire          litepcieendpoint_tag_queue_do_read;
+wire          litepcieendpoint_tag_queue_fifo_in_first;
+wire          litepcieendpoint_tag_queue_fifo_in_last;
+wire    [1:0] litepcieendpoint_tag_queue_fifo_in_payload_tag;
+wire          litepcieendpoint_tag_queue_fifo_out_first;
+wire          litepcieendpoint_tag_queue_fifo_out_last;
+wire    [1:0] litepcieendpoint_tag_queue_fifo_out_payload_tag;
+reg     [2:0] litepcieendpoint_tag_queue_level0 = 3'd0;
+wire    [2:0] litepcieendpoint_tag_queue_level1;
+reg     [1:0] litepcieendpoint_tag_queue_produce = 2'd0;
+wire    [1:0] litepcieendpoint_tag_queue_rdport_adr;
+wire    [3:0] litepcieendpoint_tag_queue_rdport_dat_r;
+wire          litepcieendpoint_tag_queue_rdport_re;
+wire          litepcieendpoint_tag_queue_re;
+reg           litepcieendpoint_tag_queue_readable = 1'd0;
+reg           litepcieendpoint_tag_queue_replace = 1'd0;
+reg           litepcieendpoint_tag_queue_sink_first = 1'd0;
+reg           litepcieendpoint_tag_queue_sink_last = 1'd0;
+reg     [1:0] litepcieendpoint_tag_queue_sink_payload_tag = 2'd0;
+wire          litepcieendpoint_tag_queue_sink_ready;
+reg           litepcieendpoint_tag_queue_sink_valid = 1'd0;
+wire          litepcieendpoint_tag_queue_source_first;
+wire          litepcieendpoint_tag_queue_source_last;
+wire    [1:0] litepcieendpoint_tag_queue_source_payload_tag;
+reg           litepcieendpoint_tag_queue_source_ready = 1'd0;
+wire          litepcieendpoint_tag_queue_source_valid;
+wire    [3:0] litepcieendpoint_tag_queue_syncfifo_din;
+wire    [3:0] litepcieendpoint_tag_queue_syncfifo_dout;
+wire          litepcieendpoint_tag_queue_syncfifo_re;
+wire          litepcieendpoint_tag_queue_syncfifo_readable;
+wire          litepcieendpoint_tag_queue_syncfifo_we;
+wire          litepcieendpoint_tag_queue_syncfifo_writable;
+reg     [1:0] litepcieendpoint_tag_queue_wrport_adr = 2'd0;
+wire    [3:0] litepcieendpoint_tag_queue_wrport_dat_r;
+wire    [3:0] litepcieendpoint_tag_queue_wrport_dat_w;
+wire          litepcieendpoint_tag_queue_wrport_we;
+reg     [1:0] litepciewishbonemaster_next_state = 2'd0;
+reg     [1:0] litepciewishbonemaster_state = 2'd0;
+reg           master_sink_first = 1'd0;
+reg           master_sink_last = 1'd0;
+reg    [63:0] master_sink_payload_adr = 64'd0;
+reg     [7:0] master_sink_payload_channel = 8'd0;
+reg   [127:0] master_sink_payload_dat = 128'd0;
+reg     [9:0] master_sink_payload_len = 10'd0;
+reg    [15:0] master_sink_payload_req_id = 16'd0;
+reg     [7:0] master_sink_payload_tag = 8'd0;
+reg     [7:0] master_sink_payload_user_id = 8'd0;
+reg           master_sink_payload_we = 1'd0;
+wire          master_sink_ready;
+reg           master_sink_valid = 1'd0;
+wire          master_source_first;
+wire          master_source_last;
+wire   [31:0] master_source_payload_adr;
+wire    [7:0] master_source_payload_channel;
+wire   [15:0] master_source_payload_cmp_id;
+wire  [127:0] master_source_payload_dat;
+wire          master_source_payload_end;
+wire          master_source_payload_err;
+wire    [9:0] master_source_payload_len;
+wire   [15:0] master_source_payload_req_id;
+wire    [7:0] master_source_payload_tag;
+wire    [7:0] master_source_payload_user_id;
+wire          master_source_ready;
+wire          master_source_valid;
+wire          mmcm_fb;
 wire          packetizer_cmp_sink_first;
 wire          packetizer_cmp_sink_last;
-wire   [15:0] packetizer_cmp_sink_payload_req_id;
-wire   [15:0] packetizer_cmp_sink_payload_cmp_id;
 wire   [31:0] packetizer_cmp_sink_payload_adr;
-wire    [9:0] packetizer_cmp_sink_payload_len;
+wire    [7:0] packetizer_cmp_sink_payload_channel;
+wire   [15:0] packetizer_cmp_sink_payload_cmp_id;
+wire  [127:0] packetizer_cmp_sink_payload_dat;
 wire          packetizer_cmp_sink_payload_end;
 wire          packetizer_cmp_sink_payload_err;
+wire    [9:0] packetizer_cmp_sink_payload_len;
+wire   [15:0] packetizer_cmp_sink_payload_req_id;
 wire    [7:0] packetizer_cmp_sink_payload_tag;
-wire  [127:0] packetizer_cmp_sink_payload_dat;
-wire    [7:0] packetizer_cmp_sink_payload_channel;
 wire    [7:0] packetizer_cmp_sink_payload_user_id;
-wire          packetizer_source_valid;
-wire          packetizer_source_ready;
+wire          packetizer_cmp_sink_ready;
+wire          packetizer_cmp_sink_valid;
+reg           packetizer_grant = 1'd0;
+reg    [15:0] packetizer_header_inserter_3dws_be = 16'd0;
+reg   [127:0] packetizer_header_inserter_3dws_dat = 128'd0;
+reg           packetizer_header_inserter_3dws_last = 1'd0;
+reg           packetizer_header_inserter_3dws_sink_first = 1'd0;
+reg           packetizer_header_inserter_3dws_sink_last = 1'd0;
+reg    [15:0] packetizer_header_inserter_3dws_sink_payload_be = 16'd0;
+reg   [127:0] packetizer_header_inserter_3dws_sink_payload_dat = 128'd0;
+reg     [1:0] packetizer_header_inserter_3dws_sink_payload_fmt = 2'd0;
+reg   [127:0] packetizer_header_inserter_3dws_sink_payload_header = 128'd0;
+reg           packetizer_header_inserter_3dws_sink_ready = 1'd0;
+reg           packetizer_header_inserter_3dws_sink_valid = 1'd0;
+reg           packetizer_header_inserter_3dws_source_first = 1'd0;
+reg           packetizer_header_inserter_3dws_source_last = 1'd0;
+reg    [15:0] packetizer_header_inserter_3dws_source_payload_be = 16'd0;
+reg   [127:0] packetizer_header_inserter_3dws_source_payload_dat = 128'd0;
+reg           packetizer_header_inserter_3dws_source_ready = 1'd0;
+reg           packetizer_header_inserter_3dws_source_valid = 1'd0;
+reg           packetizer_header_inserter_4dws_sink_first = 1'd0;
+reg           packetizer_header_inserter_4dws_sink_last = 1'd0;
+reg    [15:0] packetizer_header_inserter_4dws_sink_payload_be = 16'd0;
+reg   [127:0] packetizer_header_inserter_4dws_sink_payload_dat = 128'd0;
+reg     [1:0] packetizer_header_inserter_4dws_sink_payload_fmt = 2'd0;
+reg   [127:0] packetizer_header_inserter_4dws_sink_payload_header = 128'd0;
+reg           packetizer_header_inserter_4dws_sink_ready = 1'd0;
+reg           packetizer_header_inserter_4dws_sink_valid = 1'd0;
+reg           packetizer_header_inserter_4dws_source_first = 1'd0;
+reg           packetizer_header_inserter_4dws_source_last = 1'd0;
+reg    [15:0] packetizer_header_inserter_4dws_source_payload_be = 16'd0;
+reg   [127:0] packetizer_header_inserter_4dws_source_payload_dat = 128'd0;
+reg           packetizer_header_inserter_4dws_source_ready = 1'd0;
+reg           packetizer_header_inserter_4dws_source_valid = 1'd0;
+reg           packetizer_header_sel = 1'd0;
+wire          packetizer_req_sink_first;
+wire          packetizer_req_sink_last;
+wire   [63:0] packetizer_req_sink_payload_adr;
+wire    [7:0] packetizer_req_sink_payload_channel;
+wire  [127:0] packetizer_req_sink_payload_dat;
+wire    [9:0] packetizer_req_sink_payload_len;
+wire   [15:0] packetizer_req_sink_payload_req_id;
+wire    [7:0] packetizer_req_sink_payload_tag;
+wire    [7:0] packetizer_req_sink_payload_user_id;
+wire          packetizer_req_sink_payload_we;
+wire          packetizer_req_sink_ready;
+wire          packetizer_req_sink_valid;
+reg     [1:0] packetizer_request = 2'd0;
+wire          packetizer_sink_sink_first;
+wire          packetizer_sink_sink_last;
+wire   [15:0] packetizer_sink_sink_payload_be;
+wire  [127:0] packetizer_sink_sink_payload_dat;
+wire    [1:0] packetizer_sink_sink_payload_fmt;
+wire  [127:0] packetizer_sink_sink_payload_header;
+reg           packetizer_sink_sink_ready = 1'd0;
+wire          packetizer_sink_sink_valid;
 wire          packetizer_source_first;
 wire          packetizer_source_last;
-reg   [127:0] packetizer_source_payload_dat = 128'd0;
 reg    [15:0] packetizer_source_payload_be = 16'd0;
-wire          packetizer_tlp_req_valid;
-wire          packetizer_tlp_req_ready;
-wire          packetizer_tlp_req_first;
-wire          packetizer_tlp_req_last;
-wire   [63:0] packetizer_tlp_req_payload_address;
-wire    [1:0] packetizer_tlp_req_payload_attr;
-wire          packetizer_tlp_req_payload_ep;
-wire    [3:0] packetizer_tlp_req_payload_first_be;
-reg     [1:0] packetizer_tlp_req_payload_fmt = 2'd0;
-reg     [3:0] packetizer_tlp_req_payload_last_be = 4'd0;
-wire    [9:0] packetizer_tlp_req_payload_length;
-wire   [15:0] packetizer_tlp_req_payload_requester_id;
-wire    [7:0] packetizer_tlp_req_payload_tag;
-wire    [2:0] packetizer_tlp_req_payload_tc;
-wire          packetizer_tlp_req_payload_td;
-wire    [4:0] packetizer_tlp_req_payload_type;
-wire  [127:0] packetizer_tlp_req_payload_dat;
-reg    [15:0] packetizer_tlp_req_payload_be = 16'd0;
-wire          packetizer_tlp_raw_req_valid;
-reg           packetizer_tlp_raw_req_ready = 1'd0;
-wire          packetizer_tlp_raw_req_first;
-wire          packetizer_tlp_raw_req_last;
-wire    [1:0] packetizer_tlp_raw_req_payload_fmt;
-reg   [127:0] packetizer_tlp_raw_req_payload_header = 128'd0;
-wire  [127:0] packetizer_tlp_raw_req_payload_dat;
-wire   [15:0] packetizer_tlp_raw_req_payload_be;
-reg   [127:0] packetizer_tlp_raw_req_header = 128'd0;
-wire          packetizer_tlp_cmp_valid;
-wire          packetizer_tlp_cmp_ready;
+reg   [127:0] packetizer_source_payload_dat = 128'd0;
+wire          packetizer_source_ready;
+reg           packetizer_source_source_first = 1'd0;
+reg           packetizer_source_source_last = 1'd0;
+reg    [15:0] packetizer_source_source_payload_be = 16'd0;
+reg   [127:0] packetizer_source_source_payload_dat = 128'd0;
+wire          packetizer_source_source_ready;
+reg           packetizer_source_source_valid = 1'd0;
+wire          packetizer_source_valid;
+reg           packetizer_status0_first = 1'd1;
+wire          packetizer_status0_last;
+wire          packetizer_status0_ongoing0;
+reg           packetizer_status0_ongoing1 = 1'd0;
+reg           packetizer_status1_first = 1'd1;
+wire          packetizer_status1_last;
+wire          packetizer_status1_ongoing0;
+reg           packetizer_status1_ongoing1 = 1'd0;
 wire          packetizer_tlp_cmp_first;
 wire          packetizer_tlp_cmp_last;
 wire    [1:0] packetizer_tlp_cmp_payload_attr;
 wire          packetizer_tlp_cmp_payload_bcm;
+reg    [15:0] packetizer_tlp_cmp_payload_be = 16'd0;
 wire   [11:0] packetizer_tlp_cmp_payload_byte_count;
 wire   [15:0] packetizer_tlp_cmp_payload_completer_id;
+wire  [127:0] packetizer_tlp_cmp_payload_dat;
 wire          packetizer_tlp_cmp_payload_ep;
 reg     [1:0] packetizer_tlp_cmp_payload_fmt = 2'd0;
 wire    [9:0] packetizer_tlp_cmp_payload_length;
@@ -732,1571 +1421,1190 @@ wire    [7:0] packetizer_tlp_cmp_payload_tag;
 wire    [2:0] packetizer_tlp_cmp_payload_tc;
 wire          packetizer_tlp_cmp_payload_td;
 reg     [4:0] packetizer_tlp_cmp_payload_type = 5'd0;
-wire  [127:0] packetizer_tlp_cmp_payload_dat;
-reg    [15:0] packetizer_tlp_cmp_payload_be = 16'd0;
-wire          packetizer_tlp_raw_cmp_valid;
-reg           packetizer_tlp_raw_cmp_ready = 1'd0;
+wire          packetizer_tlp_cmp_ready;
+wire          packetizer_tlp_cmp_valid;
 wire          packetizer_tlp_raw_cmp_first;
+reg   [127:0] packetizer_tlp_raw_cmp_header = 128'd0;
 wire          packetizer_tlp_raw_cmp_last;
+wire   [15:0] packetizer_tlp_raw_cmp_payload_be;
+wire  [127:0] packetizer_tlp_raw_cmp_payload_dat;
 wire    [1:0] packetizer_tlp_raw_cmp_payload_fmt;
 reg   [127:0] packetizer_tlp_raw_cmp_payload_header = 128'd0;
-wire  [127:0] packetizer_tlp_raw_cmp_payload_dat;
-wire   [15:0] packetizer_tlp_raw_cmp_payload_be;
-reg   [127:0] packetizer_tlp_raw_cmp_header = 128'd0;
-reg           packetizer_tlp_raw_valid = 1'd0;
-wire          packetizer_tlp_raw_ready;
+reg           packetizer_tlp_raw_cmp_ready = 1'd0;
+wire          packetizer_tlp_raw_cmp_valid;
 reg           packetizer_tlp_raw_first = 1'd0;
 reg           packetizer_tlp_raw_last = 1'd0;
+reg    [15:0] packetizer_tlp_raw_payload_be = 16'd0;
+reg   [127:0] packetizer_tlp_raw_payload_dat = 128'd0;
 reg     [1:0] packetizer_tlp_raw_payload_fmt = 2'd0;
 reg   [127:0] packetizer_tlp_raw_payload_header = 128'd0;
-reg   [127:0] packetizer_tlp_raw_payload_dat = 128'd0;
-reg    [15:0] packetizer_tlp_raw_payload_be = 16'd0;
-reg     [1:0] packetizer_request = 2'd0;
-reg           packetizer_grant = 1'd0;
-reg           packetizer_status0_first = 1'd1;
-reg           packetizer_status0_last = 1'd0;
-wire          packetizer_status0_ongoing0;
-reg           packetizer_status0_ongoing1 = 1'd0;
-reg           packetizer_status1_first = 1'd1;
-reg           packetizer_status1_last = 1'd0;
-wire          packetizer_status1_ongoing0;
-reg           packetizer_status1_ongoing1 = 1'd0;
-wire          packetizer_sink_sink_valid;
-reg           packetizer_sink_sink_ready = 1'd0;
-wire          packetizer_sink_sink_first;
-wire          packetizer_sink_sink_last;
-wire    [1:0] packetizer_sink_sink_payload_fmt;
-wire  [127:0] packetizer_sink_sink_payload_header;
-wire  [127:0] packetizer_sink_sink_payload_dat;
-wire   [15:0] packetizer_sink_sink_payload_be;
-reg           packetizer_source_source_valid = 1'd0;
-wire          packetizer_source_source_ready;
-reg           packetizer_source_source_first = 1'd0;
-reg           packetizer_source_source_last = 1'd0;
-reg   [127:0] packetizer_source_source_payload_dat = 128'd0;
-reg    [15:0] packetizer_source_source_payload_be = 16'd0;
-reg           packetizer_header_inserter_3dws_sink_valid = 1'd0;
-reg           packetizer_header_inserter_3dws_sink_ready = 1'd0;
-reg           packetizer_header_inserter_3dws_sink_first = 1'd0;
-reg           packetizer_header_inserter_3dws_sink_last = 1'd0;
-reg     [1:0] packetizer_header_inserter_3dws_sink_payload_fmt = 2'd0;
-reg   [127:0] packetizer_header_inserter_3dws_sink_payload_header = 128'd0;
-reg   [127:0] packetizer_header_inserter_3dws_sink_payload_dat = 128'd0;
-reg    [15:0] packetizer_header_inserter_3dws_sink_payload_be = 16'd0;
-reg           packetizer_header_inserter_3dws_source_valid = 1'd0;
-reg           packetizer_header_inserter_3dws_source_ready = 1'd0;
-reg           packetizer_header_inserter_3dws_source_first = 1'd0;
-reg           packetizer_header_inserter_3dws_source_last = 1'd0;
-reg   [127:0] packetizer_header_inserter_3dws_source_payload_dat = 128'd0;
-reg    [15:0] packetizer_header_inserter_3dws_source_payload_be = 16'd0;
-reg   [127:0] packetizer_header_inserter_3dws_dat = 128'd0;
-reg           packetizer_header_inserter_3dws_last = 1'd0;
-reg           packetizer_header_inserter_4dws_sink_valid = 1'd0;
-reg           packetizer_header_inserter_4dws_sink_ready = 1'd0;
-reg           packetizer_header_inserter_4dws_sink_first = 1'd0;
-reg           packetizer_header_inserter_4dws_sink_last = 1'd0;
-reg     [1:0] packetizer_header_inserter_4dws_sink_payload_fmt = 2'd0;
-reg   [127:0] packetizer_header_inserter_4dws_sink_payload_header = 128'd0;
-reg   [127:0] packetizer_header_inserter_4dws_sink_payload_dat = 128'd0;
-reg    [15:0] packetizer_header_inserter_4dws_sink_payload_be = 16'd0;
-reg           packetizer_header_inserter_4dws_source_valid = 1'd0;
-reg           packetizer_header_inserter_4dws_source_ready = 1'd0;
-reg           packetizer_header_inserter_4dws_source_first = 1'd0;
-reg           packetizer_header_inserter_4dws_source_last = 1'd0;
-reg   [127:0] packetizer_header_inserter_4dws_source_payload_dat = 128'd0;
-reg    [15:0] packetizer_header_inserter_4dws_source_payload_be = 16'd0;
-reg           packetizer_header_sel = 1'd0;
-reg           master_sink_valid = 1'd0;
-wire          master_sink_ready;
-reg           master_sink_first = 1'd0;
-reg           master_sink_last = 1'd0;
-reg    [15:0] master_sink_payload_req_id = 16'd0;
-reg           master_sink_payload_we = 1'd0;
-reg    [31:0] master_sink_payload_adr = 32'd0;
-reg     [9:0] master_sink_payload_len = 10'd0;
-reg     [7:0] master_sink_payload_tag = 8'd0;
-reg   [127:0] master_sink_payload_dat = 128'd0;
-reg     [7:0] master_sink_payload_channel = 8'd0;
-reg     [7:0] master_sink_payload_user_id = 8'd0;
-wire          master_source_valid;
-wire          master_source_ready;
-wire          master_source_first;
-wire          master_source_last;
-wire   [15:0] master_source_payload_req_id;
-wire   [15:0] master_source_payload_cmp_id;
-wire   [31:0] master_source_payload_adr;
-wire    [9:0] master_source_payload_len;
-wire          master_source_payload_end;
-wire          master_source_payload_err;
-wire    [7:0] master_source_payload_tag;
-wire  [127:0] master_source_payload_dat;
-wire    [7:0] master_source_payload_channel;
-wire    [7:0] master_source_payload_user_id;
-wire          slave_sink_valid;
-wire          slave_sink_ready;
-wire          slave_sink_first;
-wire          slave_sink_last;
-wire   [15:0] slave_sink_payload_req_id;
-wire   [15:0] slave_sink_payload_cmp_id;
-wire   [31:0] slave_sink_payload_adr;
-wire    [9:0] slave_sink_payload_len;
-wire          slave_sink_payload_end;
-wire          slave_sink_payload_err;
-wire    [7:0] slave_sink_payload_tag;
-wire  [127:0] slave_sink_payload_dat;
-wire    [7:0] slave_sink_payload_channel;
-wire    [7:0] slave_sink_payload_user_id;
-wire          slave_source_valid;
-wire          slave_source_ready;
-wire          slave_source_first;
-wire          slave_source_last;
-wire   [15:0] slave_source_payload_req_id;
-wire          slave_source_payload_we;
-wire   [31:0] slave_source_payload_adr;
-wire    [9:0] slave_source_payload_len;
-wire    [7:0] slave_source_payload_tag;
-wire  [127:0] slave_source_payload_dat;
-wire    [7:0] slave_source_payload_channel;
-wire    [7:0] slave_source_payload_user_id;
-reg    [29:0] pcie_wishbone_master_wishbone_adr = 30'd0;
-reg    [31:0] pcie_wishbone_master_wishbone_dat_w = 32'd0;
-wire   [31:0] pcie_wishbone_master_wishbone_dat_r;
-reg     [3:0] pcie_wishbone_master_wishbone_sel = 4'd0;
-reg           pcie_wishbone_master_wishbone_cyc = 1'd0;
-reg           pcie_wishbone_master_wishbone_stb = 1'd0;
-wire          pcie_wishbone_master_wishbone_ack;
-reg           pcie_wishbone_master_wishbone_we = 1'd0;
-reg     [2:0] pcie_wishbone_master_wishbone_cti = 3'd0;
-reg     [1:0] pcie_wishbone_master_wishbone_bte = 2'd0;
-wire          pcie_wishbone_master_wishbone_err;
-reg           pcie_wishbone_master_sink_valid = 1'd0;
-wire          pcie_wishbone_master_sink_ready;
-reg           pcie_wishbone_master_sink_first = 1'd0;
-reg           pcie_wishbone_master_sink_last = 1'd0;
-reg    [15:0] pcie_wishbone_master_sink_payload_req_id = 16'd0;
-reg    [15:0] pcie_wishbone_master_sink_payload_cmp_id = 16'd0;
-reg    [31:0] pcie_wishbone_master_sink_payload_adr = 32'd0;
-reg     [9:0] pcie_wishbone_master_sink_payload_len = 10'd0;
-reg           pcie_wishbone_master_sink_payload_end = 1'd0;
-reg           pcie_wishbone_master_sink_payload_err = 1'd0;
-reg     [7:0] pcie_wishbone_master_sink_payload_tag = 8'd0;
-reg   [127:0] pcie_wishbone_master_sink_payload_dat = 128'd0;
-reg     [7:0] pcie_wishbone_master_sink_payload_channel = 8'd0;
-reg     [7:0] pcie_wishbone_master_sink_payload_user_id = 8'd0;
-wire          pcie_wishbone_master_source_valid;
-reg           pcie_wishbone_master_source_ready = 1'd0;
-wire          pcie_wishbone_master_source_first;
-wire          pcie_wishbone_master_source_last;
-wire   [15:0] pcie_wishbone_master_source_payload_req_id;
-wire          pcie_wishbone_master_source_payload_we;
-wire   [31:0] pcie_wishbone_master_source_payload_adr;
-wire    [9:0] pcie_wishbone_master_source_payload_len;
-wire    [7:0] pcie_wishbone_master_source_payload_tag;
-wire  [127:0] pcie_wishbone_master_source_payload_dat;
-wire    [7:0] pcie_wishbone_master_source_payload_channel;
-wire    [7:0] pcie_wishbone_master_source_payload_user_id;
-reg           pcie_wishbone_master_update_dat = 1'd0;
-reg   [511:0] CNTRL_cntrl_storage = 512'd0;
-reg           CNTRL_cntrl_re = 1'd0;
-wire          CNTRL_cntrl_we;
-wire  [511:0] CNTRL_cntrl_dat_w;
-reg           CNTRL_enable_storage = 1'd0;
-reg           CNTRL_enable_re = 1'd0;
-reg    [31:0] CNTRL_test_storage = 32'd0;
-reg           CNTRL_test_re = 1'd0;
-reg     [3:0] CNTRL_ndma_status = 4'd1;
-wire          CNTRL_ndma_we;
-reg           CNTRL_ndma_re = 1'd0;
-reg           CNTRL_enable_both_storage = 1'd0;
-reg           CNTRL_enable_both_re = 1'd0;
-reg           litepciemasterinternalport0_sink_valid = 1'd0;
-wire          litepciemasterinternalport0_sink_ready;
-wire          litepciemasterinternalport0_sink_first;
-wire          litepciemasterinternalport0_sink_last;
-wire   [15:0] litepciemasterinternalport0_sink_payload_req_id;
-wire          litepciemasterinternalport0_sink_payload_we;
-wire   [31:0] litepciemasterinternalport0_sink_payload_adr;
-wire    [9:0] litepciemasterinternalport0_sink_payload_len;
-wire    [7:0] litepciemasterinternalport0_sink_payload_tag;
-wire  [127:0] litepciemasterinternalport0_sink_payload_dat;
-wire    [7:0] litepciemasterinternalport0_sink_payload_channel;
-wire    [7:0] litepciemasterinternalport0_sink_payload_user_id;
-wire          litepciemasterinternalport0_source_valid;
-reg           litepciemasterinternalport0_source_ready = 1'd0;
-wire          litepciemasterinternalport0_source_first;
-wire          litepciemasterinternalport0_source_last;
-wire   [15:0] litepciemasterinternalport0_source_payload_req_id;
-wire   [15:0] litepciemasterinternalport0_source_payload_cmp_id;
-wire   [31:0] litepciemasterinternalport0_source_payload_adr;
-wire    [9:0] litepciemasterinternalport0_source_payload_len;
-wire          litepciemasterinternalport0_source_payload_end;
-wire          litepciemasterinternalport0_source_payload_err;
-wire    [7:0] litepciemasterinternalport0_source_payload_tag;
-wire  [127:0] litepciemasterinternalport0_source_payload_dat;
-wire    [7:0] litepciemasterinternalport0_source_payload_channel;
-wire    [7:0] litepciemasterinternalport0_source_payload_user_id;
-wire          writer_sink_sink_valid;
-reg           writer_sink_sink_ready = 1'd0;
-wire          writer_sink_sink_first;
-wire          writer_sink_sink_last;
-wire  [127:0] writer_sink_sink_payload_data;
-reg           writer_enable_storage = 1'd0;
-reg           writer_enable_re = 1'd0;
-reg           writer_irq = 1'd0;
-wire          writer_table_source_source_valid;
-wire          writer_table_source_source_ready;
-wire          writer_table_source_source_first;
-wire          writer_table_source_source_last;
-wire   [31:0] writer_table_source_source_payload_address;
-wire   [23:0] writer_table_source_source_payload_length;
-wire          writer_table_source_source_payload_irq_disable;
-wire          writer_table_source_source_payload_last_disable;
-wire   [31:0] writer_table_address_lsb;
-wire   [23:0] writer_table_length;
-wire          writer_table_irq_disable;
-wire          writer_table_last_disable;
-reg    [57:0] writer_table_value_storage = 58'd0;
-reg           writer_table_value_re = 1'd0;
-wire   [31:0] writer_table_address_msb;
-reg    [31:0] writer_table_we_storage = 32'd0;
-reg           writer_table_we_re = 1'd0;
-reg           writer_table_loop_prog_n_storage = 1'd0;
-reg           writer_table_loop_prog_n_re = 1'd0;
-reg    [15:0] writer_table_index = 16'd0;
-reg    [15:0] writer_table_count = 16'd0;
-reg    [31:0] writer_table_loop_status_status = 32'd0;
-wire          writer_table_loop_status_we;
-reg           writer_table_loop_status_re = 1'd0;
-wire    [8:0] writer_table_level_status;
-wire          writer_table_level_we;
-reg           writer_table_level_re = 1'd0;
-reg           writer_table_reset_storage = 1'd0;
-reg           writer_table_reset_re = 1'd0;
-reg           writer_table_table_sink_valid = 1'd0;
-wire          writer_table_table_sink_ready;
-reg           writer_table_table_sink_first = 1'd0;
-reg           writer_table_table_sink_last = 1'd0;
-reg    [31:0] writer_table_table_sink_payload_address = 32'd0;
-reg    [23:0] writer_table_table_sink_payload_length = 24'd0;
-reg           writer_table_table_sink_payload_irq_disable = 1'd0;
-reg           writer_table_table_sink_payload_last_disable = 1'd0;
-wire          writer_table_table_source_valid;
-wire          writer_table_table_source_ready;
-wire          writer_table_table_source_first;
-wire          writer_table_table_source_last;
-wire   [31:0] writer_table_table_source_payload_address;
-wire   [23:0] writer_table_table_source_payload_length;
-wire          writer_table_table_source_payload_irq_disable;
-wire          writer_table_table_source_payload_last_disable;
-wire          writer_table_table_syncfifo_we;
-wire          writer_table_table_syncfifo_writable;
-wire          writer_table_table_syncfifo_re;
-wire          writer_table_table_syncfifo_readable;
-wire   [59:0] writer_table_table_syncfifo_din;
-wire   [59:0] writer_table_table_syncfifo_dout;
-reg     [8:0] writer_table_table_level = 9'd0;
-reg           writer_table_table_replace = 1'd0;
-reg     [7:0] writer_table_table_produce = 8'd0;
-reg     [7:0] writer_table_table_consume = 8'd0;
-reg     [7:0] writer_table_table_wrport_adr = 8'd0;
-wire   [59:0] writer_table_table_wrport_dat_r;
-wire          writer_table_table_wrport_we;
-wire   [59:0] writer_table_table_wrport_dat_w;
-wire          writer_table_table_do_read;
-wire    [7:0] writer_table_table_rdport_adr;
-wire   [59:0] writer_table_table_rdport_dat_r;
-wire   [31:0] writer_table_table_fifo_in_payload_address;
-wire   [23:0] writer_table_table_fifo_in_payload_length;
-wire          writer_table_table_fifo_in_payload_irq_disable;
-wire          writer_table_table_fifo_in_payload_last_disable;
-wire          writer_table_table_fifo_in_first;
-wire          writer_table_table_fifo_in_last;
-wire   [31:0] writer_table_table_fifo_out_payload_address;
-wire   [23:0] writer_table_table_fifo_out_payload_length;
-wire          writer_table_table_fifo_out_payload_irq_disable;
-wire          writer_table_table_fifo_out_payload_last_disable;
-wire          writer_table_table_fifo_out_first;
-wire          writer_table_table_fifo_out_last;
-wire          writer_table_table_reset;
-reg           writer_table_loop_first = 1'd0;
-wire          writer_splitter_sink_valid;
-reg           writer_splitter_sink_ready = 1'd0;
-wire          writer_splitter_sink_first;
-wire          writer_splitter_sink_last;
-wire   [31:0] writer_splitter_sink_payload_address;
-wire   [23:0] writer_splitter_sink_payload_length;
-wire          writer_splitter_sink_payload_irq_disable;
-wire          writer_splitter_sink_payload_last_disable;
-reg           writer_splitter_source_valid = 1'd0;
-wire          writer_splitter_source_ready;
-reg           writer_splitter_source_first = 1'd0;
-reg           writer_splitter_source_last = 1'd0;
-wire   [31:0] writer_splitter_source_payload_address;
-reg    [23:0] writer_splitter_source_payload_length = 24'd0;
-wire          writer_splitter_source_payload_irq_disable;
-wire          writer_splitter_source_payload_last_disable;
-wire    [7:0] writer_splitter_source_payload_user_id;
-wire          writer_splitter_terminate;
-reg    [31:0] writer_splitter_desc_length = 32'd0;
-reg    [31:0] writer_splitter_desc_offset = 32'd0;
-reg    [31:0] writer_splitter_desc_id = 32'd0;
-reg           writer_splitter_reset = 1'd0;
-wire          writer_splitter_sink_sink_valid;
-wire          writer_splitter_sink_sink_ready;
-wire          writer_splitter_sink_sink_first;
-wire          writer_splitter_sink_sink_last;
-wire   [31:0] writer_splitter_sink_sink_payload_address;
-wire   [23:0] writer_splitter_sink_sink_payload_length;
-wire          writer_splitter_sink_sink_payload_irq_disable;
-wire          writer_splitter_sink_sink_payload_last_disable;
-wire    [7:0] writer_splitter_sink_sink_payload_user_id;
-wire          writer_splitter_source_source_valid;
-reg           writer_splitter_source_source_ready = 1'd0;
-wire          writer_splitter_source_source_first;
-wire          writer_splitter_source_source_last;
-wire   [31:0] writer_splitter_source_source_payload_address;
-wire   [23:0] writer_splitter_source_source_payload_length;
-wire          writer_splitter_source_source_payload_irq_disable;
-wire          writer_splitter_source_source_payload_last_disable;
-wire    [7:0] writer_splitter_source_source_payload_user_id;
-wire          writer_splitter_pipe_valid_sink_valid;
-wire          writer_splitter_pipe_valid_sink_ready;
-wire          writer_splitter_pipe_valid_sink_first;
-wire          writer_splitter_pipe_valid_sink_last;
-wire   [31:0] writer_splitter_pipe_valid_sink_payload_address;
-wire   [23:0] writer_splitter_pipe_valid_sink_payload_length;
-wire          writer_splitter_pipe_valid_sink_payload_irq_disable;
-wire          writer_splitter_pipe_valid_sink_payload_last_disable;
-wire    [7:0] writer_splitter_pipe_valid_sink_payload_user_id;
-reg           writer_splitter_pipe_valid_source_valid = 1'd0;
-wire          writer_splitter_pipe_valid_source_ready;
-reg           writer_splitter_pipe_valid_source_first = 1'd0;
-reg           writer_splitter_pipe_valid_source_last = 1'd0;
-reg    [31:0] writer_splitter_pipe_valid_source_payload_address = 32'd0;
-reg    [23:0] writer_splitter_pipe_valid_source_payload_length = 24'd0;
-reg           writer_splitter_pipe_valid_source_payload_irq_disable = 1'd0;
-reg           writer_splitter_pipe_valid_source_payload_last_disable = 1'd0;
-reg     [7:0] writer_splitter_pipe_valid_source_payload_user_id = 8'd0;
-reg           writer_data_fifo_sink_valid = 1'd0;
-wire          writer_data_fifo_sink_ready;
-reg           writer_data_fifo_sink_first = 1'd0;
-reg           writer_data_fifo_sink_last = 1'd0;
-reg   [127:0] writer_data_fifo_sink_payload_data = 128'd0;
-wire          writer_data_fifo_source_valid;
-reg           writer_data_fifo_source_ready = 1'd0;
-wire          writer_data_fifo_source_first;
-wire          writer_data_fifo_source_last;
-wire  [127:0] writer_data_fifo_source_payload_data;
-wire          writer_data_fifo_re;
-reg           writer_data_fifo_readable = 1'd0;
-wire          writer_data_fifo_syncfifo_we;
-wire          writer_data_fifo_syncfifo_writable;
-wire          writer_data_fifo_syncfifo_re;
-wire          writer_data_fifo_syncfifo_readable;
-wire  [129:0] writer_data_fifo_syncfifo_din;
-wire  [129:0] writer_data_fifo_syncfifo_dout;
-reg     [7:0] writer_data_fifo_level0 = 8'd0;
-reg           writer_data_fifo_replace = 1'd0;
-reg     [6:0] writer_data_fifo_produce = 7'd0;
-reg     [6:0] writer_data_fifo_consume = 7'd0;
-reg     [6:0] writer_data_fifo_wrport_adr = 7'd0;
-wire  [129:0] writer_data_fifo_wrport_dat_r;
-wire          writer_data_fifo_wrport_we;
-wire  [129:0] writer_data_fifo_wrport_dat_w;
-wire          writer_data_fifo_do_read;
-wire    [6:0] writer_data_fifo_rdport_adr;
-wire  [129:0] writer_data_fifo_rdport_dat_r;
-wire          writer_data_fifo_rdport_re;
-wire    [7:0] writer_data_fifo_level1;
-wire  [127:0] writer_data_fifo_fifo_in_payload_data;
-wire          writer_data_fifo_fifo_in_first;
-wire          writer_data_fifo_fifo_in_last;
-wire  [127:0] writer_data_fifo_fifo_out_payload_data;
-wire          writer_data_fifo_fifo_out_first;
-wire          writer_data_fifo_fifo_out_last;
-reg           writer_data_fifo_reset = 1'd0;
-reg    [23:0] writer_req_count = 24'd0;
-reg           litepciemasterinternalport1_sink_valid = 1'd0;
-wire          litepciemasterinternalport1_sink_ready;
-wire          litepciemasterinternalport1_sink_first;
-wire          litepciemasterinternalport1_sink_last;
-wire   [15:0] litepciemasterinternalport1_sink_payload_req_id;
-wire          litepciemasterinternalport1_sink_payload_we;
-wire   [31:0] litepciemasterinternalport1_sink_payload_adr;
-wire    [9:0] litepciemasterinternalport1_sink_payload_len;
-reg     [7:0] litepciemasterinternalport1_sink_payload_tag = 8'd0;
-wire  [127:0] litepciemasterinternalport1_sink_payload_dat;
-wire    [7:0] litepciemasterinternalport1_sink_payload_channel;
-wire    [7:0] litepciemasterinternalport1_sink_payload_user_id;
-wire          litepciemasterinternalport1_source_valid;
-reg           litepciemasterinternalport1_source_ready = 1'd0;
-wire          litepciemasterinternalport1_source_first;
-wire          litepciemasterinternalport1_source_last;
-wire   [15:0] litepciemasterinternalport1_source_payload_req_id;
-wire   [15:0] litepciemasterinternalport1_source_payload_cmp_id;
-wire   [31:0] litepciemasterinternalport1_source_payload_adr;
-wire    [9:0] litepciemasterinternalport1_source_payload_len;
-wire          litepciemasterinternalport1_source_payload_end;
-wire          litepciemasterinternalport1_source_payload_err;
-wire    [7:0] litepciemasterinternalport1_source_payload_tag;
-wire  [127:0] litepciemasterinternalport1_source_payload_dat;
-wire    [7:0] litepciemasterinternalport1_source_payload_channel;
-wire    [7:0] litepciemasterinternalport1_source_payload_user_id;
-wire          reader_source_source_valid;
-wire          reader_source_source_ready;
-wire          reader_source_source_first;
-wire          reader_source_source_last;
-wire  [127:0] reader_source_source_payload_data;
-reg           reader_enable_storage = 1'd0;
-reg           reader_enable_re = 1'd0;
-reg           reader_irq = 1'd0;
-wire          reader_table_source_source_valid;
-wire          reader_table_source_source_ready;
-wire          reader_table_source_source_first;
-wire          reader_table_source_source_last;
-wire   [31:0] reader_table_source_source_payload_address;
-wire   [23:0] reader_table_source_source_payload_length;
-wire          reader_table_source_source_payload_irq_disable;
-wire          reader_table_source_source_payload_last_disable;
-wire   [31:0] reader_table_address_lsb;
-wire   [23:0] reader_table_length;
-wire          reader_table_irq_disable;
-wire          reader_table_last_disable;
-reg    [57:0] reader_table_value_storage = 58'd0;
-reg           reader_table_value_re = 1'd0;
-wire   [31:0] reader_table_address_msb;
-reg    [31:0] reader_table_we_storage = 32'd0;
-reg           reader_table_we_re = 1'd0;
-reg           reader_table_loop_prog_n_storage = 1'd0;
-reg           reader_table_loop_prog_n_re = 1'd0;
-reg    [15:0] reader_table_index = 16'd0;
-reg    [15:0] reader_table_count = 16'd0;
-reg    [31:0] reader_table_loop_status_status = 32'd0;
-wire          reader_table_loop_status_we;
-reg           reader_table_loop_status_re = 1'd0;
-wire    [8:0] reader_table_level_status;
-wire          reader_table_level_we;
-reg           reader_table_level_re = 1'd0;
-reg           reader_table_reset_storage = 1'd0;
-reg           reader_table_reset_re = 1'd0;
-reg           reader_table_table_sink_valid = 1'd0;
-wire          reader_table_table_sink_ready;
-reg           reader_table_table_sink_first = 1'd0;
-reg           reader_table_table_sink_last = 1'd0;
-reg    [31:0] reader_table_table_sink_payload_address = 32'd0;
-reg    [23:0] reader_table_table_sink_payload_length = 24'd0;
-reg           reader_table_table_sink_payload_irq_disable = 1'd0;
-reg           reader_table_table_sink_payload_last_disable = 1'd0;
-wire          reader_table_table_source_valid;
-wire          reader_table_table_source_ready;
-wire          reader_table_table_source_first;
-wire          reader_table_table_source_last;
-wire   [31:0] reader_table_table_source_payload_address;
-wire   [23:0] reader_table_table_source_payload_length;
-wire          reader_table_table_source_payload_irq_disable;
-wire          reader_table_table_source_payload_last_disable;
-wire          reader_table_table_syncfifo_we;
-wire          reader_table_table_syncfifo_writable;
-wire          reader_table_table_syncfifo_re;
-wire          reader_table_table_syncfifo_readable;
-wire   [59:0] reader_table_table_syncfifo_din;
-wire   [59:0] reader_table_table_syncfifo_dout;
-reg     [8:0] reader_table_table_level = 9'd0;
-reg           reader_table_table_replace = 1'd0;
-reg     [7:0] reader_table_table_produce = 8'd0;
-reg     [7:0] reader_table_table_consume = 8'd0;
-reg     [7:0] reader_table_table_wrport_adr = 8'd0;
-wire   [59:0] reader_table_table_wrport_dat_r;
-wire          reader_table_table_wrport_we;
-wire   [59:0] reader_table_table_wrport_dat_w;
-wire          reader_table_table_do_read;
-wire    [7:0] reader_table_table_rdport_adr;
-wire   [59:0] reader_table_table_rdport_dat_r;
-wire   [31:0] reader_table_table_fifo_in_payload_address;
-wire   [23:0] reader_table_table_fifo_in_payload_length;
-wire          reader_table_table_fifo_in_payload_irq_disable;
-wire          reader_table_table_fifo_in_payload_last_disable;
-wire          reader_table_table_fifo_in_first;
-wire          reader_table_table_fifo_in_last;
-wire   [31:0] reader_table_table_fifo_out_payload_address;
-wire   [23:0] reader_table_table_fifo_out_payload_length;
-wire          reader_table_table_fifo_out_payload_irq_disable;
-wire          reader_table_table_fifo_out_payload_last_disable;
-wire          reader_table_table_fifo_out_first;
-wire          reader_table_table_fifo_out_last;
-wire          reader_table_table_reset;
-reg           reader_table_loop_first = 1'd0;
-wire          reader_splitter_sink_valid;
-reg           reader_splitter_sink_ready = 1'd0;
-wire          reader_splitter_sink_first;
-wire          reader_splitter_sink_last;
-wire   [31:0] reader_splitter_sink_payload_address;
-wire   [23:0] reader_splitter_sink_payload_length;
-wire          reader_splitter_sink_payload_irq_disable;
-wire          reader_splitter_sink_payload_last_disable;
-reg           reader_splitter_source_valid = 1'd0;
-wire          reader_splitter_source_ready;
-reg           reader_splitter_source_first = 1'd0;
-reg           reader_splitter_source_last = 1'd0;
-wire   [31:0] reader_splitter_source_payload_address;
-reg    [23:0] reader_splitter_source_payload_length = 24'd0;
-wire          reader_splitter_source_payload_irq_disable;
-wire          reader_splitter_source_payload_last_disable;
-wire    [7:0] reader_splitter_source_payload_user_id;
-reg           reader_splitter_terminate = 1'd0;
-reg    [31:0] reader_splitter_desc_length = 32'd0;
-reg    [31:0] reader_splitter_desc_offset = 32'd0;
-reg    [31:0] reader_splitter_desc_id = 32'd0;
-reg           reader_splitter_reset = 1'd0;
-wire          reader_splitter_sink_sink_valid;
-wire          reader_splitter_sink_sink_ready;
-wire          reader_splitter_sink_sink_first;
-wire          reader_splitter_sink_sink_last;
-wire   [31:0] reader_splitter_sink_sink_payload_address;
-wire   [23:0] reader_splitter_sink_sink_payload_length;
-wire          reader_splitter_sink_sink_payload_irq_disable;
-wire          reader_splitter_sink_sink_payload_last_disable;
-wire    [7:0] reader_splitter_sink_sink_payload_user_id;
-wire          reader_splitter_source_source_valid;
-reg           reader_splitter_source_source_ready = 1'd0;
-wire          reader_splitter_source_source_first;
-wire          reader_splitter_source_source_last;
-wire   [31:0] reader_splitter_source_source_payload_address;
-wire   [23:0] reader_splitter_source_source_payload_length;
-wire          reader_splitter_source_source_payload_irq_disable;
-wire          reader_splitter_source_source_payload_last_disable;
-wire    [7:0] reader_splitter_source_source_payload_user_id;
-wire          reader_splitter_pipe_valid_sink_valid;
-wire          reader_splitter_pipe_valid_sink_ready;
-wire          reader_splitter_pipe_valid_sink_first;
-wire          reader_splitter_pipe_valid_sink_last;
-wire   [31:0] reader_splitter_pipe_valid_sink_payload_address;
-wire   [23:0] reader_splitter_pipe_valid_sink_payload_length;
-wire          reader_splitter_pipe_valid_sink_payload_irq_disable;
-wire          reader_splitter_pipe_valid_sink_payload_last_disable;
-wire    [7:0] reader_splitter_pipe_valid_sink_payload_user_id;
-reg           reader_splitter_pipe_valid_source_valid = 1'd0;
-wire          reader_splitter_pipe_valid_source_ready;
-reg           reader_splitter_pipe_valid_source_first = 1'd0;
-reg           reader_splitter_pipe_valid_source_last = 1'd0;
-reg    [31:0] reader_splitter_pipe_valid_source_payload_address = 32'd0;
-reg    [23:0] reader_splitter_pipe_valid_source_payload_length = 24'd0;
-reg           reader_splitter_pipe_valid_source_payload_irq_disable = 1'd0;
-reg           reader_splitter_pipe_valid_source_payload_last_disable = 1'd0;
-reg     [7:0] reader_splitter_pipe_valid_source_payload_user_id = 8'd0;
-reg     [7:0] reader_last_user_id = 8'd255;
-reg           reader_data_fifo_sink_valid = 1'd0;
-wire          reader_data_fifo_sink_ready;
-reg           reader_data_fifo_sink_first = 1'd0;
-reg           reader_data_fifo_sink_last = 1'd0;
-reg   [127:0] reader_data_fifo_sink_payload_data = 128'd0;
-wire          reader_data_fifo_source_valid;
-wire          reader_data_fifo_source_ready;
-wire          reader_data_fifo_source_first;
-wire          reader_data_fifo_source_last;
-wire  [127:0] reader_data_fifo_source_payload_data;
-wire          reader_data_fifo_re;
-reg           reader_data_fifo_readable = 1'd0;
-wire          reader_data_fifo_syncfifo_we;
-wire          reader_data_fifo_syncfifo_writable;
-wire          reader_data_fifo_syncfifo_re;
-wire          reader_data_fifo_syncfifo_readable;
-wire  [129:0] reader_data_fifo_syncfifo_din;
-wire  [129:0] reader_data_fifo_syncfifo_dout;
-reg     [9:0] reader_data_fifo_level0 = 10'd0;
-reg           reader_data_fifo_replace = 1'd0;
-reg     [8:0] reader_data_fifo_produce = 9'd0;
-reg     [8:0] reader_data_fifo_consume = 9'd0;
-reg     [8:0] reader_data_fifo_wrport_adr = 9'd0;
-wire  [129:0] reader_data_fifo_wrport_dat_r;
-wire          reader_data_fifo_wrport_we;
-wire  [129:0] reader_data_fifo_wrport_dat_w;
-wire          reader_data_fifo_do_read;
-wire    [8:0] reader_data_fifo_rdport_adr;
-wire  [129:0] reader_data_fifo_rdport_dat_r;
-wire          reader_data_fifo_rdport_re;
-wire    [9:0] reader_data_fifo_level1;
-wire  [127:0] reader_data_fifo_fifo_in_payload_data;
-wire          reader_data_fifo_fifo_in_first;
-wire          reader_data_fifo_fifo_in_last;
-wire  [127:0] reader_data_fifo_fifo_out_payload_data;
-wire          reader_data_fifo_fifo_out_first;
-wire          reader_data_fifo_fifo_out_last;
-reg           reader_data_fifo_reset = 1'd0;
-reg     [9:0] reader_pending_words = 10'd0;
-reg     [9:0] reader_pending_words_queue = 10'd0;
-reg     [9:0] reader_pending_words_dequeue = 10'd0;
-wire          buffering_sink_sink_valid;
-reg           buffering_sink_sink_ready = 1'd0;
-wire          buffering_sink_sink_first;
-wire          buffering_sink_sink_last;
-wire  [127:0] buffering_sink_sink_payload_data;
-wire          buffering_source_source_valid;
-wire          buffering_source_source_ready;
-wire          buffering_source_source_first;
-wire          buffering_source_source_last;
-wire  [127:0] buffering_source_source_payload_data;
-wire          buffering_next_source_valid;
-wire          buffering_next_source_ready;
-wire          buffering_next_source_first;
-wire          buffering_next_source_last;
-wire  [127:0] buffering_next_source_payload_data;
-wire          buffering_next_sink_valid;
-reg           buffering_next_sink_ready = 1'd0;
-wire          buffering_next_sink_first;
-wire          buffering_next_sink_last;
-wire  [127:0] buffering_next_sink_payload_data;
-wire   [23:0] buffering_csrfield_depth0;
-wire    [3:0] buffering_csrfield_scratch0;
-wire          buffering_csrfield_level_mode0;
-reg    [31:0] buffering_reader_fifo_control_storage = 32'd8192;
-reg           buffering_reader_fifo_control_re = 1'd0;
-reg    [23:0] buffering_csrfield_level0 = 24'd0;
-wire   [23:0] buffering_reader_fifo_status_status;
-wire          buffering_reader_fifo_status_we;
-reg           buffering_reader_fifo_status_re = 1'd0;
-wire   [23:0] buffering_csrfield_depth1;
-wire    [3:0] buffering_csrfield_scratch1;
-wire          buffering_csrfield_level_mode1;
-reg    [31:0] buffering_writer_fifo_control_storage = 32'd8192;
-reg           buffering_writer_fifo_control_re = 1'd0;
-reg    [23:0] buffering_csrfield_level1 = 24'd0;
-wire   [23:0] buffering_writer_fifo_status_status;
-wire          buffering_writer_fifo_status_we;
-reg           buffering_writer_fifo_status_re = 1'd0;
-reg           buffering_reader_fifo_sink_valid = 1'd0;
-wire          buffering_reader_fifo_sink_ready;
-wire          buffering_reader_fifo_sink_first;
-wire          buffering_reader_fifo_sink_last;
-wire  [127:0] buffering_reader_fifo_sink_payload_data;
-wire          buffering_reader_fifo_source_valid;
-wire          buffering_reader_fifo_source_ready;
-wire          buffering_reader_fifo_source_first;
-wire          buffering_reader_fifo_source_last;
-wire  [127:0] buffering_reader_fifo_source_payload_data;
-wire          buffering_reader_fifo_re;
-reg           buffering_reader_fifo_readable = 1'd0;
-wire          buffering_reader_fifo_syncfifo_we;
-wire          buffering_reader_fifo_syncfifo_writable;
-wire          buffering_reader_fifo_syncfifo_re;
-wire          buffering_reader_fifo_syncfifo_readable;
-wire  [129:0] buffering_reader_fifo_syncfifo_din;
-wire  [129:0] buffering_reader_fifo_syncfifo_dout;
-reg     [9:0] buffering_reader_fifo_level0 = 10'd0;
-reg           buffering_reader_fifo_replace = 1'd0;
-reg     [8:0] buffering_reader_fifo_produce = 9'd0;
-reg     [8:0] buffering_reader_fifo_consume = 9'd0;
-reg     [8:0] buffering_reader_fifo_wrport_adr = 9'd0;
-wire  [129:0] buffering_reader_fifo_wrport_dat_r;
-wire          buffering_reader_fifo_wrport_we;
-wire  [129:0] buffering_reader_fifo_wrport_dat_w;
-wire          buffering_reader_fifo_do_read;
-wire    [8:0] buffering_reader_fifo_rdport_adr;
-wire  [129:0] buffering_reader_fifo_rdport_dat_r;
-wire          buffering_reader_fifo_rdport_re;
-wire    [9:0] buffering_reader_fifo_level1;
-wire  [127:0] buffering_reader_fifo_fifo_in_payload_data;
-wire          buffering_reader_fifo_fifo_in_first;
-wire          buffering_reader_fifo_fifo_in_last;
-wire  [127:0] buffering_reader_fifo_fifo_out_payload_data;
-wire          buffering_reader_fifo_fifo_out_first;
-wire          buffering_reader_fifo_fifo_out_last;
-reg     [9:0] buffering_reader_fifo_level_min = 10'd0;
-reg           buffering_writer_fifo_sink_valid = 1'd0;
-wire          buffering_writer_fifo_sink_ready;
-wire          buffering_writer_fifo_sink_first;
-wire          buffering_writer_fifo_sink_last;
-wire  [127:0] buffering_writer_fifo_sink_payload_data;
-wire          buffering_writer_fifo_source_valid;
-wire          buffering_writer_fifo_source_ready;
-wire          buffering_writer_fifo_source_first;
-wire          buffering_writer_fifo_source_last;
-wire  [127:0] buffering_writer_fifo_source_payload_data;
-wire          buffering_writer_fifo_re;
-reg           buffering_writer_fifo_readable = 1'd0;
-wire          buffering_writer_fifo_syncfifo_we;
-wire          buffering_writer_fifo_syncfifo_writable;
-wire          buffering_writer_fifo_syncfifo_re;
-wire          buffering_writer_fifo_syncfifo_readable;
-wire  [129:0] buffering_writer_fifo_syncfifo_din;
-wire  [129:0] buffering_writer_fifo_syncfifo_dout;
-reg     [9:0] buffering_writer_fifo_level0 = 10'd0;
-reg           buffering_writer_fifo_replace = 1'd0;
-reg     [8:0] buffering_writer_fifo_produce = 9'd0;
-reg     [8:0] buffering_writer_fifo_consume = 9'd0;
-reg     [8:0] buffering_writer_fifo_wrport_adr = 9'd0;
-wire  [129:0] buffering_writer_fifo_wrport_dat_r;
-wire          buffering_writer_fifo_wrport_we;
-wire  [129:0] buffering_writer_fifo_wrport_dat_w;
-wire          buffering_writer_fifo_do_read;
-wire    [8:0] buffering_writer_fifo_rdport_adr;
-wire  [129:0] buffering_writer_fifo_rdport_dat_r;
-wire          buffering_writer_fifo_rdport_re;
-wire    [9:0] buffering_writer_fifo_level1;
-wire  [127:0] buffering_writer_fifo_fifo_in_payload_data;
-wire          buffering_writer_fifo_fifo_in_first;
-wire          buffering_writer_fifo_fifo_in_last;
-wire  [127:0] buffering_writer_fifo_fifo_out_payload_data;
-wire          buffering_writer_fifo_fifo_out_first;
-wire          buffering_writer_fifo_fifo_out_last;
-reg     [9:0] buffering_writer_fifo_level_max = 10'd0;
-wire          bufferizeendpoints0_sink_sink_valid;
-wire          bufferizeendpoints0_sink_sink_ready;
-reg           bufferizeendpoints0_sink_sink_first = 1'd0;
-wire          bufferizeendpoints0_sink_sink_last;
-wire  [127:0] bufferizeendpoints0_sink_sink_payload_data;
-wire          bufferizeendpoints0_source_source_valid;
-wire          bufferizeendpoints0_source_source_ready;
-wire          bufferizeendpoints0_source_source_first;
-wire          bufferizeendpoints0_source_source_last;
-wire  [127:0] bufferizeendpoints0_source_source_payload_data;
-wire          bufferizeendpoints0_pipe_valid_sink_valid;
-wire          bufferizeendpoints0_pipe_valid_sink_ready;
-wire          bufferizeendpoints0_pipe_valid_sink_first;
-wire          bufferizeendpoints0_pipe_valid_sink_last;
-wire  [127:0] bufferizeendpoints0_pipe_valid_sink_payload_data;
-reg           bufferizeendpoints0_pipe_valid_source_valid = 1'd0;
-wire          bufferizeendpoints0_pipe_valid_source_ready;
-reg           bufferizeendpoints0_pipe_valid_source_first = 1'd0;
-reg           bufferizeendpoints0_pipe_valid_source_last = 1'd0;
-reg   [127:0] bufferizeendpoints0_pipe_valid_source_payload_data = 128'd0;
-wire          bufferizeendpoints1_sink_sink_valid;
-wire          bufferizeendpoints1_sink_sink_ready;
-wire          bufferizeendpoints1_sink_sink_first;
-wire          bufferizeendpoints1_sink_sink_last;
-wire  [127:0] bufferizeendpoints1_sink_sink_payload_data;
-wire          bufferizeendpoints1_source_source_valid;
-wire          bufferizeendpoints1_source_source_ready;
-wire          bufferizeendpoints1_source_source_first;
-wire          bufferizeendpoints1_source_source_last;
-wire  [127:0] bufferizeendpoints1_source_source_payload_data;
-wire          bufferizeendpoints1_pipe_valid_sink_valid;
-wire          bufferizeendpoints1_pipe_valid_sink_ready;
-wire          bufferizeendpoints1_pipe_valid_sink_first;
-wire          bufferizeendpoints1_pipe_valid_sink_last;
-wire  [127:0] bufferizeendpoints1_pipe_valid_sink_payload_data;
-reg           bufferizeendpoints1_pipe_valid_source_valid = 1'd0;
-wire          bufferizeendpoints1_pipe_valid_source_ready;
-reg           bufferizeendpoints1_pipe_valid_source_first = 1'd0;
-reg           bufferizeendpoints1_pipe_valid_source_last = 1'd0;
-reg   [127:0] bufferizeendpoints1_pipe_valid_source_payload_data = 128'd0;
+wire          packetizer_tlp_raw_ready;
+wire          packetizer_tlp_raw_req_first;
+reg   [127:0] packetizer_tlp_raw_req_header = 128'd0;
+wire          packetizer_tlp_raw_req_last;
+wire   [15:0] packetizer_tlp_raw_req_payload_be;
+wire  [127:0] packetizer_tlp_raw_req_payload_dat;
+wire    [1:0] packetizer_tlp_raw_req_payload_fmt;
+reg   [127:0] packetizer_tlp_raw_req_payload_header = 128'd0;
+reg           packetizer_tlp_raw_req_ready = 1'd0;
+wire          packetizer_tlp_raw_req_valid;
+reg           packetizer_tlp_raw_valid = 1'd0;
+wire          packetizer_tlp_req_first;
+wire          packetizer_tlp_req_last;
+reg    [63:0] packetizer_tlp_req_payload_address = 64'd0;
+wire    [1:0] packetizer_tlp_req_payload_attr;
+reg    [15:0] packetizer_tlp_req_payload_be = 16'd0;
+wire  [127:0] packetizer_tlp_req_payload_dat;
+wire          packetizer_tlp_req_payload_ep;
+wire    [3:0] packetizer_tlp_req_payload_first_be;
+reg     [1:0] packetizer_tlp_req_payload_fmt = 2'd0;
+reg     [3:0] packetizer_tlp_req_payload_last_be = 4'd0;
+wire    [9:0] packetizer_tlp_req_payload_length;
+wire   [15:0] packetizer_tlp_req_payload_requester_id;
+wire    [7:0] packetizer_tlp_req_payload_tag;
+wire    [2:0] packetizer_tlp_req_payload_tc;
+wire          packetizer_tlp_req_payload_td;
+wire    [4:0] packetizer_tlp_req_payload_type;
+wire          packetizer_tlp_req_ready;
+wire          packetizer_tlp_req_valid;
+wire          pcie_clk;
+wire   [23:0] pcie_dma_buffering_csrfield_depth0;
+wire   [23:0] pcie_dma_buffering_csrfield_depth1;
+reg    [23:0] pcie_dma_buffering_csrfield_level0 = 24'd0;
+reg    [23:0] pcie_dma_buffering_csrfield_level1 = 24'd0;
+wire          pcie_dma_buffering_csrfield_level_mode0;
+wire          pcie_dma_buffering_csrfield_level_mode1;
+wire    [3:0] pcie_dma_buffering_csrfield_scratch0;
+wire    [3:0] pcie_dma_buffering_csrfield_scratch1;
+wire          pcie_dma_buffering_next_sink_first;
+wire          pcie_dma_buffering_next_sink_last;
+wire  [127:0] pcie_dma_buffering_next_sink_payload_data;
+reg           pcie_dma_buffering_next_sink_ready = 1'd0;
+wire          pcie_dma_buffering_next_sink_valid;
+wire          pcie_dma_buffering_next_source_first;
+wire          pcie_dma_buffering_next_source_last;
+wire  [127:0] pcie_dma_buffering_next_source_payload_data;
+wire          pcie_dma_buffering_next_source_ready;
+wire          pcie_dma_buffering_next_source_valid;
+reg     [8:0] pcie_dma_buffering_reader_fifo_consume = 9'd0;
+reg           pcie_dma_buffering_reader_fifo_control_re = 1'd0;
+reg    [31:0] pcie_dma_buffering_reader_fifo_control_storage = 32'd8192;
+wire          pcie_dma_buffering_reader_fifo_do_read;
+wire          pcie_dma_buffering_reader_fifo_fifo_in_first;
+wire          pcie_dma_buffering_reader_fifo_fifo_in_last;
+wire  [127:0] pcie_dma_buffering_reader_fifo_fifo_in_payload_data;
+wire          pcie_dma_buffering_reader_fifo_fifo_out_first;
+wire          pcie_dma_buffering_reader_fifo_fifo_out_last;
+wire  [127:0] pcie_dma_buffering_reader_fifo_fifo_out_payload_data;
+reg     [9:0] pcie_dma_buffering_reader_fifo_level0 = 10'd0;
+wire    [9:0] pcie_dma_buffering_reader_fifo_level1;
+reg     [9:0] pcie_dma_buffering_reader_fifo_level_min = 10'd0;
+reg     [8:0] pcie_dma_buffering_reader_fifo_produce = 9'd0;
+wire    [8:0] pcie_dma_buffering_reader_fifo_rdport_adr;
+wire  [129:0] pcie_dma_buffering_reader_fifo_rdport_dat_r;
+wire          pcie_dma_buffering_reader_fifo_rdport_re;
+wire          pcie_dma_buffering_reader_fifo_re;
+reg           pcie_dma_buffering_reader_fifo_readable = 1'd0;
+reg           pcie_dma_buffering_reader_fifo_replace = 1'd0;
+wire          pcie_dma_buffering_reader_fifo_sink_first;
+wire          pcie_dma_buffering_reader_fifo_sink_last;
+wire  [127:0] pcie_dma_buffering_reader_fifo_sink_payload_data;
+wire          pcie_dma_buffering_reader_fifo_sink_ready;
+reg           pcie_dma_buffering_reader_fifo_sink_valid = 1'd0;
+wire          pcie_dma_buffering_reader_fifo_source_first;
+wire          pcie_dma_buffering_reader_fifo_source_last;
+wire  [127:0] pcie_dma_buffering_reader_fifo_source_payload_data;
+wire          pcie_dma_buffering_reader_fifo_source_ready;
+wire          pcie_dma_buffering_reader_fifo_source_valid;
+reg           pcie_dma_buffering_reader_fifo_status_re = 1'd0;
+reg    [23:0] pcie_dma_buffering_reader_fifo_status_status = 24'd0;
+wire          pcie_dma_buffering_reader_fifo_status_we;
+wire  [129:0] pcie_dma_buffering_reader_fifo_syncfifo_din;
+wire  [129:0] pcie_dma_buffering_reader_fifo_syncfifo_dout;
+wire          pcie_dma_buffering_reader_fifo_syncfifo_re;
+wire          pcie_dma_buffering_reader_fifo_syncfifo_readable;
+wire          pcie_dma_buffering_reader_fifo_syncfifo_we;
+wire          pcie_dma_buffering_reader_fifo_syncfifo_writable;
+reg     [8:0] pcie_dma_buffering_reader_fifo_wrport_adr = 9'd0;
+wire  [129:0] pcie_dma_buffering_reader_fifo_wrport_dat_r;
+wire  [129:0] pcie_dma_buffering_reader_fifo_wrport_dat_w;
+wire          pcie_dma_buffering_reader_fifo_wrport_we;
+wire          pcie_dma_buffering_sink_sink_first;
+wire          pcie_dma_buffering_sink_sink_last;
+wire  [127:0] pcie_dma_buffering_sink_sink_payload_data;
+reg           pcie_dma_buffering_sink_sink_ready = 1'd0;
+wire          pcie_dma_buffering_sink_sink_valid;
+wire          pcie_dma_buffering_source_source_first;
+wire          pcie_dma_buffering_source_source_last;
+wire  [127:0] pcie_dma_buffering_source_source_payload_data;
+wire          pcie_dma_buffering_source_source_ready;
+wire          pcie_dma_buffering_source_source_valid;
+reg     [8:0] pcie_dma_buffering_writer_fifo_consume = 9'd0;
+reg           pcie_dma_buffering_writer_fifo_control_re = 1'd0;
+reg    [31:0] pcie_dma_buffering_writer_fifo_control_storage = 32'd8192;
+wire          pcie_dma_buffering_writer_fifo_do_read;
+wire          pcie_dma_buffering_writer_fifo_fifo_in_first;
+wire          pcie_dma_buffering_writer_fifo_fifo_in_last;
+wire  [127:0] pcie_dma_buffering_writer_fifo_fifo_in_payload_data;
+wire          pcie_dma_buffering_writer_fifo_fifo_out_first;
+wire          pcie_dma_buffering_writer_fifo_fifo_out_last;
+wire  [127:0] pcie_dma_buffering_writer_fifo_fifo_out_payload_data;
+reg     [9:0] pcie_dma_buffering_writer_fifo_level0 = 10'd0;
+wire    [9:0] pcie_dma_buffering_writer_fifo_level1;
+reg     [9:0] pcie_dma_buffering_writer_fifo_level_max = 10'd0;
+reg     [8:0] pcie_dma_buffering_writer_fifo_produce = 9'd0;
+wire    [8:0] pcie_dma_buffering_writer_fifo_rdport_adr;
+wire  [129:0] pcie_dma_buffering_writer_fifo_rdport_dat_r;
+wire          pcie_dma_buffering_writer_fifo_rdport_re;
+wire          pcie_dma_buffering_writer_fifo_re;
+reg           pcie_dma_buffering_writer_fifo_readable = 1'd0;
+reg           pcie_dma_buffering_writer_fifo_replace = 1'd0;
+wire          pcie_dma_buffering_writer_fifo_sink_first;
+wire          pcie_dma_buffering_writer_fifo_sink_last;
+wire  [127:0] pcie_dma_buffering_writer_fifo_sink_payload_data;
+wire          pcie_dma_buffering_writer_fifo_sink_ready;
+reg           pcie_dma_buffering_writer_fifo_sink_valid = 1'd0;
+wire          pcie_dma_buffering_writer_fifo_source_first;
+wire          pcie_dma_buffering_writer_fifo_source_last;
+wire  [127:0] pcie_dma_buffering_writer_fifo_source_payload_data;
+wire          pcie_dma_buffering_writer_fifo_source_ready;
+wire          pcie_dma_buffering_writer_fifo_source_valid;
+reg           pcie_dma_buffering_writer_fifo_status_re = 1'd0;
+reg    [23:0] pcie_dma_buffering_writer_fifo_status_status = 24'd0;
+wire          pcie_dma_buffering_writer_fifo_status_we;
+wire  [129:0] pcie_dma_buffering_writer_fifo_syncfifo_din;
+wire  [129:0] pcie_dma_buffering_writer_fifo_syncfifo_dout;
+wire          pcie_dma_buffering_writer_fifo_syncfifo_re;
+wire          pcie_dma_buffering_writer_fifo_syncfifo_readable;
+wire          pcie_dma_buffering_writer_fifo_syncfifo_we;
+wire          pcie_dma_buffering_writer_fifo_syncfifo_writable;
+reg     [8:0] pcie_dma_buffering_writer_fifo_wrport_adr = 9'd0;
+wire  [129:0] pcie_dma_buffering_writer_fifo_wrport_dat_r;
+wire  [129:0] pcie_dma_buffering_writer_fifo_wrport_dat_w;
+wire          pcie_dma_buffering_writer_fifo_wrport_we;
+wire          pcie_dma_bufferizeendpoints0_pipe_valid_sink_first;
+wire          pcie_dma_bufferizeendpoints0_pipe_valid_sink_last;
+wire  [127:0] pcie_dma_bufferizeendpoints0_pipe_valid_sink_payload_data;
+wire          pcie_dma_bufferizeendpoints0_pipe_valid_sink_ready;
+wire          pcie_dma_bufferizeendpoints0_pipe_valid_sink_valid;
+reg           pcie_dma_bufferizeendpoints0_pipe_valid_source_first = 1'd0;
+reg           pcie_dma_bufferizeendpoints0_pipe_valid_source_last = 1'd0;
+reg   [127:0] pcie_dma_bufferizeendpoints0_pipe_valid_source_payload_data = 128'd0;
+wire          pcie_dma_bufferizeendpoints0_pipe_valid_source_ready;
+reg           pcie_dma_bufferizeendpoints0_pipe_valid_source_valid = 1'd0;
+reg           pcie_dma_bufferizeendpoints0_sink_sink_first = 1'd0;
+wire          pcie_dma_bufferizeendpoints0_sink_sink_last;
+wire  [127:0] pcie_dma_bufferizeendpoints0_sink_sink_payload_data;
+wire          pcie_dma_bufferizeendpoints0_sink_sink_ready;
+wire          pcie_dma_bufferizeendpoints0_sink_sink_valid;
+wire          pcie_dma_bufferizeendpoints0_source_source_first;
+wire          pcie_dma_bufferizeendpoints0_source_source_last;
+wire  [127:0] pcie_dma_bufferizeendpoints0_source_source_payload_data;
+wire          pcie_dma_bufferizeendpoints0_source_source_ready;
+wire          pcie_dma_bufferizeendpoints0_source_source_valid;
+wire          pcie_dma_bufferizeendpoints1_pipe_valid_sink_first;
+wire          pcie_dma_bufferizeendpoints1_pipe_valid_sink_last;
+wire  [127:0] pcie_dma_bufferizeendpoints1_pipe_valid_sink_payload_data;
+wire          pcie_dma_bufferizeendpoints1_pipe_valid_sink_ready;
+wire          pcie_dma_bufferizeendpoints1_pipe_valid_sink_valid;
+reg           pcie_dma_bufferizeendpoints1_pipe_valid_source_first = 1'd0;
+reg           pcie_dma_bufferizeendpoints1_pipe_valid_source_last = 1'd0;
+reg   [127:0] pcie_dma_bufferizeendpoints1_pipe_valid_source_payload_data = 128'd0;
+wire          pcie_dma_bufferizeendpoints1_pipe_valid_source_ready;
+reg           pcie_dma_bufferizeendpoints1_pipe_valid_source_valid = 1'd0;
+wire          pcie_dma_bufferizeendpoints1_sink_sink_first;
+wire          pcie_dma_bufferizeendpoints1_sink_sink_last;
+wire  [127:0] pcie_dma_bufferizeendpoints1_sink_sink_payload_data;
+wire          pcie_dma_bufferizeendpoints1_sink_sink_ready;
+wire          pcie_dma_bufferizeendpoints1_sink_sink_valid;
+wire          pcie_dma_bufferizeendpoints1_source_source_first;
+wire          pcie_dma_bufferizeendpoints1_source_source_last;
+wire  [127:0] pcie_dma_bufferizeendpoints1_source_source_payload_data;
+wire          pcie_dma_bufferizeendpoints1_source_source_ready;
+wire          pcie_dma_bufferizeendpoints1_source_source_valid;
+wire          pcie_dma_litepciemasterinternalport0_sink_first;
+wire          pcie_dma_litepciemasterinternalport0_sink_last;
+wire   [63:0] pcie_dma_litepciemasterinternalport0_sink_payload_adr;
+wire    [7:0] pcie_dma_litepciemasterinternalport0_sink_payload_channel;
+wire  [127:0] pcie_dma_litepciemasterinternalport0_sink_payload_dat;
+wire    [9:0] pcie_dma_litepciemasterinternalport0_sink_payload_len;
+wire   [15:0] pcie_dma_litepciemasterinternalport0_sink_payload_req_id;
+wire    [7:0] pcie_dma_litepciemasterinternalport0_sink_payload_tag;
+wire    [7:0] pcie_dma_litepciemasterinternalport0_sink_payload_user_id;
+wire          pcie_dma_litepciemasterinternalport0_sink_payload_we;
+wire          pcie_dma_litepciemasterinternalport0_sink_ready;
+reg           pcie_dma_litepciemasterinternalport0_sink_valid = 1'd0;
+reg           pcie_dma_litepciemasterinternalport0_source_first = 1'd0;
+reg           pcie_dma_litepciemasterinternalport0_source_last = 1'd0;
+reg    [31:0] pcie_dma_litepciemasterinternalport0_source_payload_adr = 32'd0;
+reg     [7:0] pcie_dma_litepciemasterinternalport0_source_payload_channel = 8'd0;
+reg    [15:0] pcie_dma_litepciemasterinternalport0_source_payload_cmp_id = 16'd0;
+reg   [127:0] pcie_dma_litepciemasterinternalport0_source_payload_dat = 128'd0;
+reg           pcie_dma_litepciemasterinternalport0_source_payload_end = 1'd0;
+reg           pcie_dma_litepciemasterinternalport0_source_payload_err = 1'd0;
+reg     [9:0] pcie_dma_litepciemasterinternalport0_source_payload_len = 10'd0;
+reg    [15:0] pcie_dma_litepciemasterinternalport0_source_payload_req_id = 16'd0;
+reg     [7:0] pcie_dma_litepciemasterinternalport0_source_payload_tag = 8'd0;
+reg     [7:0] pcie_dma_litepciemasterinternalport0_source_payload_user_id = 8'd0;
+reg           pcie_dma_litepciemasterinternalport0_source_ready = 1'd0;
+reg           pcie_dma_litepciemasterinternalport0_source_valid = 1'd0;
+wire          pcie_dma_litepciemasterinternalport1_sink_first;
+wire          pcie_dma_litepciemasterinternalport1_sink_last;
+wire   [63:0] pcie_dma_litepciemasterinternalport1_sink_payload_adr;
+wire    [7:0] pcie_dma_litepciemasterinternalport1_sink_payload_channel;
+wire  [127:0] pcie_dma_litepciemasterinternalport1_sink_payload_dat;
+wire    [9:0] pcie_dma_litepciemasterinternalport1_sink_payload_len;
+wire   [15:0] pcie_dma_litepciemasterinternalport1_sink_payload_req_id;
+reg     [7:0] pcie_dma_litepciemasterinternalport1_sink_payload_tag = 8'd0;
+wire    [7:0] pcie_dma_litepciemasterinternalport1_sink_payload_user_id;
+wire          pcie_dma_litepciemasterinternalport1_sink_payload_we;
+wire          pcie_dma_litepciemasterinternalport1_sink_ready;
+reg           pcie_dma_litepciemasterinternalport1_sink_valid = 1'd0;
+reg           pcie_dma_litepciemasterinternalport1_source_first = 1'd0;
+reg           pcie_dma_litepciemasterinternalport1_source_last = 1'd0;
+reg    [31:0] pcie_dma_litepciemasterinternalport1_source_payload_adr = 32'd0;
+reg     [7:0] pcie_dma_litepciemasterinternalport1_source_payload_channel = 8'd0;
+reg    [15:0] pcie_dma_litepciemasterinternalport1_source_payload_cmp_id = 16'd0;
+reg   [127:0] pcie_dma_litepciemasterinternalport1_source_payload_dat = 128'd0;
+reg           pcie_dma_litepciemasterinternalport1_source_payload_end = 1'd0;
+reg           pcie_dma_litepciemasterinternalport1_source_payload_err = 1'd0;
+reg     [9:0] pcie_dma_litepciemasterinternalport1_source_payload_len = 10'd0;
+reg    [15:0] pcie_dma_litepciemasterinternalport1_source_payload_req_id = 16'd0;
+reg     [7:0] pcie_dma_litepciemasterinternalport1_source_payload_tag = 8'd0;
+reg     [7:0] pcie_dma_litepciemasterinternalport1_source_payload_user_id = 8'd0;
+reg           pcie_dma_litepciemasterinternalport1_source_ready = 1'd0;
+reg           pcie_dma_litepciemasterinternalport1_source_valid = 1'd0;
+wire          pcie_dma_reader_data_conv_converter_sink_first;
+wire          pcie_dma_reader_data_conv_converter_sink_last;
+wire  [127:0] pcie_dma_reader_data_conv_converter_sink_payload_data;
+wire          pcie_dma_reader_data_conv_converter_sink_ready;
+wire          pcie_dma_reader_data_conv_converter_sink_valid;
+wire          pcie_dma_reader_data_conv_converter_source_first;
+wire          pcie_dma_reader_data_conv_converter_source_last;
+wire  [127:0] pcie_dma_reader_data_conv_converter_source_payload_data;
+wire          pcie_dma_reader_data_conv_converter_source_payload_valid_token_count;
+wire          pcie_dma_reader_data_conv_converter_source_ready;
+wire          pcie_dma_reader_data_conv_converter_source_valid;
+wire          pcie_dma_reader_data_conv_source_source_first;
+wire          pcie_dma_reader_data_conv_source_source_last;
+wire  [127:0] pcie_dma_reader_data_conv_source_source_payload_data;
+wire          pcie_dma_reader_data_conv_source_source_ready;
+wire          pcie_dma_reader_data_conv_source_source_valid;
+reg     [8:0] pcie_dma_reader_data_fifo_consume = 9'd0;
+wire          pcie_dma_reader_data_fifo_do_read;
+wire          pcie_dma_reader_data_fifo_fifo_in_first;
+wire          pcie_dma_reader_data_fifo_fifo_in_last;
+wire  [127:0] pcie_dma_reader_data_fifo_fifo_in_payload_data;
+wire          pcie_dma_reader_data_fifo_fifo_out_first;
+wire          pcie_dma_reader_data_fifo_fifo_out_last;
+wire  [127:0] pcie_dma_reader_data_fifo_fifo_out_payload_data;
+reg     [9:0] pcie_dma_reader_data_fifo_level0 = 10'd0;
+wire    [9:0] pcie_dma_reader_data_fifo_level1;
+reg     [8:0] pcie_dma_reader_data_fifo_produce = 9'd0;
+wire    [8:0] pcie_dma_reader_data_fifo_rdport_adr;
+wire  [129:0] pcie_dma_reader_data_fifo_rdport_dat_r;
+wire          pcie_dma_reader_data_fifo_rdport_re;
+wire          pcie_dma_reader_data_fifo_re;
+reg           pcie_dma_reader_data_fifo_readable = 1'd0;
+reg           pcie_dma_reader_data_fifo_replace = 1'd0;
+reg           pcie_dma_reader_data_fifo_reset = 1'd0;
+reg           pcie_dma_reader_data_fifo_sink_first = 1'd0;
+reg           pcie_dma_reader_data_fifo_sink_last = 1'd0;
+reg   [127:0] pcie_dma_reader_data_fifo_sink_payload_data = 128'd0;
+wire          pcie_dma_reader_data_fifo_sink_ready;
+reg           pcie_dma_reader_data_fifo_sink_valid = 1'd0;
+wire          pcie_dma_reader_data_fifo_source_first;
+wire          pcie_dma_reader_data_fifo_source_last;
+wire  [127:0] pcie_dma_reader_data_fifo_source_payload_data;
+wire          pcie_dma_reader_data_fifo_source_ready;
+wire          pcie_dma_reader_data_fifo_source_valid;
+wire  [129:0] pcie_dma_reader_data_fifo_syncfifo_din;
+wire  [129:0] pcie_dma_reader_data_fifo_syncfifo_dout;
+wire          pcie_dma_reader_data_fifo_syncfifo_re;
+wire          pcie_dma_reader_data_fifo_syncfifo_readable;
+wire          pcie_dma_reader_data_fifo_syncfifo_we;
+wire          pcie_dma_reader_data_fifo_syncfifo_writable;
+reg     [8:0] pcie_dma_reader_data_fifo_wrport_adr = 9'd0;
+wire  [129:0] pcie_dma_reader_data_fifo_wrport_dat_r;
+wire  [129:0] pcie_dma_reader_data_fifo_wrport_dat_w;
+wire          pcie_dma_reader_data_fifo_wrport_we;
+reg           pcie_dma_reader_enable_re = 1'd0;
+reg     [1:0] pcie_dma_reader_enable_storage = 2'd0;
+reg           pcie_dma_reader_irq = 1'd0;
+reg           pcie_dma_reader_is_ongoing = 1'd0;
+reg     [7:0] pcie_dma_reader_last_user_id = 8'd255;
+reg     [9:0] pcie_dma_reader_pending_words = 10'd0;
+reg     [9:0] pcie_dma_reader_pending_words_dequeue = 10'd0;
+reg     [9:0] pcie_dma_reader_pending_words_queue = 10'd0;
+wire          pcie_dma_reader_source_source_first;
+wire          pcie_dma_reader_source_source_last;
+wire  [127:0] pcie_dma_reader_source_source_payload_data;
+wire          pcie_dma_reader_source_source_ready;
+wire          pcie_dma_reader_source_source_valid;
+reg    [23:0] pcie_dma_reader_splitter_length = 24'd0;
+reg    [23:0] pcie_dma_reader_splitter_length_next = 24'd0;
+reg    [23:0] pcie_dma_reader_splitter_length_next_value3 = 24'd0;
+reg           pcie_dma_reader_splitter_length_next_value_ce3 = 1'd0;
+reg           pcie_dma_reader_splitter_reset = 1'd0;
+wire          pcie_dma_reader_splitter_sink_first;
+wire          pcie_dma_reader_splitter_sink_last;
+wire   [63:0] pcie_dma_reader_splitter_sink_payload_address;
+wire          pcie_dma_reader_splitter_sink_payload_irq_disable;
+wire          pcie_dma_reader_splitter_sink_payload_last_disable;
+wire   [23:0] pcie_dma_reader_splitter_sink_payload_length;
+reg           pcie_dma_reader_splitter_sink_ready = 1'd0;
+wire          pcie_dma_reader_splitter_sink_valid;
+reg           pcie_dma_reader_splitter_source_first = 1'd0;
+reg           pcie_dma_reader_splitter_source_first_next_value0 = 1'd0;
+reg           pcie_dma_reader_splitter_source_first_next_value_ce0 = 1'd0;
+reg           pcie_dma_reader_splitter_source_last = 1'd0;
+reg           pcie_dma_reader_splitter_source_last_next_value1 = 1'd0;
+reg           pcie_dma_reader_splitter_source_last_next_value_ce1 = 1'd0;
+reg    [63:0] pcie_dma_reader_splitter_source_payload_address = 64'd0;
+reg    [63:0] pcie_dma_reader_splitter_source_payload_address_next_value2 = 64'd0;
+reg           pcie_dma_reader_splitter_source_payload_address_next_value_ce2 = 1'd0;
+wire          pcie_dma_reader_splitter_source_payload_irq_disable;
+wire          pcie_dma_reader_splitter_source_payload_last_disable;
+reg    [23:0] pcie_dma_reader_splitter_source_payload_length = 24'd0;
+reg    [23:0] pcie_dma_reader_splitter_source_payload_length_next_value4 = 24'd0;
+reg           pcie_dma_reader_splitter_source_payload_length_next_value_ce4 = 1'd0;
+reg     [7:0] pcie_dma_reader_splitter_source_payload_user_id = 8'd0;
+reg     [7:0] pcie_dma_reader_splitter_source_payload_user_id_next_value5 = 8'd0;
+reg           pcie_dma_reader_splitter_source_payload_user_id_next_value_ce5 = 1'd0;
+reg           pcie_dma_reader_splitter_source_ready = 1'd0;
+reg           pcie_dma_reader_splitter_source_valid = 1'd0;
+reg           pcie_dma_reader_splitter_terminate = 1'd0;
+wire   [31:0] pcie_dma_reader_table_address_lsb;
+wire   [31:0] pcie_dma_reader_table_address_msb;
+reg    [15:0] pcie_dma_reader_table_count = 16'd0;
+reg    [15:0] pcie_dma_reader_table_index = 16'd0;
+wire          pcie_dma_reader_table_irq_disable;
+wire          pcie_dma_reader_table_last_disable;
+wire   [23:0] pcie_dma_reader_table_length;
+reg           pcie_dma_reader_table_level_re = 1'd0;
+wire    [8:0] pcie_dma_reader_table_level_status;
+wire          pcie_dma_reader_table_level_we;
+reg           pcie_dma_reader_table_loop_first = 1'd0;
+reg           pcie_dma_reader_table_loop_prog_n_re = 1'd0;
+reg           pcie_dma_reader_table_loop_prog_n_storage = 1'd0;
+reg           pcie_dma_reader_table_loop_status_re = 1'd0;
+reg    [31:0] pcie_dma_reader_table_loop_status_status = 32'd0;
+wire          pcie_dma_reader_table_loop_status_we;
+reg           pcie_dma_reader_table_reset_re = 1'd0;
+reg           pcie_dma_reader_table_reset_storage = 1'd0;
+wire          pcie_dma_reader_table_source_source_first;
+wire          pcie_dma_reader_table_source_source_last;
+wire   [63:0] pcie_dma_reader_table_source_source_payload_address;
+wire          pcie_dma_reader_table_source_source_payload_irq_disable;
+wire          pcie_dma_reader_table_source_source_payload_last_disable;
+wire   [23:0] pcie_dma_reader_table_source_source_payload_length;
+wire          pcie_dma_reader_table_source_source_ready;
+wire          pcie_dma_reader_table_source_source_valid;
+reg     [7:0] pcie_dma_reader_table_table_consume = 8'd0;
+wire          pcie_dma_reader_table_table_do_read;
+wire          pcie_dma_reader_table_table_fifo_in_first;
+wire          pcie_dma_reader_table_table_fifo_in_last;
+wire   [63:0] pcie_dma_reader_table_table_fifo_in_payload_address;
+wire          pcie_dma_reader_table_table_fifo_in_payload_irq_disable;
+wire          pcie_dma_reader_table_table_fifo_in_payload_last_disable;
+wire   [23:0] pcie_dma_reader_table_table_fifo_in_payload_length;
+wire          pcie_dma_reader_table_table_fifo_out_first;
+wire          pcie_dma_reader_table_table_fifo_out_last;
+wire   [63:0] pcie_dma_reader_table_table_fifo_out_payload_address;
+wire          pcie_dma_reader_table_table_fifo_out_payload_irq_disable;
+wire          pcie_dma_reader_table_table_fifo_out_payload_last_disable;
+wire   [23:0] pcie_dma_reader_table_table_fifo_out_payload_length;
+reg     [8:0] pcie_dma_reader_table_table_level = 9'd0;
+reg     [7:0] pcie_dma_reader_table_table_produce = 8'd0;
+wire    [7:0] pcie_dma_reader_table_table_rdport_adr;
+wire   [91:0] pcie_dma_reader_table_table_rdport_dat_r;
+reg           pcie_dma_reader_table_table_replace = 1'd0;
+wire          pcie_dma_reader_table_table_reset;
+reg           pcie_dma_reader_table_table_sink_first = 1'd0;
+reg           pcie_dma_reader_table_table_sink_last = 1'd0;
+reg    [63:0] pcie_dma_reader_table_table_sink_payload_address = 64'd0;
+reg           pcie_dma_reader_table_table_sink_payload_irq_disable = 1'd0;
+reg           pcie_dma_reader_table_table_sink_payload_last_disable = 1'd0;
+reg    [23:0] pcie_dma_reader_table_table_sink_payload_length = 24'd0;
+wire          pcie_dma_reader_table_table_sink_ready;
+reg           pcie_dma_reader_table_table_sink_valid = 1'd0;
+wire          pcie_dma_reader_table_table_source_first;
+wire          pcie_dma_reader_table_table_source_last;
+wire   [63:0] pcie_dma_reader_table_table_source_payload_address;
+wire          pcie_dma_reader_table_table_source_payload_irq_disable;
+wire          pcie_dma_reader_table_table_source_payload_last_disable;
+wire   [23:0] pcie_dma_reader_table_table_source_payload_length;
+wire          pcie_dma_reader_table_table_source_ready;
+wire          pcie_dma_reader_table_table_source_valid;
+wire   [91:0] pcie_dma_reader_table_table_syncfifo_din;
+wire   [91:0] pcie_dma_reader_table_table_syncfifo_dout;
+wire          pcie_dma_reader_table_table_syncfifo_re;
+wire          pcie_dma_reader_table_table_syncfifo_readable;
+wire          pcie_dma_reader_table_table_syncfifo_we;
+wire          pcie_dma_reader_table_table_syncfifo_writable;
+reg     [7:0] pcie_dma_reader_table_table_wrport_adr = 8'd0;
+wire   [91:0] pcie_dma_reader_table_table_wrport_dat_r;
+wire   [91:0] pcie_dma_reader_table_table_wrport_dat_w;
+wire          pcie_dma_reader_table_table_wrport_we;
+reg           pcie_dma_reader_table_value_re = 1'd0;
+reg    [57:0] pcie_dma_reader_table_value_storage = 58'd0;
+reg           pcie_dma_reader_table_we_re = 1'd0;
+reg    [31:0] pcie_dma_reader_table_we_storage = 32'd0;
+wire          pcie_dma_sink_first;
+wire          pcie_dma_sink_last;
+wire  [127:0] pcie_dma_sink_payload_data;
+wire          pcie_dma_sink_ready;
+wire          pcie_dma_sink_valid;
+wire          pcie_dma_source_first;
+wire          pcie_dma_source_last;
+wire  [127:0] pcie_dma_source_payload_data;
+wire          pcie_dma_source_ready;
+wire          pcie_dma_source_valid;
+wire          pcie_dma_writer_data_conv_converter_sink_first;
+wire          pcie_dma_writer_data_conv_converter_sink_last;
+wire  [127:0] pcie_dma_writer_data_conv_converter_sink_payload_data;
+wire          pcie_dma_writer_data_conv_converter_sink_ready;
+wire          pcie_dma_writer_data_conv_converter_sink_valid;
+wire          pcie_dma_writer_data_conv_converter_source_first;
+wire          pcie_dma_writer_data_conv_converter_source_last;
+wire  [127:0] pcie_dma_writer_data_conv_converter_source_payload_data;
+wire          pcie_dma_writer_data_conv_converter_source_payload_valid_token_count;
+wire          pcie_dma_writer_data_conv_converter_source_ready;
+wire          pcie_dma_writer_data_conv_converter_source_valid;
+wire          pcie_dma_writer_data_conv_source_source_first;
+wire          pcie_dma_writer_data_conv_source_source_last;
+wire  [127:0] pcie_dma_writer_data_conv_source_source_payload_data;
+reg           pcie_dma_writer_data_conv_source_source_ready = 1'd0;
+wire          pcie_dma_writer_data_conv_source_source_valid;
+reg     [6:0] pcie_dma_writer_data_fifo_consume = 7'd0;
+wire          pcie_dma_writer_data_fifo_do_read;
+wire          pcie_dma_writer_data_fifo_fifo_in_first;
+wire          pcie_dma_writer_data_fifo_fifo_in_last;
+wire  [127:0] pcie_dma_writer_data_fifo_fifo_in_payload_data;
+wire          pcie_dma_writer_data_fifo_fifo_out_first;
+wire          pcie_dma_writer_data_fifo_fifo_out_last;
+wire  [127:0] pcie_dma_writer_data_fifo_fifo_out_payload_data;
+reg     [7:0] pcie_dma_writer_data_fifo_level0 = 8'd0;
+wire    [7:0] pcie_dma_writer_data_fifo_level1;
+reg     [6:0] pcie_dma_writer_data_fifo_produce = 7'd0;
+wire    [6:0] pcie_dma_writer_data_fifo_rdport_adr;
+wire  [129:0] pcie_dma_writer_data_fifo_rdport_dat_r;
+wire          pcie_dma_writer_data_fifo_rdport_re;
+wire          pcie_dma_writer_data_fifo_re;
+reg           pcie_dma_writer_data_fifo_readable = 1'd0;
+reg           pcie_dma_writer_data_fifo_replace = 1'd0;
+reg           pcie_dma_writer_data_fifo_reset = 1'd0;
+reg           pcie_dma_writer_data_fifo_sink_first = 1'd0;
+reg           pcie_dma_writer_data_fifo_sink_last = 1'd0;
+reg   [127:0] pcie_dma_writer_data_fifo_sink_payload_data = 128'd0;
+wire          pcie_dma_writer_data_fifo_sink_ready;
+reg           pcie_dma_writer_data_fifo_sink_valid = 1'd0;
+wire          pcie_dma_writer_data_fifo_source_first;
+wire          pcie_dma_writer_data_fifo_source_last;
+wire  [127:0] pcie_dma_writer_data_fifo_source_payload_data;
+reg           pcie_dma_writer_data_fifo_source_ready = 1'd0;
+wire          pcie_dma_writer_data_fifo_source_valid;
+wire  [129:0] pcie_dma_writer_data_fifo_syncfifo_din;
+wire  [129:0] pcie_dma_writer_data_fifo_syncfifo_dout;
+wire          pcie_dma_writer_data_fifo_syncfifo_re;
+wire          pcie_dma_writer_data_fifo_syncfifo_readable;
+wire          pcie_dma_writer_data_fifo_syncfifo_we;
+wire          pcie_dma_writer_data_fifo_syncfifo_writable;
+reg     [6:0] pcie_dma_writer_data_fifo_wrport_adr = 7'd0;
+wire  [129:0] pcie_dma_writer_data_fifo_wrport_dat_r;
+wire  [129:0] pcie_dma_writer_data_fifo_wrport_dat_w;
+wire          pcie_dma_writer_data_fifo_wrport_we;
+reg           pcie_dma_writer_enable_re = 1'd0;
+reg     [1:0] pcie_dma_writer_enable_storage = 2'd0;
+reg           pcie_dma_writer_irq = 1'd0;
+reg           pcie_dma_writer_is_ongoing = 1'd0;
+reg    [23:0] pcie_dma_writer_req_count = 24'd0;
+reg    [23:0] pcie_dma_writer_req_count_fsm_next_value = 24'd0;
+reg           pcie_dma_writer_req_count_fsm_next_value_ce = 1'd0;
+wire          pcie_dma_writer_sink_sink_first;
+wire          pcie_dma_writer_sink_sink_last;
+wire  [127:0] pcie_dma_writer_sink_sink_payload_data;
+wire          pcie_dma_writer_sink_sink_ready;
+wire          pcie_dma_writer_sink_sink_valid;
+reg    [23:0] pcie_dma_writer_splitter_length = 24'd0;
+reg    [23:0] pcie_dma_writer_splitter_length_next = 24'd0;
+reg    [23:0] pcie_dma_writer_splitter_length_resetinserter_next_value3 = 24'd0;
+reg           pcie_dma_writer_splitter_length_resetinserter_next_value_ce3 = 1'd0;
+reg           pcie_dma_writer_splitter_reset = 1'd0;
+wire          pcie_dma_writer_splitter_sink_first;
+wire          pcie_dma_writer_splitter_sink_last;
+wire   [63:0] pcie_dma_writer_splitter_sink_payload_address;
+wire          pcie_dma_writer_splitter_sink_payload_irq_disable;
+wire          pcie_dma_writer_splitter_sink_payload_last_disable;
+wire   [23:0] pcie_dma_writer_splitter_sink_payload_length;
+reg           pcie_dma_writer_splitter_sink_ready = 1'd0;
+wire          pcie_dma_writer_splitter_sink_valid;
+reg           pcie_dma_writer_splitter_source_first = 1'd0;
+reg           pcie_dma_writer_splitter_source_first_resetinserter_next_value0 = 1'd0;
+reg           pcie_dma_writer_splitter_source_first_resetinserter_next_value_ce0 = 1'd0;
+reg           pcie_dma_writer_splitter_source_last = 1'd0;
+reg           pcie_dma_writer_splitter_source_last_resetinserter_next_value1 = 1'd0;
+reg           pcie_dma_writer_splitter_source_last_resetinserter_next_value_ce1 = 1'd0;
+reg    [63:0] pcie_dma_writer_splitter_source_payload_address = 64'd0;
+reg    [63:0] pcie_dma_writer_splitter_source_payload_address_resetinserter_next_value2 = 64'd0;
+reg           pcie_dma_writer_splitter_source_payload_address_resetinserter_next_value_ce2 = 1'd0;
+wire          pcie_dma_writer_splitter_source_payload_irq_disable;
+wire          pcie_dma_writer_splitter_source_payload_last_disable;
+reg    [23:0] pcie_dma_writer_splitter_source_payload_length = 24'd0;
+reg    [23:0] pcie_dma_writer_splitter_source_payload_length_resetinserter_next_value4 = 24'd0;
+reg           pcie_dma_writer_splitter_source_payload_length_resetinserter_next_value_ce4 = 1'd0;
+reg     [7:0] pcie_dma_writer_splitter_source_payload_user_id = 8'd0;
+reg     [7:0] pcie_dma_writer_splitter_source_payload_user_id_resetinserter_next_value5 = 8'd0;
+reg           pcie_dma_writer_splitter_source_payload_user_id_resetinserter_next_value_ce5 = 1'd0;
+reg           pcie_dma_writer_splitter_source_ready = 1'd0;
+reg           pcie_dma_writer_splitter_source_valid = 1'd0;
+wire          pcie_dma_writer_splitter_terminate;
+wire   [31:0] pcie_dma_writer_table_address_lsb;
+wire   [31:0] pcie_dma_writer_table_address_msb;
+reg    [15:0] pcie_dma_writer_table_count = 16'd0;
+reg    [15:0] pcie_dma_writer_table_index = 16'd0;
+wire          pcie_dma_writer_table_irq_disable;
+wire          pcie_dma_writer_table_last_disable;
+wire   [23:0] pcie_dma_writer_table_length;
+reg           pcie_dma_writer_table_level_re = 1'd0;
+wire    [8:0] pcie_dma_writer_table_level_status;
+wire          pcie_dma_writer_table_level_we;
+reg           pcie_dma_writer_table_loop_first = 1'd0;
+reg           pcie_dma_writer_table_loop_prog_n_re = 1'd0;
+reg           pcie_dma_writer_table_loop_prog_n_storage = 1'd0;
+reg           pcie_dma_writer_table_loop_status_re = 1'd0;
+reg    [31:0] pcie_dma_writer_table_loop_status_status = 32'd0;
+wire          pcie_dma_writer_table_loop_status_we;
+reg           pcie_dma_writer_table_reset_re = 1'd0;
+reg           pcie_dma_writer_table_reset_storage = 1'd0;
+wire          pcie_dma_writer_table_source_source_first;
+wire          pcie_dma_writer_table_source_source_last;
+wire   [63:0] pcie_dma_writer_table_source_source_payload_address;
+wire          pcie_dma_writer_table_source_source_payload_irq_disable;
+wire          pcie_dma_writer_table_source_source_payload_last_disable;
+wire   [23:0] pcie_dma_writer_table_source_source_payload_length;
+wire          pcie_dma_writer_table_source_source_ready;
+wire          pcie_dma_writer_table_source_source_valid;
+reg     [7:0] pcie_dma_writer_table_table_consume = 8'd0;
+wire          pcie_dma_writer_table_table_do_read;
+wire          pcie_dma_writer_table_table_fifo_in_first;
+wire          pcie_dma_writer_table_table_fifo_in_last;
+wire   [63:0] pcie_dma_writer_table_table_fifo_in_payload_address;
+wire          pcie_dma_writer_table_table_fifo_in_payload_irq_disable;
+wire          pcie_dma_writer_table_table_fifo_in_payload_last_disable;
+wire   [23:0] pcie_dma_writer_table_table_fifo_in_payload_length;
+wire          pcie_dma_writer_table_table_fifo_out_first;
+wire          pcie_dma_writer_table_table_fifo_out_last;
+wire   [63:0] pcie_dma_writer_table_table_fifo_out_payload_address;
+wire          pcie_dma_writer_table_table_fifo_out_payload_irq_disable;
+wire          pcie_dma_writer_table_table_fifo_out_payload_last_disable;
+wire   [23:0] pcie_dma_writer_table_table_fifo_out_payload_length;
+reg     [8:0] pcie_dma_writer_table_table_level = 9'd0;
+reg     [7:0] pcie_dma_writer_table_table_produce = 8'd0;
+wire    [7:0] pcie_dma_writer_table_table_rdport_adr;
+wire   [91:0] pcie_dma_writer_table_table_rdport_dat_r;
+reg           pcie_dma_writer_table_table_replace = 1'd0;
+wire          pcie_dma_writer_table_table_reset;
+reg           pcie_dma_writer_table_table_sink_first = 1'd0;
+reg           pcie_dma_writer_table_table_sink_last = 1'd0;
+reg    [63:0] pcie_dma_writer_table_table_sink_payload_address = 64'd0;
+reg           pcie_dma_writer_table_table_sink_payload_irq_disable = 1'd0;
+reg           pcie_dma_writer_table_table_sink_payload_last_disable = 1'd0;
+reg    [23:0] pcie_dma_writer_table_table_sink_payload_length = 24'd0;
+wire          pcie_dma_writer_table_table_sink_ready;
+reg           pcie_dma_writer_table_table_sink_valid = 1'd0;
+wire          pcie_dma_writer_table_table_source_first;
+wire          pcie_dma_writer_table_table_source_last;
+wire   [63:0] pcie_dma_writer_table_table_source_payload_address;
+wire          pcie_dma_writer_table_table_source_payload_irq_disable;
+wire          pcie_dma_writer_table_table_source_payload_last_disable;
+wire   [23:0] pcie_dma_writer_table_table_source_payload_length;
+wire          pcie_dma_writer_table_table_source_ready;
+wire          pcie_dma_writer_table_table_source_valid;
+wire   [91:0] pcie_dma_writer_table_table_syncfifo_din;
+wire   [91:0] pcie_dma_writer_table_table_syncfifo_dout;
+wire          pcie_dma_writer_table_table_syncfifo_re;
+wire          pcie_dma_writer_table_table_syncfifo_readable;
+wire          pcie_dma_writer_table_table_syncfifo_we;
+wire          pcie_dma_writer_table_table_syncfifo_writable;
+reg     [7:0] pcie_dma_writer_table_table_wrport_adr = 8'd0;
+wire   [91:0] pcie_dma_writer_table_table_wrport_dat_r;
+wire   [91:0] pcie_dma_writer_table_table_wrport_dat_w;
+wire          pcie_dma_writer_table_table_wrport_we;
+reg           pcie_dma_writer_table_value_re = 1'd0;
+reg    [57:0] pcie_dma_writer_table_value_storage = 58'd0;
+reg           pcie_dma_writer_table_we_re = 1'd0;
+reg    [31:0] pcie_dma_writer_table_we_storage = 32'd0;
+reg    [31:0] pcie_msi_clear = 32'd0;
+reg           pcie_msi_clear_re = 1'd0;
+reg    [31:0] pcie_msi_clear_storage = 32'd0;
+wire   [31:0] pcie_msi_enable;
+reg           pcie_msi_enable_re = 1'd0;
+reg    [31:0] pcie_msi_enable_storage = 32'd0;
 reg    [31:0] pcie_msi_irqs = 32'd0;
-wire          pcie_msi_source_valid;
-wire          pcie_msi_source_ready;
+reg    [31:0] pcie_msi_msi = 32'd0;
 reg           pcie_msi_source_first = 1'd0;
 reg           pcie_msi_source_last = 1'd0;
 reg     [7:0] pcie_msi_source_payload_dat = 8'd0;
-reg    [31:0] pcie_msi_enable_storage = 32'd0;
-reg           pcie_msi_enable_re = 1'd0;
-reg    [31:0] pcie_msi_clear_storage = 32'd0;
-reg           pcie_msi_clear_re = 1'd0;
+wire          pcie_msi_source_ready;
+wire          pcie_msi_source_valid;
+reg    [31:0] pcie_msi_vector = 32'd0;
+reg           pcie_msi_vector_re = 1'd0;
 wire   [31:0] pcie_msi_vector_status;
 wire          pcie_msi_vector_we;
-reg           pcie_msi_vector_re = 1'd0;
-wire   [31:0] pcie_msi_enable;
-reg    [31:0] pcie_msi_clear = 32'd0;
-reg    [31:0] pcie_msi_vector = 32'd0;
-reg    [31:0] pcie_msi_msi = 32'd0;
-reg    [13:0] litepciecore_adr = 14'd0;
-reg           litepciecore_we = 1'd0;
-reg    [31:0] litepciecore_dat_w = 32'd0;
-wire   [31:0] litepciecore_dat_r;
-wire   [29:0] litepciecore_wishbone_adr;
-wire   [31:0] litepciecore_wishbone_dat_w;
-reg    [31:0] litepciecore_wishbone_dat_r = 32'd0;
-wire    [3:0] litepciecore_wishbone_sel;
-wire          litepciecore_wishbone_cyc;
-wire          litepciecore_wishbone_stb;
-reg           litepciecore_wishbone_ack = 1'd0;
-wire          litepciecore_wishbone_we;
-wire    [2:0] litepciecore_wishbone_cti;
-wire    [1:0] litepciecore_wishbone_bte;
-reg           litepciecore_wishbone_err = 1'd0;
-wire   [13:0] interface0_adr;
-wire          interface0_we;
-wire   [31:0] interface0_dat_w;
-reg    [31:0] interface0_dat_r = 32'd0;
-reg           csrbank0_cntrl15_re = 1'd0;
-wire   [31:0] csrbank0_cntrl15_r;
-reg           csrbank0_cntrl15_we = 1'd0;
-wire   [31:0] csrbank0_cntrl15_w;
-reg           csrbank0_cntrl14_re = 1'd0;
-wire   [31:0] csrbank0_cntrl14_r;
-reg           csrbank0_cntrl14_we = 1'd0;
-wire   [31:0] csrbank0_cntrl14_w;
-reg           csrbank0_cntrl13_re = 1'd0;
-wire   [31:0] csrbank0_cntrl13_r;
-reg           csrbank0_cntrl13_we = 1'd0;
-wire   [31:0] csrbank0_cntrl13_w;
-reg           csrbank0_cntrl12_re = 1'd0;
-wire   [31:0] csrbank0_cntrl12_r;
-reg           csrbank0_cntrl12_we = 1'd0;
-wire   [31:0] csrbank0_cntrl12_w;
-reg           csrbank0_cntrl11_re = 1'd0;
-wire   [31:0] csrbank0_cntrl11_r;
-reg           csrbank0_cntrl11_we = 1'd0;
-wire   [31:0] csrbank0_cntrl11_w;
-reg           csrbank0_cntrl10_re = 1'd0;
-wire   [31:0] csrbank0_cntrl10_r;
-reg           csrbank0_cntrl10_we = 1'd0;
-wire   [31:0] csrbank0_cntrl10_w;
-reg           csrbank0_cntrl9_re = 1'd0;
-wire   [31:0] csrbank0_cntrl9_r;
-reg           csrbank0_cntrl9_we = 1'd0;
-wire   [31:0] csrbank0_cntrl9_w;
-reg           csrbank0_cntrl8_re = 1'd0;
-wire   [31:0] csrbank0_cntrl8_r;
-reg           csrbank0_cntrl8_we = 1'd0;
-wire   [31:0] csrbank0_cntrl8_w;
-reg           csrbank0_cntrl7_re = 1'd0;
-wire   [31:0] csrbank0_cntrl7_r;
-reg           csrbank0_cntrl7_we = 1'd0;
-wire   [31:0] csrbank0_cntrl7_w;
-reg           csrbank0_cntrl6_re = 1'd0;
-wire   [31:0] csrbank0_cntrl6_r;
-reg           csrbank0_cntrl6_we = 1'd0;
-wire   [31:0] csrbank0_cntrl6_w;
-reg           csrbank0_cntrl5_re = 1'd0;
-wire   [31:0] csrbank0_cntrl5_r;
-reg           csrbank0_cntrl5_we = 1'd0;
-wire   [31:0] csrbank0_cntrl5_w;
-reg           csrbank0_cntrl4_re = 1'd0;
-wire   [31:0] csrbank0_cntrl4_r;
-reg           csrbank0_cntrl4_we = 1'd0;
-wire   [31:0] csrbank0_cntrl4_w;
-reg           csrbank0_cntrl3_re = 1'd0;
-wire   [31:0] csrbank0_cntrl3_r;
-reg           csrbank0_cntrl3_we = 1'd0;
-wire   [31:0] csrbank0_cntrl3_w;
-reg           csrbank0_cntrl2_re = 1'd0;
-wire   [31:0] csrbank0_cntrl2_r;
-reg           csrbank0_cntrl2_we = 1'd0;
-wire   [31:0] csrbank0_cntrl2_w;
-reg           csrbank0_cntrl1_re = 1'd0;
-wire   [31:0] csrbank0_cntrl1_r;
-reg           csrbank0_cntrl1_we = 1'd0;
-wire   [31:0] csrbank0_cntrl1_w;
-reg           csrbank0_cntrl0_re = 1'd0;
-wire   [31:0] csrbank0_cntrl0_r;
-reg           csrbank0_cntrl0_we = 1'd0;
-wire   [31:0] csrbank0_cntrl0_w;
-reg           csrbank0_enable0_re = 1'd0;
-wire          csrbank0_enable0_r;
-reg           csrbank0_enable0_we = 1'd0;
-wire          csrbank0_enable0_w;
-reg           csrbank0_test0_re = 1'd0;
-wire   [31:0] csrbank0_test0_r;
-reg           csrbank0_test0_we = 1'd0;
-wire   [31:0] csrbank0_test0_w;
-reg           csrbank0_ndma_re = 1'd0;
-wire    [3:0] csrbank0_ndma_r;
-reg           csrbank0_ndma_we = 1'd0;
-wire    [3:0] csrbank0_ndma_w;
-reg           csrbank0_enable_both0_re = 1'd0;
-wire          csrbank0_enable_both0_r;
-reg           csrbank0_enable_both0_we = 1'd0;
-wire          csrbank0_enable_both0_w;
-wire          csrbank0_sel;
-wire   [13:0] interface1_adr;
-wire          interface1_we;
-wire   [31:0] interface1_dat_w;
-reg    [31:0] interface1_dat_r = 32'd0;
-reg           csrbank1_reset0_re = 1'd0;
-wire    [1:0] csrbank1_reset0_r;
-reg           csrbank1_reset0_we = 1'd0;
-wire    [1:0] csrbank1_reset0_w;
-reg           csrbank1_scratch0_re = 1'd0;
-wire   [31:0] csrbank1_scratch0_r;
-reg           csrbank1_scratch0_we = 1'd0;
-wire   [31:0] csrbank1_scratch0_w;
-reg           csrbank1_bus_errors_re = 1'd0;
-wire   [31:0] csrbank1_bus_errors_r;
-reg           csrbank1_bus_errors_we = 1'd0;
-wire   [31:0] csrbank1_bus_errors_w;
-wire          csrbank1_sel;
-wire   [13:0] interface2_adr;
-wire          interface2_we;
-wire   [31:0] interface2_dat_w;
-reg    [31:0] interface2_dat_r = 32'd0;
-wire    [5:0] mmap_adr;
-wire    [7:0] mmap_dat_r;
-wire          mmap_sel;
-reg           mmap_sel_r = 1'd0;
-wire   [13:0] interface3_adr;
-wire          interface3_we;
-wire   [31:0] interface3_dat_w;
-reg    [31:0] interface3_dat_r = 32'd0;
-reg           csrbank2_writer_enable0_re = 1'd0;
-wire          csrbank2_writer_enable0_r;
-reg           csrbank2_writer_enable0_we = 1'd0;
-wire          csrbank2_writer_enable0_w;
-reg           csrbank2_writer_table_value1_re = 1'd0;
-wire   [25:0] csrbank2_writer_table_value1_r;
-reg           csrbank2_writer_table_value1_we = 1'd0;
-wire   [25:0] csrbank2_writer_table_value1_w;
-reg           csrbank2_writer_table_value0_re = 1'd0;
-wire   [31:0] csrbank2_writer_table_value0_r;
-reg           csrbank2_writer_table_value0_we = 1'd0;
-wire   [31:0] csrbank2_writer_table_value0_w;
-reg           csrbank2_writer_table_we0_re = 1'd0;
-wire   [31:0] csrbank2_writer_table_we0_r;
-reg           csrbank2_writer_table_we0_we = 1'd0;
-wire   [31:0] csrbank2_writer_table_we0_w;
-reg           csrbank2_writer_table_loop_prog_n0_re = 1'd0;
-wire          csrbank2_writer_table_loop_prog_n0_r;
-reg           csrbank2_writer_table_loop_prog_n0_we = 1'd0;
-wire          csrbank2_writer_table_loop_prog_n0_w;
-reg           csrbank2_writer_table_loop_status_re = 1'd0;
-wire   [31:0] csrbank2_writer_table_loop_status_r;
-reg           csrbank2_writer_table_loop_status_we = 1'd0;
-wire   [31:0] csrbank2_writer_table_loop_status_w;
-reg           csrbank2_writer_table_level_re = 1'd0;
-wire    [8:0] csrbank2_writer_table_level_r;
-reg           csrbank2_writer_table_level_we = 1'd0;
-wire    [8:0] csrbank2_writer_table_level_w;
-reg           csrbank2_writer_table_reset0_re = 1'd0;
-wire          csrbank2_writer_table_reset0_r;
-reg           csrbank2_writer_table_reset0_we = 1'd0;
-wire          csrbank2_writer_table_reset0_w;
-reg           csrbank2_reader_enable0_re = 1'd0;
-wire          csrbank2_reader_enable0_r;
-reg           csrbank2_reader_enable0_we = 1'd0;
-wire          csrbank2_reader_enable0_w;
-reg           csrbank2_reader_table_value1_re = 1'd0;
-wire   [25:0] csrbank2_reader_table_value1_r;
-reg           csrbank2_reader_table_value1_we = 1'd0;
-wire   [25:0] csrbank2_reader_table_value1_w;
-reg           csrbank2_reader_table_value0_re = 1'd0;
-wire   [31:0] csrbank2_reader_table_value0_r;
-reg           csrbank2_reader_table_value0_we = 1'd0;
-wire   [31:0] csrbank2_reader_table_value0_w;
-reg           csrbank2_reader_table_we0_re = 1'd0;
-wire   [31:0] csrbank2_reader_table_we0_r;
-reg           csrbank2_reader_table_we0_we = 1'd0;
-wire   [31:0] csrbank2_reader_table_we0_w;
-reg           csrbank2_reader_table_loop_prog_n0_re = 1'd0;
-wire          csrbank2_reader_table_loop_prog_n0_r;
-reg           csrbank2_reader_table_loop_prog_n0_we = 1'd0;
-wire          csrbank2_reader_table_loop_prog_n0_w;
-reg           csrbank2_reader_table_loop_status_re = 1'd0;
-wire   [31:0] csrbank2_reader_table_loop_status_r;
-reg           csrbank2_reader_table_loop_status_we = 1'd0;
-wire   [31:0] csrbank2_reader_table_loop_status_w;
-reg           csrbank2_reader_table_level_re = 1'd0;
-wire    [8:0] csrbank2_reader_table_level_r;
-reg           csrbank2_reader_table_level_we = 1'd0;
-wire    [8:0] csrbank2_reader_table_level_w;
-reg           csrbank2_reader_table_reset0_re = 1'd0;
-wire          csrbank2_reader_table_reset0_r;
-reg           csrbank2_reader_table_reset0_we = 1'd0;
-wire          csrbank2_reader_table_reset0_w;
-reg           csrbank2_buffering_reader_fifo_control0_re = 1'd0;
-wire   [31:0] csrbank2_buffering_reader_fifo_control0_r;
-reg           csrbank2_buffering_reader_fifo_control0_we = 1'd0;
-wire   [31:0] csrbank2_buffering_reader_fifo_control0_w;
-reg           csrbank2_buffering_reader_fifo_status_re = 1'd0;
-wire   [23:0] csrbank2_buffering_reader_fifo_status_r;
-reg           csrbank2_buffering_reader_fifo_status_we = 1'd0;
-wire   [23:0] csrbank2_buffering_reader_fifo_status_w;
-reg           csrbank2_buffering_writer_fifo_control0_re = 1'd0;
-wire   [31:0] csrbank2_buffering_writer_fifo_control0_r;
-reg           csrbank2_buffering_writer_fifo_control0_we = 1'd0;
-wire   [31:0] csrbank2_buffering_writer_fifo_control0_w;
-reg           csrbank2_buffering_writer_fifo_status_re = 1'd0;
-wire   [23:0] csrbank2_buffering_writer_fifo_status_r;
-reg           csrbank2_buffering_writer_fifo_status_we = 1'd0;
-wire   [23:0] csrbank2_buffering_writer_fifo_status_w;
-wire          csrbank2_sel;
-wire   [13:0] interface4_adr;
-wire          interface4_we;
-wire   [31:0] interface4_dat_w;
-reg    [31:0] interface4_dat_r = 32'd0;
-reg           csrbank3_enable0_re = 1'd0;
-wire   [31:0] csrbank3_enable0_r;
-reg           csrbank3_enable0_we = 1'd0;
-wire   [31:0] csrbank3_enable0_w;
-reg           csrbank3_clear0_re = 1'd0;
-wire   [31:0] csrbank3_clear0_r;
-reg           csrbank3_clear0_we = 1'd0;
-wire   [31:0] csrbank3_clear0_w;
-reg           csrbank3_vector_re = 1'd0;
-wire   [31:0] csrbank3_vector_r;
-reg           csrbank3_vector_we = 1'd0;
-wire   [31:0] csrbank3_vector_w;
-wire          csrbank3_sel;
-wire   [13:0] interface5_adr;
-wire          interface5_we;
-wire   [31:0] interface5_dat_w;
-reg    [31:0] interface5_dat_r = 32'd0;
-reg           csrbank4_link_status_re = 1'd0;
-wire    [9:0] csrbank4_link_status_r;
-reg           csrbank4_link_status_we = 1'd0;
-wire    [9:0] csrbank4_link_status_w;
-reg           csrbank4_msi_enable_re = 1'd0;
-wire          csrbank4_msi_enable_r;
-reg           csrbank4_msi_enable_we = 1'd0;
-wire          csrbank4_msi_enable_w;
-reg           csrbank4_msix_enable_re = 1'd0;
-wire          csrbank4_msix_enable_r;
-reg           csrbank4_msix_enable_we = 1'd0;
-wire          csrbank4_msix_enable_w;
-reg           csrbank4_bus_master_enable_re = 1'd0;
-wire          csrbank4_bus_master_enable_r;
-reg           csrbank4_bus_master_enable_we = 1'd0;
-wire          csrbank4_bus_master_enable_w;
-reg           csrbank4_max_request_size_re = 1'd0;
-wire   [15:0] csrbank4_max_request_size_r;
-reg           csrbank4_max_request_size_we = 1'd0;
-wire   [15:0] csrbank4_max_request_size_w;
-reg           csrbank4_max_payload_size_re = 1'd0;
-wire   [15:0] csrbank4_max_payload_size_r;
-reg           csrbank4_max_payload_size_we = 1'd0;
-wire   [15:0] csrbank4_max_payload_size_w;
-wire          csrbank4_sel;
-wire   [13:0] csr_interconnect_adr;
-wire          csr_interconnect_we;
-wire   [31:0] csr_interconnect_dat_w;
-wire   [31:0] csr_interconnect_dat_r;
-reg     [1:0] litepciecore_litepcieendpoint_state = 2'd0;
-reg     [1:0] litepciecore_litepcieendpoint_next_state = 2'd0;
-reg           depacketizer_header_extracter_first_litepcietlpdepacketizer_next_value0 = 1'd0;
-reg           depacketizer_header_extracter_first_litepcietlpdepacketizer_next_value_ce0 = 1'd0;
-reg           depacketizer_header_extracter_last_litepcietlpdepacketizer_next_value1 = 1'd0;
-reg           depacketizer_header_extracter_last_litepcietlpdepacketizer_next_value_ce1 = 1'd0;
-reg    [31:0] litepciecore_litepcieendpoint_next_value0 = 32'd0;
-reg           litepciecore_litepcieendpoint_next_value_ce0 = 1'd0;
-reg    [31:0] litepciecore_litepcieendpoint_next_value1 = 32'd0;
-reg           litepciecore_litepcieendpoint_next_value_ce1 = 1'd0;
-reg    [31:0] litepciecore_litepcieendpoint_next_value2 = 32'd0;
-reg           litepciecore_litepcieendpoint_next_value_ce2 = 1'd0;
-reg    [31:0] litepciecore_litepcieendpoint_next_value3 = 32'd0;
-reg           litepciecore_litepcieendpoint_next_value_ce3 = 1'd0;
-reg           litepciecore_litepcieendpoint_litepcietlpheaderinserter128b3dws_state = 1'd0;
-reg           litepciecore_litepcieendpoint_litepcietlpheaderinserter128b3dws_next_state = 1'd0;
-reg           litepciecore_litepcieendpoint_litepcietlpheaderinserter128b4dws_state = 1'd0;
-reg           litepciecore_litepcieendpoint_litepcietlpheaderinserter128b4dws_next_state = 1'd0;
-wire          litepciecore_litepcieendpoint_s_dispatcher_sel;
-wire          litepciecore_litepcieendpoint_master_in_sink_valid;
-reg           litepciecore_litepcieendpoint_master_in_sink_ready = 1'd0;
-wire          litepciecore_litepcieendpoint_master_in_sink_first;
-wire          litepciecore_litepcieendpoint_master_in_sink_last;
-wire   [15:0] litepciecore_litepcieendpoint_master_in_sink_payload_req_id;
-wire          litepciecore_litepcieendpoint_master_in_sink_payload_we;
-wire   [31:0] litepciecore_litepcieendpoint_master_in_sink_payload_adr;
-wire    [9:0] litepciecore_litepcieendpoint_master_in_sink_payload_len;
-wire    [7:0] litepciecore_litepcieendpoint_master_in_sink_payload_tag;
-wire  [127:0] litepciecore_litepcieendpoint_master_in_sink_payload_dat;
-wire    [7:0] litepciecore_litepcieendpoint_master_in_sink_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_master_in_sink_payload_user_id;
-reg           litepciecore_litepcieendpoint_master_in_source_valid = 1'd0;
-wire          litepciecore_litepcieendpoint_master_in_source_ready;
-reg           litepciecore_litepcieendpoint_master_in_source_first = 1'd0;
-reg           litepciecore_litepcieendpoint_master_in_source_last = 1'd0;
-reg    [15:0] litepciecore_litepcieendpoint_master_in_source_payload_req_id = 16'd0;
-reg    [15:0] litepciecore_litepcieendpoint_master_in_source_payload_cmp_id = 16'd0;
-reg    [31:0] litepciecore_litepcieendpoint_master_in_source_payload_adr = 32'd0;
-reg     [9:0] litepciecore_litepcieendpoint_master_in_source_payload_len = 10'd0;
-reg           litepciecore_litepcieendpoint_master_in_source_payload_end = 1'd0;
-reg           litepciecore_litepcieendpoint_master_in_source_payload_err = 1'd0;
-reg     [7:0] litepciecore_litepcieendpoint_master_in_source_payload_tag = 8'd0;
-reg   [127:0] litepciecore_litepcieendpoint_master_in_source_payload_dat = 128'd0;
-reg     [7:0] litepciecore_litepcieendpoint_master_in_source_payload_channel = 8'd0;
-reg     [7:0] litepciecore_litepcieendpoint_master_in_source_payload_user_id = 8'd0;
-reg           litepciecore_litepcieendpoint_master_out_sink_valid = 1'd0;
-reg           litepciecore_litepcieendpoint_master_out_sink_ready = 1'd0;
-wire          litepciecore_litepcieendpoint_master_out_sink_first;
-wire          litepciecore_litepcieendpoint_master_out_sink_last;
-wire   [15:0] litepciecore_litepcieendpoint_master_out_sink_payload_req_id;
-wire          litepciecore_litepcieendpoint_master_out_sink_payload_we;
-wire   [31:0] litepciecore_litepcieendpoint_master_out_sink_payload_adr;
-wire    [9:0] litepciecore_litepcieendpoint_master_out_sink_payload_len;
-reg     [7:0] litepciecore_litepcieendpoint_master_out_sink_payload_tag = 8'd0;
-wire  [127:0] litepciecore_litepcieendpoint_master_out_sink_payload_dat;
-wire    [7:0] litepciecore_litepcieendpoint_master_out_sink_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_master_out_sink_payload_user_id;
-wire          litepciecore_litepcieendpoint_master_out_source_valid;
-reg           litepciecore_litepcieendpoint_master_out_source_ready = 1'd0;
-wire          litepciecore_litepcieendpoint_master_out_source_first;
-wire          litepciecore_litepcieendpoint_master_out_source_last;
-wire   [15:0] litepciecore_litepcieendpoint_master_out_source_payload_req_id;
-wire   [15:0] litepciecore_litepcieendpoint_master_out_source_payload_cmp_id;
-wire   [31:0] litepciecore_litepcieendpoint_master_out_source_payload_adr;
-wire    [9:0] litepciecore_litepcieendpoint_master_out_source_payload_len;
-wire          litepciecore_litepcieendpoint_master_out_source_payload_end;
-wire          litepciecore_litepcieendpoint_master_out_source_payload_err;
-wire    [7:0] litepciecore_litepcieendpoint_master_out_source_payload_tag;
-wire  [127:0] litepciecore_litepcieendpoint_master_out_source_payload_dat;
-wire    [7:0] litepciecore_litepcieendpoint_master_out_source_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_master_out_source_payload_user_id;
-reg           litepciecore_litepcieendpoint_tag_queue_sink_valid = 1'd0;
-wire          litepciecore_litepcieendpoint_tag_queue_sink_ready;
-reg           litepciecore_litepcieendpoint_tag_queue_sink_first = 1'd0;
-reg           litepciecore_litepcieendpoint_tag_queue_sink_last = 1'd0;
-reg     [1:0] litepciecore_litepcieendpoint_tag_queue_sink_payload_tag = 2'd0;
-wire          litepciecore_litepcieendpoint_tag_queue_source_valid;
-reg           litepciecore_litepcieendpoint_tag_queue_source_ready = 1'd0;
-wire          litepciecore_litepcieendpoint_tag_queue_source_first;
-wire          litepciecore_litepcieendpoint_tag_queue_source_last;
-wire    [1:0] litepciecore_litepcieendpoint_tag_queue_source_payload_tag;
-wire          litepciecore_litepcieendpoint_tag_queue_re;
-reg           litepciecore_litepcieendpoint_tag_queue_readable = 1'd0;
-wire          litepciecore_litepcieendpoint_tag_queue_syncfifo_we;
-wire          litepciecore_litepcieendpoint_tag_queue_syncfifo_writable;
-wire          litepciecore_litepcieendpoint_tag_queue_syncfifo_re;
-wire          litepciecore_litepcieendpoint_tag_queue_syncfifo_readable;
-wire    [3:0] litepciecore_litepcieendpoint_tag_queue_syncfifo_din;
-wire    [3:0] litepciecore_litepcieendpoint_tag_queue_syncfifo_dout;
-reg     [2:0] litepciecore_litepcieendpoint_tag_queue_level0 = 3'd0;
-reg           litepciecore_litepcieendpoint_tag_queue_replace = 1'd0;
-reg     [1:0] litepciecore_litepcieendpoint_tag_queue_produce = 2'd0;
-reg     [1:0] litepciecore_litepcieendpoint_tag_queue_consume = 2'd0;
-reg     [1:0] litepciecore_litepcieendpoint_tag_queue_wrport_adr = 2'd0;
-wire    [3:0] litepciecore_litepcieendpoint_tag_queue_wrport_dat_r;
-wire          litepciecore_litepcieendpoint_tag_queue_wrport_we;
-wire    [3:0] litepciecore_litepcieendpoint_tag_queue_wrport_dat_w;
-wire          litepciecore_litepcieendpoint_tag_queue_do_read;
-wire    [1:0] litepciecore_litepcieendpoint_tag_queue_rdport_adr;
-wire    [3:0] litepciecore_litepcieendpoint_tag_queue_rdport_dat_r;
-wire          litepciecore_litepcieendpoint_tag_queue_rdport_re;
-wire    [2:0] litepciecore_litepcieendpoint_tag_queue_level1;
-wire    [1:0] litepciecore_litepcieendpoint_tag_queue_fifo_in_payload_tag;
-wire          litepciecore_litepcieendpoint_tag_queue_fifo_in_first;
-wire          litepciecore_litepcieendpoint_tag_queue_fifo_in_last;
-wire    [1:0] litepciecore_litepcieendpoint_tag_queue_fifo_out_payload_tag;
-wire          litepciecore_litepcieendpoint_tag_queue_fifo_out_first;
-wire          litepciecore_litepcieendpoint_tag_queue_fifo_out_last;
-reg           litepciecore_litepcieendpoint_req_queue_sink_valid = 1'd0;
-wire          litepciecore_litepcieendpoint_req_queue_sink_ready;
-reg           litepciecore_litepcieendpoint_req_queue_sink_first = 1'd0;
-reg           litepciecore_litepcieendpoint_req_queue_sink_last = 1'd0;
-reg     [1:0] litepciecore_litepcieendpoint_req_queue_sink_payload_tag = 2'd0;
-reg     [7:0] litepciecore_litepcieendpoint_req_queue_sink_payload_channel = 8'd0;
-reg     [7:0] litepciecore_litepcieendpoint_req_queue_sink_payload_user_id = 8'd0;
-wire          litepciecore_litepcieendpoint_req_queue_source_valid;
-reg           litepciecore_litepcieendpoint_req_queue_source_ready = 1'd0;
-wire          litepciecore_litepcieendpoint_req_queue_source_first;
-wire          litepciecore_litepcieendpoint_req_queue_source_last;
-wire    [1:0] litepciecore_litepcieendpoint_req_queue_source_payload_tag;
-wire    [7:0] litepciecore_litepcieendpoint_req_queue_source_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_req_queue_source_payload_user_id;
-wire          litepciecore_litepcieendpoint_req_queue_re;
-reg           litepciecore_litepcieendpoint_req_queue_readable = 1'd0;
-wire          litepciecore_litepcieendpoint_req_queue_syncfifo_we;
-wire          litepciecore_litepcieendpoint_req_queue_syncfifo_writable;
-wire          litepciecore_litepcieendpoint_req_queue_syncfifo_re;
-wire          litepciecore_litepcieendpoint_req_queue_syncfifo_readable;
-wire   [19:0] litepciecore_litepcieendpoint_req_queue_syncfifo_din;
-wire   [19:0] litepciecore_litepcieendpoint_req_queue_syncfifo_dout;
-reg     [2:0] litepciecore_litepcieendpoint_req_queue_level0 = 3'd0;
-reg           litepciecore_litepcieendpoint_req_queue_replace = 1'd0;
-reg     [1:0] litepciecore_litepcieendpoint_req_queue_produce = 2'd0;
-reg     [1:0] litepciecore_litepcieendpoint_req_queue_consume = 2'd0;
-reg     [1:0] litepciecore_litepcieendpoint_req_queue_wrport_adr = 2'd0;
-wire   [19:0] litepciecore_litepcieendpoint_req_queue_wrport_dat_r;
-wire          litepciecore_litepcieendpoint_req_queue_wrport_we;
-wire   [19:0] litepciecore_litepcieendpoint_req_queue_wrport_dat_w;
-wire          litepciecore_litepcieendpoint_req_queue_do_read;
-wire    [1:0] litepciecore_litepcieendpoint_req_queue_rdport_adr;
-wire   [19:0] litepciecore_litepcieendpoint_req_queue_rdport_dat_r;
-wire          litepciecore_litepcieendpoint_req_queue_rdport_re;
-wire    [2:0] litepciecore_litepcieendpoint_req_queue_level1;
-wire    [1:0] litepciecore_litepcieendpoint_req_queue_fifo_in_payload_tag;
-wire    [7:0] litepciecore_litepcieendpoint_req_queue_fifo_in_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_req_queue_fifo_in_payload_user_id;
-wire          litepciecore_litepcieendpoint_req_queue_fifo_in_first;
-wire          litepciecore_litepcieendpoint_req_queue_fifo_in_last;
-wire    [1:0] litepciecore_litepcieendpoint_req_queue_fifo_out_payload_tag;
-wire    [7:0] litepciecore_litepcieendpoint_req_queue_fifo_out_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_req_queue_fifo_out_payload_user_id;
-wire          litepciecore_litepcieendpoint_req_queue_fifo_out_first;
-wire          litepciecore_litepcieendpoint_req_queue_fifo_out_last;
-reg           litepciecore_litepcieendpoint_cmp_reorder_valid = 1'd0;
-reg           litepciecore_litepcieendpoint_cmp_reorder_ready = 1'd0;
-wire          litepciecore_litepcieendpoint_cmp_reorder_first;
-wire          litepciecore_litepcieendpoint_cmp_reorder_last;
-wire   [15:0] litepciecore_litepcieendpoint_cmp_reorder_payload_req_id;
-wire   [15:0] litepciecore_litepcieendpoint_cmp_reorder_payload_cmp_id;
-wire   [31:0] litepciecore_litepcieendpoint_cmp_reorder_payload_adr;
-wire    [9:0] litepciecore_litepcieendpoint_cmp_reorder_payload_len;
-wire          litepciecore_litepcieendpoint_cmp_reorder_payload_end;
-wire          litepciecore_litepcieendpoint_cmp_reorder_payload_err;
-wire    [7:0] litepciecore_litepcieendpoint_cmp_reorder_payload_tag;
-wire  [127:0] litepciecore_litepcieendpoint_cmp_reorder_payload_dat;
-wire    [7:0] litepciecore_litepcieendpoint_cmp_reorder_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_cmp_reorder_payload_user_id;
-reg           litepciecore_litepcieendpoint_syncfifo0_sink_valid = 1'd0;
-wire          litepciecore_litepcieendpoint_syncfifo0_sink_ready;
-reg           litepciecore_litepcieendpoint_syncfifo0_sink_first = 1'd0;
-reg           litepciecore_litepcieendpoint_syncfifo0_sink_last = 1'd0;
-reg    [15:0] litepciecore_litepcieendpoint_syncfifo0_sink_payload_req_id = 16'd0;
-reg    [15:0] litepciecore_litepcieendpoint_syncfifo0_sink_payload_cmp_id = 16'd0;
-reg    [31:0] litepciecore_litepcieendpoint_syncfifo0_sink_payload_adr = 32'd0;
-reg     [9:0] litepciecore_litepcieendpoint_syncfifo0_sink_payload_len = 10'd0;
-reg           litepciecore_litepcieendpoint_syncfifo0_sink_payload_end = 1'd0;
-reg           litepciecore_litepcieendpoint_syncfifo0_sink_payload_err = 1'd0;
-reg     [7:0] litepciecore_litepcieendpoint_syncfifo0_sink_payload_tag = 8'd0;
-reg   [127:0] litepciecore_litepcieendpoint_syncfifo0_sink_payload_dat = 128'd0;
-reg     [7:0] litepciecore_litepcieendpoint_syncfifo0_sink_payload_channel = 8'd0;
-reg     [7:0] litepciecore_litepcieendpoint_syncfifo0_sink_payload_user_id = 8'd0;
-wire          litepciecore_litepcieendpoint_syncfifo0_source_valid;
-reg           litepciecore_litepcieendpoint_syncfifo0_source_ready = 1'd0;
-wire          litepciecore_litepcieendpoint_syncfifo0_source_first;
-wire          litepciecore_litepcieendpoint_syncfifo0_source_last;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo0_source_payload_req_id;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo0_source_payload_cmp_id;
-wire   [31:0] litepciecore_litepcieendpoint_syncfifo0_source_payload_adr;
-wire    [9:0] litepciecore_litepcieendpoint_syncfifo0_source_payload_len;
-wire          litepciecore_litepcieendpoint_syncfifo0_source_payload_end;
-wire          litepciecore_litepcieendpoint_syncfifo0_source_payload_err;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo0_source_payload_tag;
-wire  [127:0] litepciecore_litepcieendpoint_syncfifo0_source_payload_dat;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo0_source_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo0_source_payload_user_id;
-wire          litepciecore_litepcieendpoint_syncfifo0_re;
-reg           litepciecore_litepcieendpoint_syncfifo0_readable = 1'd0;
-wire          litepciecore_litepcieendpoint_syncfifo0_syncfifo0_we;
-wire          litepciecore_litepcieendpoint_syncfifo0_syncfifo0_writable;
-wire          litepciecore_litepcieendpoint_syncfifo0_syncfifo0_re;
-wire          litepciecore_litepcieendpoint_syncfifo0_syncfifo0_readable;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo0_syncfifo0_din;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo0_syncfifo0_dout;
-reg     [7:0] litepciecore_litepcieendpoint_syncfifo0_level0 = 8'd0;
-reg           litepciecore_litepcieendpoint_syncfifo0_replace = 1'd0;
-reg     [6:0] litepciecore_litepcieendpoint_syncfifo0_produce = 7'd0;
-reg     [6:0] litepciecore_litepcieendpoint_syncfifo0_consume = 7'd0;
-reg     [6:0] litepciecore_litepcieendpoint_syncfifo0_wrport_adr = 7'd0;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo0_wrport_dat_r;
-wire          litepciecore_litepcieendpoint_syncfifo0_wrport_we;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo0_wrport_dat_w;
-wire          litepciecore_litepcieendpoint_syncfifo0_do_read;
-wire    [6:0] litepciecore_litepcieendpoint_syncfifo0_rdport_adr;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo0_rdport_dat_r;
-wire          litepciecore_litepcieendpoint_syncfifo0_rdport_re;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo0_level1;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_req_id;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_cmp_id;
-wire   [31:0] litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_adr;
-wire    [9:0] litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_len;
-wire          litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_end;
-wire          litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_err;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_tag;
-wire  [127:0] litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_dat;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_user_id;
-wire          litepciecore_litepcieendpoint_syncfifo0_fifo_in_first;
-wire          litepciecore_litepcieendpoint_syncfifo0_fifo_in_last;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_req_id;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_cmp_id;
-wire   [31:0] litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_adr;
-wire    [9:0] litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_len;
-wire          litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_end;
-wire          litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_err;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_tag;
-wire  [127:0] litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_dat;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_user_id;
-wire          litepciecore_litepcieendpoint_syncfifo0_fifo_out_first;
-wire          litepciecore_litepcieendpoint_syncfifo0_fifo_out_last;
-reg           litepciecore_litepcieendpoint_syncfifo1_sink_valid = 1'd0;
-wire          litepciecore_litepcieendpoint_syncfifo1_sink_ready;
-reg           litepciecore_litepcieendpoint_syncfifo1_sink_first = 1'd0;
-reg           litepciecore_litepcieendpoint_syncfifo1_sink_last = 1'd0;
-reg    [15:0] litepciecore_litepcieendpoint_syncfifo1_sink_payload_req_id = 16'd0;
-reg    [15:0] litepciecore_litepcieendpoint_syncfifo1_sink_payload_cmp_id = 16'd0;
-reg    [31:0] litepciecore_litepcieendpoint_syncfifo1_sink_payload_adr = 32'd0;
-reg     [9:0] litepciecore_litepcieendpoint_syncfifo1_sink_payload_len = 10'd0;
-reg           litepciecore_litepcieendpoint_syncfifo1_sink_payload_end = 1'd0;
-reg           litepciecore_litepcieendpoint_syncfifo1_sink_payload_err = 1'd0;
-reg     [7:0] litepciecore_litepcieendpoint_syncfifo1_sink_payload_tag = 8'd0;
-reg   [127:0] litepciecore_litepcieendpoint_syncfifo1_sink_payload_dat = 128'd0;
-reg     [7:0] litepciecore_litepcieendpoint_syncfifo1_sink_payload_channel = 8'd0;
-reg     [7:0] litepciecore_litepcieendpoint_syncfifo1_sink_payload_user_id = 8'd0;
-wire          litepciecore_litepcieendpoint_syncfifo1_source_valid;
-reg           litepciecore_litepcieendpoint_syncfifo1_source_ready = 1'd0;
-wire          litepciecore_litepcieendpoint_syncfifo1_source_first;
-wire          litepciecore_litepcieendpoint_syncfifo1_source_last;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo1_source_payload_req_id;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo1_source_payload_cmp_id;
-wire   [31:0] litepciecore_litepcieendpoint_syncfifo1_source_payload_adr;
-wire    [9:0] litepciecore_litepcieendpoint_syncfifo1_source_payload_len;
-wire          litepciecore_litepcieendpoint_syncfifo1_source_payload_end;
-wire          litepciecore_litepcieendpoint_syncfifo1_source_payload_err;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo1_source_payload_tag;
-wire  [127:0] litepciecore_litepcieendpoint_syncfifo1_source_payload_dat;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo1_source_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo1_source_payload_user_id;
-wire          litepciecore_litepcieendpoint_syncfifo1_re;
-reg           litepciecore_litepcieendpoint_syncfifo1_readable = 1'd0;
-wire          litepciecore_litepcieendpoint_syncfifo1_syncfifo1_we;
-wire          litepciecore_litepcieendpoint_syncfifo1_syncfifo1_writable;
-wire          litepciecore_litepcieendpoint_syncfifo1_syncfifo1_re;
-wire          litepciecore_litepcieendpoint_syncfifo1_syncfifo1_readable;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo1_syncfifo1_din;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo1_syncfifo1_dout;
-reg     [7:0] litepciecore_litepcieendpoint_syncfifo1_level0 = 8'd0;
-reg           litepciecore_litepcieendpoint_syncfifo1_replace = 1'd0;
-reg     [6:0] litepciecore_litepcieendpoint_syncfifo1_produce = 7'd0;
-reg     [6:0] litepciecore_litepcieendpoint_syncfifo1_consume = 7'd0;
-reg     [6:0] litepciecore_litepcieendpoint_syncfifo1_wrport_adr = 7'd0;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo1_wrport_dat_r;
-wire          litepciecore_litepcieendpoint_syncfifo1_wrport_we;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo1_wrport_dat_w;
-wire          litepciecore_litepcieendpoint_syncfifo1_do_read;
-wire    [6:0] litepciecore_litepcieendpoint_syncfifo1_rdport_adr;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo1_rdport_dat_r;
-wire          litepciecore_litepcieendpoint_syncfifo1_rdport_re;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo1_level1;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_req_id;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_cmp_id;
-wire   [31:0] litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_adr;
-wire    [9:0] litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_len;
-wire          litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_end;
-wire          litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_err;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_tag;
-wire  [127:0] litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_dat;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_user_id;
-wire          litepciecore_litepcieendpoint_syncfifo1_fifo_in_first;
-wire          litepciecore_litepcieendpoint_syncfifo1_fifo_in_last;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_req_id;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_cmp_id;
-wire   [31:0] litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_adr;
-wire    [9:0] litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_len;
-wire          litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_end;
-wire          litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_err;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_tag;
-wire  [127:0] litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_dat;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_user_id;
-wire          litepciecore_litepcieendpoint_syncfifo1_fifo_out_first;
-wire          litepciecore_litepcieendpoint_syncfifo1_fifo_out_last;
-reg           litepciecore_litepcieendpoint_syncfifo2_sink_valid = 1'd0;
-wire          litepciecore_litepcieendpoint_syncfifo2_sink_ready;
-reg           litepciecore_litepcieendpoint_syncfifo2_sink_first = 1'd0;
-reg           litepciecore_litepcieendpoint_syncfifo2_sink_last = 1'd0;
-reg    [15:0] litepciecore_litepcieendpoint_syncfifo2_sink_payload_req_id = 16'd0;
-reg    [15:0] litepciecore_litepcieendpoint_syncfifo2_sink_payload_cmp_id = 16'd0;
-reg    [31:0] litepciecore_litepcieendpoint_syncfifo2_sink_payload_adr = 32'd0;
-reg     [9:0] litepciecore_litepcieendpoint_syncfifo2_sink_payload_len = 10'd0;
-reg           litepciecore_litepcieendpoint_syncfifo2_sink_payload_end = 1'd0;
-reg           litepciecore_litepcieendpoint_syncfifo2_sink_payload_err = 1'd0;
-reg     [7:0] litepciecore_litepcieendpoint_syncfifo2_sink_payload_tag = 8'd0;
-reg   [127:0] litepciecore_litepcieendpoint_syncfifo2_sink_payload_dat = 128'd0;
-reg     [7:0] litepciecore_litepcieendpoint_syncfifo2_sink_payload_channel = 8'd0;
-reg     [7:0] litepciecore_litepcieendpoint_syncfifo2_sink_payload_user_id = 8'd0;
-wire          litepciecore_litepcieendpoint_syncfifo2_source_valid;
-reg           litepciecore_litepcieendpoint_syncfifo2_source_ready = 1'd0;
-wire          litepciecore_litepcieendpoint_syncfifo2_source_first;
-wire          litepciecore_litepcieendpoint_syncfifo2_source_last;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo2_source_payload_req_id;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo2_source_payload_cmp_id;
-wire   [31:0] litepciecore_litepcieendpoint_syncfifo2_source_payload_adr;
-wire    [9:0] litepciecore_litepcieendpoint_syncfifo2_source_payload_len;
-wire          litepciecore_litepcieendpoint_syncfifo2_source_payload_end;
-wire          litepciecore_litepcieendpoint_syncfifo2_source_payload_err;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo2_source_payload_tag;
-wire  [127:0] litepciecore_litepcieendpoint_syncfifo2_source_payload_dat;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo2_source_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo2_source_payload_user_id;
-wire          litepciecore_litepcieendpoint_syncfifo2_re;
-reg           litepciecore_litepcieendpoint_syncfifo2_readable = 1'd0;
-wire          litepciecore_litepcieendpoint_syncfifo2_syncfifo2_we;
-wire          litepciecore_litepcieendpoint_syncfifo2_syncfifo2_writable;
-wire          litepciecore_litepcieendpoint_syncfifo2_syncfifo2_re;
-wire          litepciecore_litepcieendpoint_syncfifo2_syncfifo2_readable;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo2_syncfifo2_din;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo2_syncfifo2_dout;
-reg     [7:0] litepciecore_litepcieendpoint_syncfifo2_level0 = 8'd0;
-reg           litepciecore_litepcieendpoint_syncfifo2_replace = 1'd0;
-reg     [6:0] litepciecore_litepcieendpoint_syncfifo2_produce = 7'd0;
-reg     [6:0] litepciecore_litepcieendpoint_syncfifo2_consume = 7'd0;
-reg     [6:0] litepciecore_litepcieendpoint_syncfifo2_wrport_adr = 7'd0;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo2_wrport_dat_r;
-wire          litepciecore_litepcieendpoint_syncfifo2_wrport_we;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo2_wrport_dat_w;
-wire          litepciecore_litepcieendpoint_syncfifo2_do_read;
-wire    [6:0] litepciecore_litepcieendpoint_syncfifo2_rdport_adr;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo2_rdport_dat_r;
-wire          litepciecore_litepcieendpoint_syncfifo2_rdport_re;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo2_level1;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_req_id;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_cmp_id;
-wire   [31:0] litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_adr;
-wire    [9:0] litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_len;
-wire          litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_end;
-wire          litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_err;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_tag;
-wire  [127:0] litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_dat;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_user_id;
-wire          litepciecore_litepcieendpoint_syncfifo2_fifo_in_first;
-wire          litepciecore_litepcieendpoint_syncfifo2_fifo_in_last;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_req_id;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_cmp_id;
-wire   [31:0] litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_adr;
-wire    [9:0] litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_len;
-wire          litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_end;
-wire          litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_err;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_tag;
-wire  [127:0] litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_dat;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_user_id;
-wire          litepciecore_litepcieendpoint_syncfifo2_fifo_out_first;
-wire          litepciecore_litepcieendpoint_syncfifo2_fifo_out_last;
-reg           litepciecore_litepcieendpoint_syncfifo3_sink_valid = 1'd0;
-wire          litepciecore_litepcieendpoint_syncfifo3_sink_ready;
-reg           litepciecore_litepcieendpoint_syncfifo3_sink_first = 1'd0;
-reg           litepciecore_litepcieendpoint_syncfifo3_sink_last = 1'd0;
-reg    [15:0] litepciecore_litepcieendpoint_syncfifo3_sink_payload_req_id = 16'd0;
-reg    [15:0] litepciecore_litepcieendpoint_syncfifo3_sink_payload_cmp_id = 16'd0;
-reg    [31:0] litepciecore_litepcieendpoint_syncfifo3_sink_payload_adr = 32'd0;
-reg     [9:0] litepciecore_litepcieendpoint_syncfifo3_sink_payload_len = 10'd0;
-reg           litepciecore_litepcieendpoint_syncfifo3_sink_payload_end = 1'd0;
-reg           litepciecore_litepcieendpoint_syncfifo3_sink_payload_err = 1'd0;
-reg     [7:0] litepciecore_litepcieendpoint_syncfifo3_sink_payload_tag = 8'd0;
-reg   [127:0] litepciecore_litepcieendpoint_syncfifo3_sink_payload_dat = 128'd0;
-reg     [7:0] litepciecore_litepcieendpoint_syncfifo3_sink_payload_channel = 8'd0;
-reg     [7:0] litepciecore_litepcieendpoint_syncfifo3_sink_payload_user_id = 8'd0;
-wire          litepciecore_litepcieendpoint_syncfifo3_source_valid;
-reg           litepciecore_litepcieendpoint_syncfifo3_source_ready = 1'd0;
-wire          litepciecore_litepcieendpoint_syncfifo3_source_first;
-wire          litepciecore_litepcieendpoint_syncfifo3_source_last;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo3_source_payload_req_id;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo3_source_payload_cmp_id;
-wire   [31:0] litepciecore_litepcieendpoint_syncfifo3_source_payload_adr;
-wire    [9:0] litepciecore_litepcieendpoint_syncfifo3_source_payload_len;
-wire          litepciecore_litepcieendpoint_syncfifo3_source_payload_end;
-wire          litepciecore_litepcieendpoint_syncfifo3_source_payload_err;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo3_source_payload_tag;
-wire  [127:0] litepciecore_litepcieendpoint_syncfifo3_source_payload_dat;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo3_source_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo3_source_payload_user_id;
-wire          litepciecore_litepcieendpoint_syncfifo3_re;
-reg           litepciecore_litepcieendpoint_syncfifo3_readable = 1'd0;
-wire          litepciecore_litepcieendpoint_syncfifo3_syncfifo3_we;
-wire          litepciecore_litepcieendpoint_syncfifo3_syncfifo3_writable;
-wire          litepciecore_litepcieendpoint_syncfifo3_syncfifo3_re;
-wire          litepciecore_litepcieendpoint_syncfifo3_syncfifo3_readable;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo3_syncfifo3_din;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo3_syncfifo3_dout;
-reg     [7:0] litepciecore_litepcieendpoint_syncfifo3_level0 = 8'd0;
-reg           litepciecore_litepcieendpoint_syncfifo3_replace = 1'd0;
-reg     [6:0] litepciecore_litepcieendpoint_syncfifo3_produce = 7'd0;
-reg     [6:0] litepciecore_litepcieendpoint_syncfifo3_consume = 7'd0;
-reg     [6:0] litepciecore_litepcieendpoint_syncfifo3_wrport_adr = 7'd0;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo3_wrport_dat_r;
-wire          litepciecore_litepcieendpoint_syncfifo3_wrport_we;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo3_wrport_dat_w;
-wire          litepciecore_litepcieendpoint_syncfifo3_do_read;
-wire    [6:0] litepciecore_litepcieendpoint_syncfifo3_rdport_adr;
-wire  [229:0] litepciecore_litepcieendpoint_syncfifo3_rdport_dat_r;
-wire          litepciecore_litepcieendpoint_syncfifo3_rdport_re;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo3_level1;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_req_id;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_cmp_id;
-wire   [31:0] litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_adr;
-wire    [9:0] litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_len;
-wire          litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_end;
-wire          litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_err;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_tag;
-wire  [127:0] litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_dat;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_user_id;
-wire          litepciecore_litepcieendpoint_syncfifo3_fifo_in_first;
-wire          litepciecore_litepcieendpoint_syncfifo3_fifo_in_last;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_req_id;
-wire   [15:0] litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_cmp_id;
-wire   [31:0] litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_adr;
-wire    [9:0] litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_len;
-wire          litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_end;
-wire          litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_err;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_tag;
-wire  [127:0] litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_dat;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_user_id;
-wire          litepciecore_litepcieendpoint_syncfifo3_fifo_out_first;
-wire          litepciecore_litepcieendpoint_syncfifo3_fifo_out_last;
-reg     [1:0] litepciecore_litepcieendpoint_fill_tag = 2'd0;
-wire          litepciecore_litepcieendpoint_m_dispatcher_sel0;
-wire          litepciecore_litepcieendpoint_sink_valid;
-reg           litepciecore_litepcieendpoint_sink_ready = 1'd0;
-wire          litepciecore_litepcieendpoint_sink_first;
-wire          litepciecore_litepcieendpoint_sink_last;
-wire   [15:0] litepciecore_litepcieendpoint_sink_payload_req_id;
-wire          litepciecore_litepcieendpoint_sink_payload_we;
-wire   [31:0] litepciecore_litepcieendpoint_sink_payload_adr;
-wire    [9:0] litepciecore_litepcieendpoint_sink_payload_len;
-wire    [7:0] litepciecore_litepcieendpoint_sink_payload_tag;
-wire  [127:0] litepciecore_litepcieendpoint_sink_payload_dat;
-wire    [7:0] litepciecore_litepcieendpoint_sink_payload_channel;
-wire    [7:0] litepciecore_litepcieendpoint_sink_payload_user_id;
-reg           litepciecore_litepcieendpoint_source_valid = 1'd0;
-wire          litepciecore_litepcieendpoint_source_ready;
-reg           litepciecore_litepcieendpoint_source_first = 1'd0;
-reg           litepciecore_litepcieendpoint_source_last = 1'd0;
-reg    [15:0] litepciecore_litepcieendpoint_source_payload_req_id = 16'd0;
-reg    [15:0] litepciecore_litepcieendpoint_source_payload_cmp_id = 16'd0;
-reg    [31:0] litepciecore_litepcieendpoint_source_payload_adr = 32'd0;
-reg     [9:0] litepciecore_litepcieendpoint_source_payload_len = 10'd0;
-reg           litepciecore_litepcieendpoint_source_payload_end = 1'd0;
-reg           litepciecore_litepcieendpoint_source_payload_err = 1'd0;
-reg     [7:0] litepciecore_litepcieendpoint_source_payload_tag = 8'd0;
-reg   [127:0] litepciecore_litepcieendpoint_source_payload_dat = 128'd0;
-reg     [7:0] litepciecore_litepcieendpoint_source_payload_channel = 8'd0;
-reg     [7:0] litepciecore_litepcieendpoint_source_payload_user_id = 8'd0;
-wire          litepciecore_litepcieendpoint_m_dispatcher_sel1;
-reg     [1:0] litepciecore_litepcieendpoint_request = 2'd0;
-reg           litepciecore_litepcieendpoint_grant = 1'd0;
-reg           litepciecore_litepcieendpoint_status0_first = 1'd1;
-reg           litepciecore_litepcieendpoint_status0_last = 1'd0;
-wire          litepciecore_litepcieendpoint_status0_ongoing0;
-reg           litepciecore_litepcieendpoint_status0_ongoing1 = 1'd0;
-reg           litepciecore_litepcieendpoint_status1_first = 1'd1;
-reg           litepciecore_litepcieendpoint_status1_last = 1'd0;
-wire          litepciecore_litepcieendpoint_status1_ongoing0;
-reg           litepciecore_litepcieendpoint_status1_ongoing1 = 1'd0;
-reg     [1:0] litepciecore_litepcieendpoint_fsm0_state = 2'd0;
-reg     [1:0] litepciecore_litepcieendpoint_fsm0_next_state = 2'd0;
-reg     [1:0] litepciecore_litepcieendpoint_fsm1_state = 2'd0;
-reg     [1:0] litepciecore_litepcieendpoint_fsm1_next_state = 2'd0;
-reg     [1:0] litepciecore_litepcieendpoint_fill_tag_litepciecrossbar_next_value = 2'd0;
-reg           litepciecore_litepcieendpoint_fill_tag_litepciecrossbar_next_value_ce = 1'd0;
-reg     [1:0] litepciecore_litepciewishbonemaster_state = 2'd0;
-reg     [1:0] litepciecore_litepciewishbonemaster_next_state = 2'd0;
-reg           litepciecore_litepciedmawriter_bufferizeendpoints_state = 1'd0;
-reg           litepciecore_litepciedmawriter_bufferizeendpoints_next_state = 1'd0;
-reg    [31:0] writer_splitter_desc_offset_bufferizeendpoints_next_value0 = 32'd0;
-reg           writer_splitter_desc_offset_bufferizeendpoints_next_value_ce0 = 1'd0;
-reg    [31:0] writer_splitter_desc_length_bufferizeendpoints_next_value1 = 32'd0;
-reg           writer_splitter_desc_length_bufferizeendpoints_next_value_ce1 = 1'd0;
-reg    [31:0] writer_splitter_desc_id_bufferizeendpoints_next_value2 = 32'd0;
-reg           writer_splitter_desc_id_bufferizeendpoints_next_value_ce2 = 1'd0;
-reg           litepciecore_litepciedmawriter_fsm_state = 1'd0;
-reg           litepciecore_litepciedmawriter_fsm_next_state = 1'd0;
-reg    [23:0] writer_req_count_fsm_next_value = 24'd0;
-reg           writer_req_count_fsm_next_value_ce = 1'd0;
-reg           litepciecore_litepciedmareader_bufferizeendpoints_state = 1'd0;
-reg           litepciecore_litepciedmareader_bufferizeendpoints_next_state = 1'd0;
-reg    [31:0] reader_splitter_desc_offset_next_value0 = 32'd0;
-reg           reader_splitter_desc_offset_next_value_ce0 = 1'd0;
-reg    [31:0] reader_splitter_desc_length_next_value1 = 32'd0;
-reg           reader_splitter_desc_length_next_value_ce1 = 1'd0;
-reg    [31:0] reader_splitter_desc_id_next_value2 = 32'd0;
-reg           reader_splitter_desc_id_next_value_ce2 = 1'd0;
-reg           litepciecore_litepciedmareader_fsm_state = 1'd0;
-reg           litepciecore_litepciedmareader_fsm_next_state = 1'd0;
-reg           litepciecore_wishbone2csr_state = 1'd0;
-reg           litepciecore_wishbone2csr_next_state = 1'd0;
+wire          pcie_rst;
+reg           pcie_wishbone_master_sink_first = 1'd0;
+reg           pcie_wishbone_master_sink_last = 1'd0;
+reg    [31:0] pcie_wishbone_master_sink_payload_adr = 32'd0;
+reg     [7:0] pcie_wishbone_master_sink_payload_channel = 8'd0;
+reg    [15:0] pcie_wishbone_master_sink_payload_cmp_id = 16'd0;
+reg   [127:0] pcie_wishbone_master_sink_payload_dat = 128'd0;
+reg           pcie_wishbone_master_sink_payload_end = 1'd0;
+reg           pcie_wishbone_master_sink_payload_err = 1'd0;
+reg     [9:0] pcie_wishbone_master_sink_payload_len = 10'd0;
+reg    [15:0] pcie_wishbone_master_sink_payload_req_id = 16'd0;
+reg     [7:0] pcie_wishbone_master_sink_payload_tag = 8'd0;
+reg     [7:0] pcie_wishbone_master_sink_payload_user_id = 8'd0;
+wire          pcie_wishbone_master_sink_ready;
+reg           pcie_wishbone_master_sink_valid = 1'd0;
+reg           pcie_wishbone_master_source_first = 1'd0;
+reg           pcie_wishbone_master_source_last = 1'd0;
+reg    [31:0] pcie_wishbone_master_source_payload_adr = 32'd0;
+reg     [7:0] pcie_wishbone_master_source_payload_channel = 8'd0;
+reg   [127:0] pcie_wishbone_master_source_payload_dat = 128'd0;
+reg     [9:0] pcie_wishbone_master_source_payload_len = 10'd0;
+reg    [15:0] pcie_wishbone_master_source_payload_req_id = 16'd0;
+reg     [7:0] pcie_wishbone_master_source_payload_tag = 8'd0;
+reg     [7:0] pcie_wishbone_master_source_payload_user_id = 8'd0;
+reg           pcie_wishbone_master_source_payload_we = 1'd0;
+reg           pcie_wishbone_master_source_ready = 1'd0;
+reg           pcie_wishbone_master_source_valid = 1'd0;
+reg           pcie_wishbone_master_update_dat = 1'd0;
+wire          pcie_wishbone_master_wishbone_ack;
+reg    [29:0] pcie_wishbone_master_wishbone_adr = 30'd0;
+reg     [1:0] pcie_wishbone_master_wishbone_bte = 2'd0;
+reg     [2:0] pcie_wishbone_master_wishbone_cti = 3'd0;
+reg           pcie_wishbone_master_wishbone_cyc = 1'd0;
+wire   [31:0] pcie_wishbone_master_wishbone_dat_r;
+reg    [31:0] pcie_wishbone_master_wishbone_dat_w = 32'd0;
+wire          pcie_wishbone_master_wishbone_err;
+reg     [3:0] pcie_wishbone_master_wishbone_sel = 4'd0;
+reg           pcie_wishbone_master_wishbone_stb = 1'd0;
+reg           pcie_wishbone_master_wishbone_we = 1'd0;
+wire          pclk_clk;
+reg           pclk_rst = 1'd0;
+wire          reset0;
+wire          reset1;
+wire          reset2;
+wire          reset3;
+wire          reset4;
+wire          reset5;
+wire          reset6;
+wire          reset7;
+reg           reset_re = 1'd0;
+reg     [1:0] reset_storage = 2'd0;
+wire          s7pciephy0;
+wire          s7pciephy1;
+wire          s7pciephy10;
+wire          s7pciephy11;
+wire          s7pciephy12;
+wire          s7pciephy13;
+wire          s7pciephy14;
+wire          s7pciephy15;
+wire          s7pciephy16;
+wire          s7pciephy17;
+wire          s7pciephy18;
+wire          s7pciephy19;
+wire          s7pciephy2;
+wire          s7pciephy20;
+wire          s7pciephy21;
+wire          s7pciephy22;
+wire          s7pciephy23;
+wire          s7pciephy24;
+wire          s7pciephy25;
+wire          s7pciephy26;
+wire          s7pciephy27;
+wire          s7pciephy28;
+wire          s7pciephy29;
+wire          s7pciephy3;
+wire          s7pciephy30;
+wire          s7pciephy31;
+wire          s7pciephy32;
+wire          s7pciephy33;
+wire          s7pciephy34;
+wire          s7pciephy35;
+wire          s7pciephy36;
+wire          s7pciephy37;
+wire          s7pciephy38;
+wire          s7pciephy39;
+wire          s7pciephy4;
+wire          s7pciephy40;
+wire          s7pciephy41;
+wire          s7pciephy42;
+wire          s7pciephy43;
+wire          s7pciephy44;
+wire          s7pciephy45;
+wire          s7pciephy46;
+wire          s7pciephy47;
+wire          s7pciephy48;
+wire          s7pciephy49;
+wire          s7pciephy5;
+wire          s7pciephy50;
+wire          s7pciephy51;
+wire          s7pciephy52;
+wire          s7pciephy53;
+wire          s7pciephy54;
+wire          s7pciephy55;
+wire          s7pciephy56;
+wire          s7pciephy57;
+wire          s7pciephy58;
+wire          s7pciephy59;
+wire          s7pciephy6;
+wire          s7pciephy60;
+wire          s7pciephy61;
+wire          s7pciephy62;
+wire          s7pciephy63;
+wire          s7pciephy64;
+wire          s7pciephy65;
+wire          s7pciephy66;
+wire          s7pciephy67;
+wire          s7pciephy68;
+wire          s7pciephy69;
+wire          s7pciephy7;
+wire          s7pciephy70;
+wire          s7pciephy71;
+wire          s7pciephy72;
+wire          s7pciephy73;
+wire          s7pciephy8;
+wire          s7pciephy9;
+reg           s7pciephy_bus_master_enable_re = 1'd0;
+wire          s7pciephy_bus_master_enable_status;
+wire          s7pciephy_bus_master_enable_we;
+wire    [7:0] s7pciephy_bus_number;
+wire          s7pciephy_clkin;
+wire          s7pciephy_clkout0;
+wire          s7pciephy_clkout1;
+wire          s7pciephy_clkout2;
+wire          s7pciephy_clkout3;
+wire          s7pciephy_clkout_buf0;
+wire          s7pciephy_clkout_buf1;
+wire          s7pciephy_clkout_buf2;
+wire          s7pciephy_clkout_buf3;
+wire   [15:0] s7pciephy_command;
+wire    [5:0] s7pciephy_csrfield_ltssm;
+wire          s7pciephy_csrfield_rate;
+wire          s7pciephy_csrfield_status;
+wire    [1:0] s7pciephy_csrfield_width;
+wire   [15:0] s7pciephy_dcommand;
+wire    [4:0] s7pciephy_device_number;
+wire    [2:0] s7pciephy_function_number;
+wire   [15:0] s7pciephy_id;
+reg           s7pciephy_link_status_re = 1'd0;
+reg     [9:0] s7pciephy_link_status_status = 10'd0;
+wire          s7pciephy_link_status_we;
+wire          s7pciephy_locked;
+wire          s7pciephy_m_axis_rx_tlast;
+wire   [31:0] s7pciephy_m_axis_rx_tuser;
+reg    [15:0] s7pciephy_max_payload_size = 16'd0;
+reg           s7pciephy_max_payload_size_re = 1'd0;
+wire   [15:0] s7pciephy_max_payload_size_status;
+wire          s7pciephy_max_payload_size_we;
+reg    [15:0] s7pciephy_max_request_size = 16'd0;
+reg           s7pciephy_max_request_size_re = 1'd0;
+wire   [15:0] s7pciephy_max_request_size_status;
+wire          s7pciephy_max_request_size_we;
+wire          s7pciephy_msi_cdc_cd_rst;
+wire    [9:0] s7pciephy_msi_cdc_cdc_asyncfifo_din;
+wire    [9:0] s7pciephy_msi_cdc_cdc_asyncfifo_dout;
+wire          s7pciephy_msi_cdc_cdc_asyncfifo_re;
+wire          s7pciephy_msi_cdc_cdc_asyncfifo_readable;
+wire          s7pciephy_msi_cdc_cdc_asyncfifo_we;
+wire          s7pciephy_msi_cdc_cdc_asyncfifo_writable;
+wire    [2:0] s7pciephy_msi_cdc_cdc_consume_wdomain;
+wire          s7pciephy_msi_cdc_cdc_fifo_in_first;
+wire          s7pciephy_msi_cdc_cdc_fifo_in_last;
+wire    [7:0] s7pciephy_msi_cdc_cdc_fifo_in_payload_dat;
+wire          s7pciephy_msi_cdc_cdc_fifo_out_first;
+wire          s7pciephy_msi_cdc_cdc_fifo_out_last;
+wire    [7:0] s7pciephy_msi_cdc_cdc_fifo_out_payload_dat;
+wire          s7pciephy_msi_cdc_cdc_graycounter0_ce;
+(* dont_touch = "true" *)
+reg     [2:0] s7pciephy_msi_cdc_cdc_graycounter0_q = 3'd0;
+reg     [2:0] s7pciephy_msi_cdc_cdc_graycounter0_q_binary = 3'd0;
+wire    [2:0] s7pciephy_msi_cdc_cdc_graycounter0_q_next;
+reg     [2:0] s7pciephy_msi_cdc_cdc_graycounter0_q_next_binary = 3'd0;
+wire          s7pciephy_msi_cdc_cdc_graycounter1_ce;
+(* dont_touch = "true" *)
+reg     [2:0] s7pciephy_msi_cdc_cdc_graycounter1_q = 3'd0;
+reg     [2:0] s7pciephy_msi_cdc_cdc_graycounter1_q_binary = 3'd0;
+wire    [2:0] s7pciephy_msi_cdc_cdc_graycounter1_q_next;
+reg     [2:0] s7pciephy_msi_cdc_cdc_graycounter1_q_next_binary = 3'd0;
+wire    [2:0] s7pciephy_msi_cdc_cdc_produce_rdomain;
+wire    [1:0] s7pciephy_msi_cdc_cdc_rdport_adr;
+wire    [9:0] s7pciephy_msi_cdc_cdc_rdport_dat_r;
+wire          s7pciephy_msi_cdc_cdc_sink_first;
+wire          s7pciephy_msi_cdc_cdc_sink_last;
+wire    [7:0] s7pciephy_msi_cdc_cdc_sink_payload_dat;
+wire          s7pciephy_msi_cdc_cdc_sink_ready;
+wire          s7pciephy_msi_cdc_cdc_sink_valid;
+wire          s7pciephy_msi_cdc_cdc_source_first;
+wire          s7pciephy_msi_cdc_cdc_source_last;
+wire    [7:0] s7pciephy_msi_cdc_cdc_source_payload_dat;
+wire          s7pciephy_msi_cdc_cdc_source_ready;
+wire          s7pciephy_msi_cdc_cdc_source_valid;
+wire    [1:0] s7pciephy_msi_cdc_cdc_wrport_adr;
+wire    [9:0] s7pciephy_msi_cdc_cdc_wrport_dat_r;
+wire    [9:0] s7pciephy_msi_cdc_cdc_wrport_dat_w;
+wire          s7pciephy_msi_cdc_cdc_wrport_we;
+wire          s7pciephy_msi_cdc_sink_sink_first;
+wire          s7pciephy_msi_cdc_sink_sink_last;
+wire    [7:0] s7pciephy_msi_cdc_sink_sink_payload_dat;
+wire          s7pciephy_msi_cdc_sink_sink_ready;
+wire          s7pciephy_msi_cdc_sink_sink_valid;
+wire          s7pciephy_msi_cdc_source_source_first;
+wire          s7pciephy_msi_cdc_source_source_last;
+wire    [7:0] s7pciephy_msi_cdc_source_source_payload_dat;
+wire          s7pciephy_msi_cdc_source_source_ready;
+wire          s7pciephy_msi_cdc_source_source_valid;
+reg           s7pciephy_msi_enable_re = 1'd0;
+wire          s7pciephy_msi_enable_status;
+wire          s7pciephy_msi_enable_we;
+wire          s7pciephy_msi_first;
+wire          s7pciephy_msi_last;
+wire    [7:0] s7pciephy_msi_payload_dat;
+wire          s7pciephy_msi_ready;
+wire          s7pciephy_msi_valid;
+reg           s7pciephy_msix_enable_re = 1'd0;
+wire          s7pciephy_msix_enable_status;
+wire          s7pciephy_msix_enable_we;
+wire          s7pciephy_pcie_refclk;
+wire          s7pciephy_pcie_rst_n;
+reg           s7pciephy_pclk_sel = 1'd0;
+wire    [1:0] s7pciephy_pipe_pclk_sel;
+wire    [1:0] s7pciephy_pipe_pclk_sel_r;
+wire          s7pciephy_pipe_txoutclk;
+wire          s7pciephy_pipe_txoutclk_bufg;
+reg           s7pciephy_power_down = 1'd0;
+reg           s7pciephy_reset = 1'd0;
+wire          s7pciephy_rx_datapath_cdc_cd_rst;
+wire  [145:0] s7pciephy_rx_datapath_cdc_cdc_asyncfifo_din;
+wire  [145:0] s7pciephy_rx_datapath_cdc_cdc_asyncfifo_dout;
+wire          s7pciephy_rx_datapath_cdc_cdc_asyncfifo_re;
+wire          s7pciephy_rx_datapath_cdc_cdc_asyncfifo_readable;
+wire          s7pciephy_rx_datapath_cdc_cdc_asyncfifo_we;
+wire          s7pciephy_rx_datapath_cdc_cdc_asyncfifo_writable;
+wire    [4:0] s7pciephy_rx_datapath_cdc_cdc_consume_wdomain;
+wire          s7pciephy_rx_datapath_cdc_cdc_fifo_in_first;
+wire          s7pciephy_rx_datapath_cdc_cdc_fifo_in_last;
+wire   [15:0] s7pciephy_rx_datapath_cdc_cdc_fifo_in_payload_be;
+wire  [127:0] s7pciephy_rx_datapath_cdc_cdc_fifo_in_payload_dat;
+wire          s7pciephy_rx_datapath_cdc_cdc_fifo_out_first;
+wire          s7pciephy_rx_datapath_cdc_cdc_fifo_out_last;
+wire   [15:0] s7pciephy_rx_datapath_cdc_cdc_fifo_out_payload_be;
+wire  [127:0] s7pciephy_rx_datapath_cdc_cdc_fifo_out_payload_dat;
+wire          s7pciephy_rx_datapath_cdc_cdc_graycounter0_ce;
+(* dont_touch = "true" *)
+reg     [4:0] s7pciephy_rx_datapath_cdc_cdc_graycounter0_q = 5'd0;
+reg     [4:0] s7pciephy_rx_datapath_cdc_cdc_graycounter0_q_binary = 5'd0;
+wire    [4:0] s7pciephy_rx_datapath_cdc_cdc_graycounter0_q_next;
+reg     [4:0] s7pciephy_rx_datapath_cdc_cdc_graycounter0_q_next_binary = 5'd0;
+wire          s7pciephy_rx_datapath_cdc_cdc_graycounter1_ce;
+(* dont_touch = "true" *)
+reg     [4:0] s7pciephy_rx_datapath_cdc_cdc_graycounter1_q = 5'd0;
+reg     [4:0] s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_binary = 5'd0;
+wire    [4:0] s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_next;
+reg     [4:0] s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_next_binary = 5'd0;
+wire    [4:0] s7pciephy_rx_datapath_cdc_cdc_produce_rdomain;
+wire    [3:0] s7pciephy_rx_datapath_cdc_cdc_rdport_adr;
+wire  [145:0] s7pciephy_rx_datapath_cdc_cdc_rdport_dat_r;
+wire          s7pciephy_rx_datapath_cdc_cdc_sink_first;
+wire          s7pciephy_rx_datapath_cdc_cdc_sink_last;
+wire   [15:0] s7pciephy_rx_datapath_cdc_cdc_sink_payload_be;
+wire  [127:0] s7pciephy_rx_datapath_cdc_cdc_sink_payload_dat;
+wire          s7pciephy_rx_datapath_cdc_cdc_sink_ready;
+wire          s7pciephy_rx_datapath_cdc_cdc_sink_valid;
+wire          s7pciephy_rx_datapath_cdc_cdc_source_first;
+wire          s7pciephy_rx_datapath_cdc_cdc_source_last;
+wire   [15:0] s7pciephy_rx_datapath_cdc_cdc_source_payload_be;
+wire  [127:0] s7pciephy_rx_datapath_cdc_cdc_source_payload_dat;
+wire          s7pciephy_rx_datapath_cdc_cdc_source_ready;
+wire          s7pciephy_rx_datapath_cdc_cdc_source_valid;
+wire    [3:0] s7pciephy_rx_datapath_cdc_cdc_wrport_adr;
+wire  [145:0] s7pciephy_rx_datapath_cdc_cdc_wrport_dat_r;
+wire  [145:0] s7pciephy_rx_datapath_cdc_cdc_wrport_dat_w;
+wire          s7pciephy_rx_datapath_cdc_cdc_wrport_we;
+wire          s7pciephy_rx_datapath_cdc_sink_sink_first;
+wire          s7pciephy_rx_datapath_cdc_sink_sink_last;
+wire   [15:0] s7pciephy_rx_datapath_cdc_sink_sink_payload_be;
+wire  [127:0] s7pciephy_rx_datapath_cdc_sink_sink_payload_dat;
+wire          s7pciephy_rx_datapath_cdc_sink_sink_ready;
+wire          s7pciephy_rx_datapath_cdc_sink_sink_valid;
+wire          s7pciephy_rx_datapath_cdc_source_source_first;
+wire          s7pciephy_rx_datapath_cdc_source_source_last;
+wire   [15:0] s7pciephy_rx_datapath_cdc_source_source_payload_be;
+wire  [127:0] s7pciephy_rx_datapath_cdc_source_source_payload_dat;
+wire          s7pciephy_rx_datapath_cdc_source_source_ready;
+wire          s7pciephy_rx_datapath_cdc_source_source_valid;
+reg           s7pciephy_rx_datapath_converter_converter_demux = 1'd0;
+wire          s7pciephy_rx_datapath_converter_converter_load_part;
+wire          s7pciephy_rx_datapath_converter_converter_sink_first;
+wire          s7pciephy_rx_datapath_converter_converter_sink_last;
+wire   [71:0] s7pciephy_rx_datapath_converter_converter_sink_payload_data;
+wire          s7pciephy_rx_datapath_converter_converter_sink_ready;
+wire          s7pciephy_rx_datapath_converter_converter_sink_valid;
+reg           s7pciephy_rx_datapath_converter_converter_source_first = 1'd0;
+reg           s7pciephy_rx_datapath_converter_converter_source_last = 1'd0;
+reg   [143:0] s7pciephy_rx_datapath_converter_converter_source_payload_data = 144'd0;
+reg     [1:0] s7pciephy_rx_datapath_converter_converter_source_payload_valid_token_count = 2'd0;
+wire          s7pciephy_rx_datapath_converter_converter_source_ready;
+wire          s7pciephy_rx_datapath_converter_converter_source_valid;
+reg           s7pciephy_rx_datapath_converter_converter_strobe_all = 1'd0;
+wire          s7pciephy_rx_datapath_converter_sink_first;
+wire          s7pciephy_rx_datapath_converter_sink_last;
+wire    [7:0] s7pciephy_rx_datapath_converter_sink_payload_be;
+wire   [63:0] s7pciephy_rx_datapath_converter_sink_payload_dat;
+wire          s7pciephy_rx_datapath_converter_sink_ready;
+wire          s7pciephy_rx_datapath_converter_sink_valid;
+wire          s7pciephy_rx_datapath_converter_source_first;
+wire          s7pciephy_rx_datapath_converter_source_last;
+reg    [15:0] s7pciephy_rx_datapath_converter_source_payload_be = 16'd0;
+reg   [127:0] s7pciephy_rx_datapath_converter_source_payload_dat = 128'd0;
+wire          s7pciephy_rx_datapath_converter_source_ready;
+wire          s7pciephy_rx_datapath_converter_source_source_first;
+wire          s7pciephy_rx_datapath_converter_source_source_last;
+wire  [143:0] s7pciephy_rx_datapath_converter_source_source_payload_data;
+wire          s7pciephy_rx_datapath_converter_source_source_ready;
+wire          s7pciephy_rx_datapath_converter_source_source_valid;
+wire          s7pciephy_rx_datapath_converter_source_valid;
+reg           s7pciephy_rx_datapath_pipe_ready_sink_d_first = 1'd0;
+reg           s7pciephy_rx_datapath_pipe_ready_sink_d_last = 1'd0;
+reg    [15:0] s7pciephy_rx_datapath_pipe_ready_sink_d_payload_be = 16'd0;
+reg   [127:0] s7pciephy_rx_datapath_pipe_ready_sink_d_payload_dat = 128'd0;
+reg           s7pciephy_rx_datapath_pipe_ready_sink_d_ready = 1'd0;
+reg           s7pciephy_rx_datapath_pipe_ready_sink_d_valid = 1'd0;
+wire          s7pciephy_rx_datapath_pipe_ready_sink_first;
+wire          s7pciephy_rx_datapath_pipe_ready_sink_last;
+wire   [15:0] s7pciephy_rx_datapath_pipe_ready_sink_payload_be;
+wire  [127:0] s7pciephy_rx_datapath_pipe_ready_sink_payload_dat;
+wire          s7pciephy_rx_datapath_pipe_ready_sink_ready;
+wire          s7pciephy_rx_datapath_pipe_ready_sink_valid;
+reg           s7pciephy_rx_datapath_pipe_ready_source_first = 1'd0;
+reg           s7pciephy_rx_datapath_pipe_ready_source_last = 1'd0;
+reg    [15:0] s7pciephy_rx_datapath_pipe_ready_source_payload_be = 16'd0;
+reg   [127:0] s7pciephy_rx_datapath_pipe_ready_source_payload_dat = 128'd0;
+wire          s7pciephy_rx_datapath_pipe_ready_source_ready;
+reg           s7pciephy_rx_datapath_pipe_ready_source_valid = 1'd0;
+reg           s7pciephy_rx_datapath_pipe_ready_valid = 1'd0;
+wire          s7pciephy_rx_datapath_pipe_valid_sink_first;
+wire          s7pciephy_rx_datapath_pipe_valid_sink_last;
+wire   [15:0] s7pciephy_rx_datapath_pipe_valid_sink_payload_be;
+wire  [127:0] s7pciephy_rx_datapath_pipe_valid_sink_payload_dat;
+wire          s7pciephy_rx_datapath_pipe_valid_sink_ready;
+wire          s7pciephy_rx_datapath_pipe_valid_sink_valid;
+reg           s7pciephy_rx_datapath_pipe_valid_source_first = 1'd0;
+reg           s7pciephy_rx_datapath_pipe_valid_source_last = 1'd0;
+reg    [15:0] s7pciephy_rx_datapath_pipe_valid_source_payload_be = 16'd0;
+reg   [127:0] s7pciephy_rx_datapath_pipe_valid_source_payload_dat = 128'd0;
+wire          s7pciephy_rx_datapath_pipe_valid_source_ready;
+reg           s7pciephy_rx_datapath_pipe_valid_source_valid = 1'd0;
+wire          s7pciephy_rx_datapath_sink_sink_first;
+wire          s7pciephy_rx_datapath_sink_sink_last;
+wire    [7:0] s7pciephy_rx_datapath_sink_sink_payload_be;
+wire   [63:0] s7pciephy_rx_datapath_sink_sink_payload_dat;
+wire          s7pciephy_rx_datapath_sink_sink_ready;
+wire          s7pciephy_rx_datapath_sink_sink_valid;
+wire          s7pciephy_rx_datapath_source_source_first;
+wire          s7pciephy_rx_datapath_source_source_last;
+wire   [15:0] s7pciephy_rx_datapath_source_source_payload_be;
+wire  [127:0] s7pciephy_rx_datapath_source_source_payload_dat;
+wire          s7pciephy_rx_datapath_source_source_ready;
+wire          s7pciephy_rx_datapath_source_source_valid;
+wire          s7pciephy_sig0;
+wire          s7pciephy_sig1;
+wire    [5:0] s7pciephy_sig10;
+wire          s7pciephy_sig2;
+wire   [15:0] s7pciephy_sig3;
+wire   [15:0] s7pciephy_sig4;
+wire    [7:0] s7pciephy_sig5;
+wire    [4:0] s7pciephy_sig6;
+wire    [2:0] s7pciephy_sig7;
+wire          s7pciephy_sig8;
+wire    [1:0] s7pciephy_sig9;
+wire          s7pciephy_sink_first;
+wire          s7pciephy_sink_last;
+wire   [15:0] s7pciephy_sink_payload_be;
+wire  [127:0] s7pciephy_sink_payload_dat;
+wire          s7pciephy_sink_ready;
+wire          s7pciephy_sink_valid;
+wire          s7pciephy_source_first;
+wire          s7pciephy_source_last;
+wire   [15:0] s7pciephy_source_payload_be;
+wire  [127:0] s7pciephy_source_payload_dat;
+wire          s7pciephy_source_ready;
+wire          s7pciephy_source_valid;
+wire          s7pciephy_tx_datapath_cdc_cd_rst;
+wire  [145:0] s7pciephy_tx_datapath_cdc_cdc_asyncfifo_din;
+wire  [145:0] s7pciephy_tx_datapath_cdc_cdc_asyncfifo_dout;
+wire          s7pciephy_tx_datapath_cdc_cdc_asyncfifo_re;
+wire          s7pciephy_tx_datapath_cdc_cdc_asyncfifo_readable;
+wire          s7pciephy_tx_datapath_cdc_cdc_asyncfifo_we;
+wire          s7pciephy_tx_datapath_cdc_cdc_asyncfifo_writable;
+wire    [4:0] s7pciephy_tx_datapath_cdc_cdc_consume_wdomain;
+wire          s7pciephy_tx_datapath_cdc_cdc_fifo_in_first;
+wire          s7pciephy_tx_datapath_cdc_cdc_fifo_in_last;
+wire   [15:0] s7pciephy_tx_datapath_cdc_cdc_fifo_in_payload_be;
+wire  [127:0] s7pciephy_tx_datapath_cdc_cdc_fifo_in_payload_dat;
+wire          s7pciephy_tx_datapath_cdc_cdc_fifo_out_first;
+wire          s7pciephy_tx_datapath_cdc_cdc_fifo_out_last;
+wire   [15:0] s7pciephy_tx_datapath_cdc_cdc_fifo_out_payload_be;
+wire  [127:0] s7pciephy_tx_datapath_cdc_cdc_fifo_out_payload_dat;
+wire          s7pciephy_tx_datapath_cdc_cdc_graycounter0_ce;
+(* dont_touch = "true" *)
+reg     [4:0] s7pciephy_tx_datapath_cdc_cdc_graycounter0_q = 5'd0;
+reg     [4:0] s7pciephy_tx_datapath_cdc_cdc_graycounter0_q_binary = 5'd0;
+wire    [4:0] s7pciephy_tx_datapath_cdc_cdc_graycounter0_q_next;
+reg     [4:0] s7pciephy_tx_datapath_cdc_cdc_graycounter0_q_next_binary = 5'd0;
+wire          s7pciephy_tx_datapath_cdc_cdc_graycounter1_ce;
+(* dont_touch = "true" *)
+reg     [4:0] s7pciephy_tx_datapath_cdc_cdc_graycounter1_q = 5'd0;
+reg     [4:0] s7pciephy_tx_datapath_cdc_cdc_graycounter1_q_binary = 5'd0;
+wire    [4:0] s7pciephy_tx_datapath_cdc_cdc_graycounter1_q_next;
+reg     [4:0] s7pciephy_tx_datapath_cdc_cdc_graycounter1_q_next_binary = 5'd0;
+wire    [4:0] s7pciephy_tx_datapath_cdc_cdc_produce_rdomain;
+wire    [3:0] s7pciephy_tx_datapath_cdc_cdc_rdport_adr;
+wire  [145:0] s7pciephy_tx_datapath_cdc_cdc_rdport_dat_r;
+wire          s7pciephy_tx_datapath_cdc_cdc_sink_first;
+wire          s7pciephy_tx_datapath_cdc_cdc_sink_last;
+wire   [15:0] s7pciephy_tx_datapath_cdc_cdc_sink_payload_be;
+wire  [127:0] s7pciephy_tx_datapath_cdc_cdc_sink_payload_dat;
+wire          s7pciephy_tx_datapath_cdc_cdc_sink_ready;
+wire          s7pciephy_tx_datapath_cdc_cdc_sink_valid;
+wire          s7pciephy_tx_datapath_cdc_cdc_source_first;
+wire          s7pciephy_tx_datapath_cdc_cdc_source_last;
+wire   [15:0] s7pciephy_tx_datapath_cdc_cdc_source_payload_be;
+wire  [127:0] s7pciephy_tx_datapath_cdc_cdc_source_payload_dat;
+wire          s7pciephy_tx_datapath_cdc_cdc_source_ready;
+wire          s7pciephy_tx_datapath_cdc_cdc_source_valid;
+wire    [3:0] s7pciephy_tx_datapath_cdc_cdc_wrport_adr;
+wire  [145:0] s7pciephy_tx_datapath_cdc_cdc_wrport_dat_r;
+wire  [145:0] s7pciephy_tx_datapath_cdc_cdc_wrport_dat_w;
+wire          s7pciephy_tx_datapath_cdc_cdc_wrport_we;
+wire          s7pciephy_tx_datapath_cdc_sink_sink_first;
+wire          s7pciephy_tx_datapath_cdc_sink_sink_last;
+wire   [15:0] s7pciephy_tx_datapath_cdc_sink_sink_payload_be;
+wire  [127:0] s7pciephy_tx_datapath_cdc_sink_sink_payload_dat;
+wire          s7pciephy_tx_datapath_cdc_sink_sink_ready;
+wire          s7pciephy_tx_datapath_cdc_sink_sink_valid;
+wire          s7pciephy_tx_datapath_cdc_source_source_first;
+wire          s7pciephy_tx_datapath_cdc_source_source_last;
+wire   [15:0] s7pciephy_tx_datapath_cdc_source_source_payload_be;
+wire  [127:0] s7pciephy_tx_datapath_cdc_source_source_payload_dat;
+wire          s7pciephy_tx_datapath_cdc_source_source_ready;
+wire          s7pciephy_tx_datapath_cdc_source_source_valid;
+wire          s7pciephy_tx_datapath_converter_converter_first;
+wire          s7pciephy_tx_datapath_converter_converter_last;
+reg           s7pciephy_tx_datapath_converter_converter_mux = 1'd0;
+wire          s7pciephy_tx_datapath_converter_converter_sink_first;
+wire          s7pciephy_tx_datapath_converter_converter_sink_last;
+reg   [143:0] s7pciephy_tx_datapath_converter_converter_sink_payload_data = 144'd0;
+wire          s7pciephy_tx_datapath_converter_converter_sink_ready;
+wire          s7pciephy_tx_datapath_converter_converter_sink_valid;
+wire          s7pciephy_tx_datapath_converter_converter_source_first;
+wire          s7pciephy_tx_datapath_converter_converter_source_last;
+reg    [71:0] s7pciephy_tx_datapath_converter_converter_source_payload_data = 72'd0;
+wire          s7pciephy_tx_datapath_converter_converter_source_payload_valid_token_count;
+wire          s7pciephy_tx_datapath_converter_converter_source_ready;
+wire          s7pciephy_tx_datapath_converter_converter_source_valid;
+wire          s7pciephy_tx_datapath_converter_sink_first;
+wire          s7pciephy_tx_datapath_converter_sink_last;
+wire   [15:0] s7pciephy_tx_datapath_converter_sink_payload_be;
+wire  [127:0] s7pciephy_tx_datapath_converter_sink_payload_dat;
+wire          s7pciephy_tx_datapath_converter_sink_ready;
+wire          s7pciephy_tx_datapath_converter_sink_valid;
+wire          s7pciephy_tx_datapath_converter_source_first;
+wire          s7pciephy_tx_datapath_converter_source_last;
+wire    [7:0] s7pciephy_tx_datapath_converter_source_payload_be;
+wire   [63:0] s7pciephy_tx_datapath_converter_source_payload_dat;
+wire          s7pciephy_tx_datapath_converter_source_ready;
+wire          s7pciephy_tx_datapath_converter_source_source_first;
+wire          s7pciephy_tx_datapath_converter_source_source_last;
+wire   [71:0] s7pciephy_tx_datapath_converter_source_source_payload_data;
+wire          s7pciephy_tx_datapath_converter_source_source_ready;
+wire          s7pciephy_tx_datapath_converter_source_source_valid;
+wire          s7pciephy_tx_datapath_converter_source_valid;
+reg           s7pciephy_tx_datapath_pipe_ready_sink_d_first = 1'd0;
+reg           s7pciephy_tx_datapath_pipe_ready_sink_d_last = 1'd0;
+reg     [7:0] s7pciephy_tx_datapath_pipe_ready_sink_d_payload_be = 8'd0;
+reg    [63:0] s7pciephy_tx_datapath_pipe_ready_sink_d_payload_dat = 64'd0;
+reg           s7pciephy_tx_datapath_pipe_ready_sink_d_ready = 1'd0;
+reg           s7pciephy_tx_datapath_pipe_ready_sink_d_valid = 1'd0;
+wire          s7pciephy_tx_datapath_pipe_ready_sink_first;
+wire          s7pciephy_tx_datapath_pipe_ready_sink_last;
+wire    [7:0] s7pciephy_tx_datapath_pipe_ready_sink_payload_be;
+wire   [63:0] s7pciephy_tx_datapath_pipe_ready_sink_payload_dat;
+wire          s7pciephy_tx_datapath_pipe_ready_sink_ready;
+wire          s7pciephy_tx_datapath_pipe_ready_sink_valid;
+reg           s7pciephy_tx_datapath_pipe_ready_source_first = 1'd0;
+reg           s7pciephy_tx_datapath_pipe_ready_source_last = 1'd0;
+reg     [7:0] s7pciephy_tx_datapath_pipe_ready_source_payload_be = 8'd0;
+reg    [63:0] s7pciephy_tx_datapath_pipe_ready_source_payload_dat = 64'd0;
+wire          s7pciephy_tx_datapath_pipe_ready_source_ready;
+reg           s7pciephy_tx_datapath_pipe_ready_source_valid = 1'd0;
+reg           s7pciephy_tx_datapath_pipe_ready_valid = 1'd0;
+wire          s7pciephy_tx_datapath_pipe_valid_sink_first;
+wire          s7pciephy_tx_datapath_pipe_valid_sink_last;
+wire   [15:0] s7pciephy_tx_datapath_pipe_valid_sink_payload_be;
+wire  [127:0] s7pciephy_tx_datapath_pipe_valid_sink_payload_dat;
+wire          s7pciephy_tx_datapath_pipe_valid_sink_ready;
+wire          s7pciephy_tx_datapath_pipe_valid_sink_valid;
+reg           s7pciephy_tx_datapath_pipe_valid_source_first = 1'd0;
+reg           s7pciephy_tx_datapath_pipe_valid_source_last = 1'd0;
+reg    [15:0] s7pciephy_tx_datapath_pipe_valid_source_payload_be = 16'd0;
+reg   [127:0] s7pciephy_tx_datapath_pipe_valid_source_payload_dat = 128'd0;
+wire          s7pciephy_tx_datapath_pipe_valid_source_ready;
+reg           s7pciephy_tx_datapath_pipe_valid_source_valid = 1'd0;
+wire          s7pciephy_tx_datapath_sink_sink_first;
+wire          s7pciephy_tx_datapath_sink_sink_last;
+wire   [15:0] s7pciephy_tx_datapath_sink_sink_payload_be;
+wire  [127:0] s7pciephy_tx_datapath_sink_sink_payload_dat;
+wire          s7pciephy_tx_datapath_sink_sink_ready;
+wire          s7pciephy_tx_datapath_sink_sink_valid;
+wire          s7pciephy_tx_datapath_source_source_first;
+wire          s7pciephy_tx_datapath_source_source_last;
+wire    [7:0] s7pciephy_tx_datapath_source_source_payload_be;
+wire   [63:0] s7pciephy_tx_datapath_source_source_payload_dat;
+wire          s7pciephy_tx_datapath_source_source_ready;
+wire          s7pciephy_tx_datapath_source_source_valid;
+reg           scratch_re = 1'd0;
+reg    [31:0] scratch_storage = 32'd305419896;
+wire          slave_sink_first;
+wire          slave_sink_last;
+wire   [31:0] slave_sink_payload_adr;
+wire    [7:0] slave_sink_payload_channel;
+wire   [15:0] slave_sink_payload_cmp_id;
+wire  [127:0] slave_sink_payload_dat;
+wire          slave_sink_payload_end;
+wire          slave_sink_payload_err;
+wire    [9:0] slave_sink_payload_len;
+wire   [15:0] slave_sink_payload_req_id;
+wire    [7:0] slave_sink_payload_tag;
+wire    [7:0] slave_sink_payload_user_id;
+wire          slave_sink_ready;
+wire          slave_sink_valid;
+wire          slave_source_first;
+wire          slave_source_last;
+wire   [31:0] slave_source_payload_adr;
+wire    [7:0] slave_source_payload_channel;
+wire  [127:0] slave_source_payload_dat;
+wire    [9:0] slave_source_payload_len;
+wire   [15:0] slave_source_payload_req_id;
+wire    [7:0] slave_source_payload_tag;
+wire    [7:0] slave_source_payload_user_id;
+wire          slave_source_payload_we;
+reg           slave_source_ready = 1'd0;
+wire          slave_source_valid;
 wire   [31:0] slice_proxy0;
 wire   [31:0] slice_proxy1;
-wire   [31:0] slice_proxy2;
-wire   [31:0] slice_proxy3;
-wire   [31:0] slice_proxy4;
-wire   [31:0] slice_proxy5;
-wire   [31:0] slice_proxy6;
-wire   [31:0] slice_proxy7;
-wire   [31:0] slice_proxy8;
-wire   [31:0] slice_proxy9;
 wire   [31:0] slice_proxy10;
 wire   [31:0] slice_proxy11;
 wire   [31:0] slice_proxy12;
@@ -2307,6 +2615,7 @@ wire    [3:0] slice_proxy16;
 wire    [3:0] slice_proxy17;
 wire    [3:0] slice_proxy18;
 wire    [3:0] slice_proxy19;
+wire   [31:0] slice_proxy2;
 wire    [3:0] slice_proxy20;
 wire    [3:0] slice_proxy21;
 wire    [3:0] slice_proxy22;
@@ -2317,6 +2626,7 @@ wire    [3:0] slice_proxy26;
 wire    [3:0] slice_proxy27;
 wire    [3:0] slice_proxy28;
 wire    [3:0] slice_proxy29;
+wire   [31:0] slice_proxy3;
 wire    [3:0] slice_proxy30;
 wire    [3:0] slice_proxy31;
 wire   [31:0] slice_proxy32;
@@ -2327,6 +2637,7 @@ wire   [31:0] slice_proxy36;
 wire   [31:0] slice_proxy37;
 wire   [31:0] slice_proxy38;
 wire   [31:0] slice_proxy39;
+wire   [31:0] slice_proxy4;
 wire   [31:0] slice_proxy40;
 wire   [31:0] slice_proxy41;
 wire   [31:0] slice_proxy42;
@@ -2337,6 +2648,7 @@ wire   [31:0] slice_proxy46;
 wire   [31:0] slice_proxy47;
 wire   [31:0] slice_proxy48;
 wire   [31:0] slice_proxy49;
+wire   [31:0] slice_proxy5;
 wire   [31:0] slice_proxy50;
 wire   [31:0] slice_proxy51;
 wire   [31:0] slice_proxy52;
@@ -2347,6 +2659,7 @@ wire   [31:0] slice_proxy56;
 wire   [31:0] slice_proxy57;
 wire   [31:0] slice_proxy58;
 wire   [31:0] slice_proxy59;
+wire   [31:0] slice_proxy6;
 wire   [31:0] slice_proxy60;
 wire   [31:0] slice_proxy61;
 wire   [31:0] slice_proxy62;
@@ -2357,6 +2670,7 @@ wire   [31:0] slice_proxy66;
 wire   [31:0] slice_proxy67;
 wire   [31:0] slice_proxy68;
 wire   [31:0] slice_proxy69;
+wire   [31:0] slice_proxy7;
 wire   [31:0] slice_proxy70;
 wire   [31:0] slice_proxy71;
 wire   [31:0] slice_proxy72;
@@ -2367,6 +2681,7 @@ wire   [31:0] slice_proxy76;
 wire   [31:0] slice_proxy77;
 wire   [31:0] slice_proxy78;
 wire   [31:0] slice_proxy79;
+wire   [31:0] slice_proxy8;
 wire    [3:0] slice_proxy80;
 wire    [3:0] slice_proxy81;
 wire    [3:0] slice_proxy82;
@@ -2377,55 +2692,114 @@ wire    [3:0] slice_proxy86;
 wire    [3:0] slice_proxy87;
 wire    [3:0] slice_proxy88;
 wire    [3:0] slice_proxy89;
+wire   [31:0] slice_proxy9;
 wire    [3:0] slice_proxy90;
 wire    [3:0] slice_proxy91;
 wire    [3:0] slice_proxy92;
 wire    [3:0] slice_proxy93;
 wire    [3:0] slice_proxy94;
 wire    [3:0] slice_proxy95;
-wire          rst_meta0;
-wire          rst_meta1;
+reg           soc_rst = 1'd0;
+wire          sys_clk;
+wire          sys_rst;
+wire          to221_clk;
+wire          to221_rst;
+wire          to685_clk;
+wire          to685_rst;
+wire          to876_clk;
+wire          to876_rst;
+wire          userclk1_clk;
+wire          userclk1_rst;
+wire          userclk2_clk;
+wire          userclk2_rst;
+reg           wishbone2csr_next_state = 1'd0;
+reg           wishbone2csr_state = 1'd0;
+wire          xilinxasyncresetsynchronizerimpl0_rst_meta;
+wire          xilinxasyncresetsynchronizerimpl1_rst_meta;
+wire          xilinxasyncresetsynchronizerimpl2_rst_meta;
+wire          xilinxasyncresetsynchronizerimpl3_rst_meta;
+wire          xilinxasyncresetsynchronizerimpl4_rst_meta;
+wire          xilinxasyncresetsynchronizerimpl5_rst_meta;
+wire          xilinxasyncresetsynchronizerimpl6;
+wire          xilinxasyncresetsynchronizerimpl6_rst_meta;
+wire          xilinxasyncresetsynchronizerimpl7;
+wire          xilinxasyncresetsynchronizerimpl7_rst_meta;
+wire          xilinxasyncresetsynchronizerimpl8;
+wire          xilinxasyncresetsynchronizerimpl8_rst_meta;
+wire          xilinxasyncresetsynchronizerimpl9;
+wire          xilinxasyncresetsynchronizerimpl9_rst_meta;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg     [4:0] xilinxmultiregimpl00 = 5'd0;
+reg     [4:0] xilinxmultiregimpl0_regs0 = 5'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg     [4:0] xilinxmultiregimpl01 = 5'd0;
+reg     [4:0] xilinxmultiregimpl0_regs1 = 5'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg     [4:0] xilinxmultiregimpl10 = 5'd0;
+reg    [15:0] xilinxmultiregimpl10_regs0 = 16'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg     [4:0] xilinxmultiregimpl11 = 5'd0;
-wire          rst_meta2;
-wire          rst_meta3;
+reg    [15:0] xilinxmultiregimpl10_regs1 = 16'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg     [4:0] xilinxmultiregimpl20 = 5'd0;
+reg    [15:0] xilinxmultiregimpl11_regs0 = 16'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg     [4:0] xilinxmultiregimpl21 = 5'd0;
+reg    [15:0] xilinxmultiregimpl11_regs1 = 16'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg     [4:0] xilinxmultiregimpl30 = 5'd0;
+reg     [7:0] xilinxmultiregimpl12_regs0 = 8'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg     [4:0] xilinxmultiregimpl31 = 5'd0;
-wire          rst_meta4;
-wire          rst_meta5;
+reg     [7:0] xilinxmultiregimpl12_regs1 = 8'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg     [2:0] xilinxmultiregimpl40 = 3'd0;
+reg     [4:0] xilinxmultiregimpl13_regs0 = 5'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg     [2:0] xilinxmultiregimpl41 = 3'd0;
+reg     [4:0] xilinxmultiregimpl13_regs1 = 5'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg     [2:0] xilinxmultiregimpl50 = 3'd0;
+reg     [2:0] xilinxmultiregimpl14_regs0 = 3'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg     [2:0] xilinxmultiregimpl51 = 3'd0;
+reg     [2:0] xilinxmultiregimpl14_regs1 = 3'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg           xilinxmultiregimpl6_xilinxmultiregimpl60 = 1'd0;
+reg           xilinxmultiregimpl15_regs0 = 1'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg           xilinxmultiregimpl6_xilinxmultiregimpl61 = 1'd0;
-wire          xilinxmultiregimpl6;
+reg           xilinxmultiregimpl15_regs1 = 1'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg    [15:0] xilinxmultiregimpl70 = 16'd0;
+reg     [1:0] xilinxmultiregimpl16_regs0 = 2'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg    [15:0] xilinxmultiregimpl71 = 16'd0;
+reg     [1:0] xilinxmultiregimpl16_regs1 = 2'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg    [15:0] xilinxmultiregimpl80 = 16'd0;
+reg     [5:0] xilinxmultiregimpl17_regs0 = 6'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg    [15:0] xilinxmultiregimpl81 = 16'd0;
+reg     [5:0] xilinxmultiregimpl17_regs1 = 6'd0;
+(* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
+reg     [4:0] xilinxmultiregimpl1_regs0 = 5'd0;
+(* async_reg = "true", dont_touch = "true" *)
+reg     [4:0] xilinxmultiregimpl1_regs1 = 5'd0;
+(* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
+reg     [4:0] xilinxmultiregimpl2_regs0 = 5'd0;
+(* async_reg = "true", dont_touch = "true" *)
+reg     [4:0] xilinxmultiregimpl2_regs1 = 5'd0;
+(* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
+reg     [4:0] xilinxmultiregimpl3_regs0 = 5'd0;
+(* async_reg = "true", dont_touch = "true" *)
+reg     [4:0] xilinxmultiregimpl3_regs1 = 5'd0;
+(* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
+reg     [2:0] xilinxmultiregimpl4_regs0 = 3'd0;
+(* async_reg = "true", dont_touch = "true" *)
+reg     [2:0] xilinxmultiregimpl4_regs1 = 3'd0;
+(* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
+reg     [2:0] xilinxmultiregimpl5_regs0 = 3'd0;
+(* async_reg = "true", dont_touch = "true" *)
+reg     [2:0] xilinxmultiregimpl5_regs1 = 3'd0;
+(* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
+reg     [1:0] xilinxmultiregimpl6_regs0 = 2'd0;
+(* async_reg = "true", dont_touch = "true" *)
+reg     [1:0] xilinxmultiregimpl6_regs1 = 2'd0;
+(* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
+reg           xilinxmultiregimpl7_regs0 = 1'd0;
+(* async_reg = "true", dont_touch = "true" *)
+reg           xilinxmultiregimpl7_regs1 = 1'd0;
+(* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
+reg           xilinxmultiregimpl8_regs0 = 1'd0;
+(* async_reg = "true", dont_touch = "true" *)
+reg           xilinxmultiregimpl8_regs1 = 1'd0;
+(* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
+reg           xilinxmultiregimpl9_regs0 = 1'd0;
+(* async_reg = "true", dont_touch = "true" *)
+reg           xilinxmultiregimpl9_regs1 = 1'd0;
 
 //------------------------------------------------------------------------------
 // Combinatorial Logic
@@ -2436,16 +2810,16 @@ assign cntrl_writer_valid = CNTRL_cntrl_re;
 assign CNTRL_cntrl_dat_w = cntrl_reader_data;
 assign CNTRL_cntrl_we = cntrl_reader_valid;
 assign cntrl_enable = CNTRL_enable_storage;
-assign dma_writer0_valid = bufferizeendpoints1_source_source_valid;
-assign bufferizeendpoints1_source_source_ready = dma_writer0_ready;
-assign dma_writer0_last = bufferizeendpoints1_source_source_last;
-assign dma_writer0_data = bufferizeendpoints1_source_source_payload_data;
-assign dma_writer0_enable = reader_enable_storage;
-assign bufferizeendpoints0_sink_sink_valid = dma_reader0_valid;
-assign dma_reader0_ready = bufferizeendpoints0_sink_sink_ready;
-assign bufferizeendpoints0_sink_sink_last = dma_reader0_last;
-assign bufferizeendpoints0_sink_sink_payload_data = dma_reader0_data;
-assign dma_reader0_enable = writer_enable_storage;
+assign dma_writer0_valid = pcie_dma_bufferizeendpoints1_source_source_valid;
+assign pcie_dma_bufferizeendpoints1_source_source_ready = dma_writer0_ready;
+assign dma_writer0_last = pcie_dma_bufferizeendpoints1_source_source_last;
+assign dma_writer0_data = pcie_dma_bufferizeendpoints1_source_source_payload_data;
+assign dma_writer0_enable = pcie_dma_reader_enable_storage[0];
+assign pcie_dma_bufferizeendpoints0_sink_sink_valid = dma_reader0_valid;
+assign dma_reader0_ready = pcie_dma_bufferizeendpoints0_sink_sink_ready;
+assign pcie_dma_bufferizeendpoints0_sink_sink_last = dma_reader0_last;
+assign pcie_dma_bufferizeendpoints0_sink_sink_payload_data = dma_reader0_data;
+assign dma_reader0_enable = pcie_dma_writer_enable_storage[0];
 assign s7pciephy_msi_valid = pcie_msi_source_valid;
 assign pcie_msi_source_ready = s7pciephy_msi_ready;
 assign s7pciephy_msi_first = pcie_msi_source_first;
@@ -2454,32 +2828,21 @@ assign s7pciephy_msi_payload_dat = pcie_msi_source_payload_dat;
 always @(*) begin
     pcie_msi_irqs <= 32'd0;
     pcie_msi_irqs[23:16] <= msi_irqs;
-    pcie_msi_irqs[0] <= reader_irq;
-    pcie_msi_irqs[1] <= writer_irq;
+    pcie_msi_irqs[0] <= pcie_dma_reader_irq;
+    pcie_msi_irqs[1] <= pcie_dma_writer_irq;
 end
-assign litepciecore_wishbone_adr = pcie_wishbone_master_wishbone_adr;
-assign litepciecore_wishbone_dat_w = pcie_wishbone_master_wishbone_dat_w;
-assign pcie_wishbone_master_wishbone_dat_r = litepciecore_wishbone_dat_r;
-assign litepciecore_wishbone_sel = pcie_wishbone_master_wishbone_sel;
-assign litepciecore_wishbone_cyc = pcie_wishbone_master_wishbone_cyc;
-assign litepciecore_wishbone_stb = pcie_wishbone_master_wishbone_stb;
-assign pcie_wishbone_master_wishbone_ack = litepciecore_wishbone_ack;
-assign litepciecore_wishbone_we = pcie_wishbone_master_wishbone_we;
-assign litepciecore_wishbone_cti = pcie_wishbone_master_wishbone_cti;
-assign litepciecore_wishbone_bte = pcie_wishbone_master_wishbone_bte;
-assign pcie_wishbone_master_wishbone_err = litepciecore_wishbone_err;
+assign interface0_adr = pcie_wishbone_master_wishbone_adr;
+assign interface0_dat_w = pcie_wishbone_master_wishbone_dat_w;
+assign pcie_wishbone_master_wishbone_dat_r = interface0_dat_r;
+assign interface0_sel = pcie_wishbone_master_wishbone_sel;
+assign interface0_cyc = pcie_wishbone_master_wishbone_cyc;
+assign interface0_stb = pcie_wishbone_master_wishbone_stb;
+assign pcie_wishbone_master_wishbone_ack = interface0_ack;
+assign interface0_we = pcie_wishbone_master_wishbone_we;
+assign interface0_cti = pcie_wishbone_master_wishbone_cti;
+assign interface0_bte = pcie_wishbone_master_wishbone_bte;
+assign pcie_wishbone_master_wishbone_err = interface0_err;
 assign bus_errors_status = bus_errors;
-always @(*) begin
-    soc_rst <= 1'd0;
-    if (reset_re) begin
-        soc_rst <= reset_storage[0];
-    end
-end
-assign cpu_rst = reset_storage[1];
-assign csrbank1_reset0_w = reset_storage[1:0];
-assign csrbank1_scratch0_w = scratch_storage[31:0];
-assign csrbank1_bus_errors_w = bus_errors_status[31:0];
-assign bus_errors_we = csrbank1_bus_errors_we;
 assign clk = pcie_clk;
 assign rst = pcie_rst;
 assign sys_clk = pcie_clk;
@@ -2502,6 +2865,56 @@ assign s7pciephy_msi_ready = s7pciephy_msi_cdc_sink_sink_ready;
 assign s7pciephy_msi_cdc_sink_sink_first = s7pciephy_msi_first;
 assign s7pciephy_msi_cdc_sink_sink_last = s7pciephy_msi_last;
 assign s7pciephy_msi_cdc_sink_sink_payload_dat = s7pciephy_msi_payload_dat;
+always @(*) begin
+    s7pciephy_max_request_size <= 16'd0;
+    case (s7pciephy_dcommand[14:12])
+        1'd0: begin
+            s7pciephy_max_request_size <= 8'd128;
+        end
+        1'd1: begin
+            s7pciephy_max_request_size <= 9'd256;
+        end
+        2'd2: begin
+            s7pciephy_max_request_size <= 10'd512;
+        end
+        2'd3: begin
+            s7pciephy_max_request_size <= 10'd512;
+        end
+        3'd4: begin
+            s7pciephy_max_request_size <= 10'd512;
+        end
+        3'd5: begin
+            s7pciephy_max_request_size <= 10'd512;
+        end
+    endcase
+end
+always @(*) begin
+    s7pciephy_max_payload_size <= 16'd0;
+    case (s7pciephy_dcommand[7:5])
+        1'd0: begin
+            s7pciephy_max_payload_size <= 8'd128;
+        end
+        1'd1: begin
+            s7pciephy_max_payload_size <= 9'd256;
+        end
+        2'd2: begin
+            s7pciephy_max_payload_size <= 10'd512;
+        end
+        2'd3: begin
+            s7pciephy_max_payload_size <= 10'd512;
+        end
+        3'd4: begin
+            s7pciephy_max_payload_size <= 10'd512;
+        end
+        3'd5: begin
+            s7pciephy_max_payload_size <= 10'd512;
+        end
+    endcase
+end
+assign s7pciephy_id = {s7pciephy_bus_number, s7pciephy_device_number, s7pciephy_function_number};
+assign s7pciephy_bus_master_enable_status = s7pciephy_command[2];
+assign s7pciephy_max_request_size_status = s7pciephy_max_request_size;
+assign s7pciephy_max_payload_size_status = s7pciephy_max_payload_size;
 assign s7pciephy_rx_datapath_sink_sink_first = 1'd0;
 assign s7pciephy_rx_datapath_sink_sink_last = s7pciephy_m_axis_rx_tlast;
 assign s7pciephy_tx_datapath_pipe_valid_sink_valid = s7pciephy_tx_datapath_sink_sink_valid;
@@ -2535,8 +2948,8 @@ assign s7pciephy_tx_datapath_source_source_last = s7pciephy_tx_datapath_pipe_rea
 assign s7pciephy_tx_datapath_source_source_payload_dat = s7pciephy_tx_datapath_pipe_ready_source_payload_dat;
 assign s7pciephy_tx_datapath_source_source_payload_be = s7pciephy_tx_datapath_pipe_ready_source_payload_be;
 assign s7pciephy_tx_datapath_pipe_valid_sink_ready = ((~s7pciephy_tx_datapath_pipe_valid_source_valid) | s7pciephy_tx_datapath_pipe_valid_source_ready);
-assign from2526333147296_clk = sys_clk;
-assign to2526333147296_clk = pcie_clk;
+assign from221_clk = sys_clk;
+assign to221_clk = pcie_clk;
 assign s7pciephy_tx_datapath_cdc_cd_rst = (sys_rst | pcie_rst);
 assign s7pciephy_tx_datapath_cdc_cdc_sink_valid = s7pciephy_tx_datapath_cdc_sink_sink_valid;
 assign s7pciephy_tx_datapath_cdc_sink_sink_ready = s7pciephy_tx_datapath_cdc_cdc_sink_ready;
@@ -2632,11 +3045,11 @@ end
 assign s7pciephy_tx_datapath_converter_converter_source_payload_valid_token_count = s7pciephy_tx_datapath_converter_converter_last;
 assign s7pciephy_tx_datapath_pipe_ready_sink_ready = (~s7pciephy_tx_datapath_pipe_ready_valid);
 always @(*) begin
-    s7pciephy_tx_datapath_pipe_ready_source_valid <= 1'd0;
     s7pciephy_tx_datapath_pipe_ready_source_first <= 1'd0;
     s7pciephy_tx_datapath_pipe_ready_source_last <= 1'd0;
-    s7pciephy_tx_datapath_pipe_ready_source_payload_dat <= 64'd0;
     s7pciephy_tx_datapath_pipe_ready_source_payload_be <= 8'd0;
+    s7pciephy_tx_datapath_pipe_ready_source_payload_dat <= 64'd0;
+    s7pciephy_tx_datapath_pipe_ready_source_valid <= 1'd0;
     if (s7pciephy_tx_datapath_pipe_ready_valid) begin
         s7pciephy_tx_datapath_pipe_ready_source_valid <= s7pciephy_tx_datapath_pipe_ready_sink_d_valid;
         s7pciephy_tx_datapath_pipe_ready_source_first <= s7pciephy_tx_datapath_pipe_ready_sink_d_first;
@@ -2683,11 +3096,11 @@ assign s7pciephy_rx_datapath_source_source_payload_dat = s7pciephy_rx_datapath_p
 assign s7pciephy_rx_datapath_source_source_payload_be = s7pciephy_rx_datapath_pipe_valid_source_payload_be;
 assign s7pciephy_rx_datapath_pipe_ready_sink_ready = (~s7pciephy_rx_datapath_pipe_ready_valid);
 always @(*) begin
-    s7pciephy_rx_datapath_pipe_ready_source_payload_dat <= 128'd0;
-    s7pciephy_rx_datapath_pipe_ready_source_payload_be <= 16'd0;
-    s7pciephy_rx_datapath_pipe_ready_source_valid <= 1'd0;
     s7pciephy_rx_datapath_pipe_ready_source_first <= 1'd0;
     s7pciephy_rx_datapath_pipe_ready_source_last <= 1'd0;
+    s7pciephy_rx_datapath_pipe_ready_source_payload_be <= 16'd0;
+    s7pciephy_rx_datapath_pipe_ready_source_payload_dat <= 128'd0;
+    s7pciephy_rx_datapath_pipe_ready_source_valid <= 1'd0;
     if (s7pciephy_rx_datapath_pipe_ready_valid) begin
         s7pciephy_rx_datapath_pipe_ready_source_valid <= s7pciephy_rx_datapath_pipe_ready_sink_d_valid;
         s7pciephy_rx_datapath_pipe_ready_source_first <= s7pciephy_rx_datapath_pipe_ready_sink_d_first;
@@ -2729,8 +3142,8 @@ assign s7pciephy_rx_datapath_converter_source_source_payload_data = s7pciephy_rx
 assign s7pciephy_rx_datapath_converter_converter_sink_ready = ((~s7pciephy_rx_datapath_converter_converter_strobe_all) | s7pciephy_rx_datapath_converter_converter_source_ready);
 assign s7pciephy_rx_datapath_converter_converter_source_valid = s7pciephy_rx_datapath_converter_converter_strobe_all;
 assign s7pciephy_rx_datapath_converter_converter_load_part = (s7pciephy_rx_datapath_converter_converter_sink_valid & s7pciephy_rx_datapath_converter_converter_sink_ready);
-assign from2526333901200_clk = pcie_clk;
-assign to2526333901200_clk = sys_clk;
+assign from685_clk = pcie_clk;
+assign to685_clk = sys_clk;
 assign s7pciephy_rx_datapath_cdc_cd_rst = (pcie_rst | sys_rst);
 assign s7pciephy_rx_datapath_cdc_cdc_sink_valid = s7pciephy_rx_datapath_cdc_sink_sink_valid;
 assign s7pciephy_rx_datapath_cdc_sink_sink_ready = s7pciephy_rx_datapath_cdc_cdc_sink_ready;
@@ -2786,8 +3199,8 @@ always @(*) begin
 end
 assign s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_next = (s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_next_binary ^ s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_next_binary[4:1]);
 assign s7pciephy_rx_datapath_pipe_valid_sink_ready = ((~s7pciephy_rx_datapath_pipe_valid_source_valid) | s7pciephy_rx_datapath_pipe_valid_source_ready);
-assign from2526333595040_clk = sys_clk;
-assign to2526333595040_clk = pcie_clk;
+assign from876_clk = sys_clk;
+assign to876_clk = pcie_clk;
 assign s7pciephy_msi_cdc_cd_rst = (sys_rst | pcie_rst);
 assign s7pciephy_msi_cdc_cdc_sink_valid = s7pciephy_msi_cdc_sink_sink_valid;
 assign s7pciephy_msi_cdc_sink_sink_ready = s7pciephy_msi_cdc_cdc_sink_ready;
@@ -2838,6 +3251,11 @@ always @(*) begin
     end
 end
 assign s7pciephy_msi_cdc_cdc_graycounter1_q_next = (s7pciephy_msi_cdc_cdc_graycounter1_q_next_binary ^ s7pciephy_msi_cdc_cdc_graycounter1_q_next_binary[2:1]);
+assign s7pciephy_clkin = s7pciephy_pipe_txoutclk_bufg;
+assign clk125_clk = s7pciephy_clkout_buf0;
+assign clk250_clk = s7pciephy_clkout_buf1;
+assign userclk1_clk = s7pciephy_clkout_buf2;
+assign userclk2_clk = s7pciephy_clkout_buf3;
 assign depacketizer_sink_sink_valid = s7pciephy_source_valid;
 assign s7pciephy_source_ready = depacketizer_sink_sink_ready;
 assign depacketizer_sink_sink_first = s7pciephy_source_first;
@@ -2909,35 +3327,25 @@ assign depacketizer_header_extracter_sink_last = depacketizer_sink_sink_last;
 assign depacketizer_header_extracter_sink_payload_dat = depacketizer_sink_sink_payload_dat;
 assign depacketizer_header_extracter_sink_payload_be = depacketizer_sink_sink_payload_be;
 assign depacketizer_endpoint0_ready = 1'd1;
-assign depacketizer_dispatch_source_valid = depacketizer_header_extracter_source_valid;
-assign depacketizer_header_extracter_source_ready = depacketizer_dispatch_source_ready;
-assign depacketizer_dispatch_source_first = depacketizer_header_extracter_source_first;
-assign depacketizer_dispatch_source_last = depacketizer_header_extracter_source_last;
-assign depacketizer_dispatch_source_payload_fmt = depacketizer_header_extracter_source_payload_header[30:29];
-assign depacketizer_dispatch_source_payload_type = depacketizer_header_extracter_source_payload_header[28:24];
+assign depacketizer_dispatch_sink_valid = depacketizer_header_extracter_source_valid;
+assign depacketizer_header_extracter_source_ready = depacketizer_dispatch_sink_ready;
+assign depacketizer_dispatch_sink_first = depacketizer_header_extracter_source_first;
+assign depacketizer_dispatch_sink_last = depacketizer_header_extracter_source_last;
+assign depacketizer_dispatch_sink_payload_fmt = depacketizer_header_extracter_source_payload_header[30:29];
+assign depacketizer_dispatch_sink_payload_type = depacketizer_header_extracter_source_payload_header[28:24];
 always @(*) begin
-    depacketizer_dispatch_source_payload_dat <= 128'd0;
-    depacketizer_dispatch_source_payload_dat[31:0] <= {slice_proxy3[7:0], slice_proxy2[15:8], slice_proxy1[23:16], slice_proxy0[31:24]};
-    depacketizer_dispatch_source_payload_dat[63:32] <= {slice_proxy7[7:0], slice_proxy6[15:8], slice_proxy5[23:16], slice_proxy4[31:24]};
-    depacketizer_dispatch_source_payload_dat[95:64] <= {slice_proxy11[7:0], slice_proxy10[15:8], slice_proxy9[23:16], slice_proxy8[31:24]};
-    depacketizer_dispatch_source_payload_dat[127:96] <= {slice_proxy15[7:0], slice_proxy14[15:8], slice_proxy13[23:16], slice_proxy12[31:24]};
+    depacketizer_dispatch_sink_payload_dat <= 128'd0;
+    depacketizer_dispatch_sink_payload_dat[31:0] <= {slice_proxy3[7:0], slice_proxy2[15:8], slice_proxy1[23:16], slice_proxy0[31:24]};
+    depacketizer_dispatch_sink_payload_dat[63:32] <= {slice_proxy7[7:0], slice_proxy6[15:8], slice_proxy5[23:16], slice_proxy4[31:24]};
+    depacketizer_dispatch_sink_payload_dat[95:64] <= {slice_proxy11[7:0], slice_proxy10[15:8], slice_proxy9[23:16], slice_proxy8[31:24]};
+    depacketizer_dispatch_sink_payload_dat[127:96] <= {slice_proxy15[7:0], slice_proxy14[15:8], slice_proxy13[23:16], slice_proxy12[31:24]};
 end
 always @(*) begin
-    depacketizer_dispatch_source_payload_be <= 16'd0;
-    depacketizer_dispatch_source_payload_be[3:0] <= {slice_proxy19[0], slice_proxy18[1], slice_proxy17[2], slice_proxy16[3]};
-    depacketizer_dispatch_source_payload_be[7:4] <= {slice_proxy23[0], slice_proxy22[1], slice_proxy21[2], slice_proxy20[3]};
-    depacketizer_dispatch_source_payload_be[11:8] <= {slice_proxy27[0], slice_proxy26[1], slice_proxy25[2], slice_proxy24[3]};
-    depacketizer_dispatch_source_payload_be[15:12] <= {slice_proxy31[0], slice_proxy30[1], slice_proxy29[2], slice_proxy28[3]};
-end
-always @(*) begin
-    depacketizer_dispatcher_sel0 <= 2'd0;
-    depacketizer_dispatcher_sel0 <= 1'd0;
-    if ((({depacketizer_dispatch_source_payload_fmt, depacketizer_dispatch_source_payload_type} == 1'd0) | ({depacketizer_dispatch_source_payload_fmt, depacketizer_dispatch_source_payload_type} == 7'd64))) begin
-        depacketizer_dispatcher_sel0 <= 1'd1;
-    end
-    if ((({depacketizer_dispatch_source_payload_fmt, depacketizer_dispatch_source_payload_type} == 7'd74) | ({depacketizer_dispatch_source_payload_fmt, depacketizer_dispatch_source_payload_type} == 4'd10))) begin
-        depacketizer_dispatcher_sel0 <= 2'd2;
-    end
+    depacketizer_dispatch_sink_payload_be <= 16'd0;
+    depacketizer_dispatch_sink_payload_be[3:0] <= {slice_proxy19[0], slice_proxy18[1], slice_proxy17[2], slice_proxy16[3]};
+    depacketizer_dispatch_sink_payload_be[7:4] <= {slice_proxy23[0], slice_proxy22[1], slice_proxy21[2], slice_proxy20[3]};
+    depacketizer_dispatch_sink_payload_be[11:8] <= {slice_proxy27[0], slice_proxy26[1], slice_proxy25[2], slice_proxy24[3]};
+    depacketizer_dispatch_sink_payload_be[15:12] <= {slice_proxy31[0], slice_proxy30[1], slice_proxy29[2], slice_proxy28[3]};
 end
 assign depacketizer_tlp_req_valid = depacketizer_endpoint1_valid;
 assign depacketizer_endpoint1_ready = depacketizer_tlp_req_ready;
@@ -2975,6 +3383,16 @@ assign depacketizer_req_source_payload_len = depacketizer_tlp_req_payload_length
 assign depacketizer_req_source_payload_req_id = depacketizer_tlp_req_payload_requester_id;
 assign depacketizer_req_source_payload_tag = depacketizer_tlp_req_payload_tag;
 assign depacketizer_req_source_payload_dat = depacketizer_tlp_req_payload_dat;
+always @(*) begin
+    depacketizer_dispatcher_sel0 <= 2'd0;
+    depacketizer_dispatcher_sel0 <= 1'd0;
+    if ((({depacketizer_dispatch_sink_payload_fmt, depacketizer_dispatch_sink_payload_type} == 1'd0) | ({depacketizer_dispatch_sink_payload_fmt, depacketizer_dispatch_sink_payload_type} == 7'd64))) begin
+        depacketizer_dispatcher_sel0 <= 1'd1;
+    end
+    if ((({depacketizer_dispatch_sink_payload_fmt, depacketizer_dispatch_sink_payload_type} == 7'd74) | ({depacketizer_dispatch_sink_payload_fmt, depacketizer_dispatch_sink_payload_type} == 4'd10))) begin
+        depacketizer_dispatcher_sel0 <= 2'd2;
+    end
+end
 assign depacketizer_tlp_cmp_valid = depacketizer_endpoint2_valid;
 assign depacketizer_endpoint2_ready = depacketizer_tlp_cmp_ready;
 assign depacketizer_tlp_cmp_first = depacketizer_endpoint2_first;
@@ -3030,41 +3448,41 @@ always @(*) begin
     depacketizer_header_extracter_source_payload_be[7:4] <= depacketizer_header_extracter_sink_payload_be[11:8];
 end
 always @(*) begin
-    litepciecore_litepcieendpoint_next_value3 <= 32'd0;
-    litepciecore_litepcieendpoint_next_value_ce3 <= 1'd0;
-    depacketizer_header_extracter_sink_ready <= 1'd0;
-    depacketizer_header_extracter_source_valid <= 1'd0;
-    depacketizer_header_extracter_source_first <= 1'd0;
-    depacketizer_header_extracter_source_last <= 1'd0;
-    litepciecore_litepcieendpoint_next_state <= 2'd0;
     depacketizer_header_extracter_first_litepcietlpdepacketizer_next_value0 <= 1'd0;
     depacketizer_header_extracter_first_litepcietlpdepacketizer_next_value_ce0 <= 1'd0;
     depacketizer_header_extracter_last_litepcietlpdepacketizer_next_value1 <= 1'd0;
     depacketizer_header_extracter_last_litepcietlpdepacketizer_next_value_ce1 <= 1'd0;
-    litepciecore_litepcieendpoint_next_value0 <= 32'd0;
-    litepciecore_litepcieendpoint_next_value_ce0 <= 1'd0;
-    litepciecore_litepcieendpoint_next_value1 <= 32'd0;
-    litepciecore_litepcieendpoint_next_value_ce1 <= 1'd0;
-    litepciecore_litepcieendpoint_next_value2 <= 32'd0;
-    litepciecore_litepcieendpoint_next_value_ce2 <= 1'd0;
-    litepciecore_litepcieendpoint_next_state <= litepciecore_litepcieendpoint_state;
-    case (litepciecore_litepcieendpoint_state)
+    depacketizer_header_extracter_sink_ready <= 1'd0;
+    depacketizer_header_extracter_source_first <= 1'd0;
+    depacketizer_header_extracter_source_last <= 1'd0;
+    depacketizer_header_extracter_source_valid <= 1'd0;
+    litepcieendpoint_next_state <= 2'd0;
+    litepcieendpoint_next_value0 <= 32'd0;
+    litepcieendpoint_next_value1 <= 32'd0;
+    litepcieendpoint_next_value2 <= 32'd0;
+    litepcieendpoint_next_value3 <= 32'd0;
+    litepcieendpoint_next_value_ce0 <= 1'd0;
+    litepcieendpoint_next_value_ce1 <= 1'd0;
+    litepcieendpoint_next_value_ce2 <= 1'd0;
+    litepcieendpoint_next_value_ce3 <= 1'd0;
+    litepcieendpoint_next_state <= litepcieendpoint_state;
+    case (litepcieendpoint_state)
         1'd1: begin
             depacketizer_header_extracter_sink_ready <= 1'd1;
             if (depacketizer_header_extracter_sink_valid) begin
-                litepciecore_litepcieendpoint_next_value0 <= depacketizer_header_extracter_sink_payload_dat[31:0];
-                litepciecore_litepcieendpoint_next_value_ce0 <= 1'd1;
-                litepciecore_litepcieendpoint_next_value1 <= depacketizer_header_extracter_sink_payload_dat[63:32];
-                litepciecore_litepcieendpoint_next_value_ce1 <= 1'd1;
-                litepciecore_litepcieendpoint_next_value2 <= depacketizer_header_extracter_sink_payload_dat[95:64];
-                litepciecore_litepcieendpoint_next_value_ce2 <= 1'd1;
-                litepciecore_litepcieendpoint_next_value3 <= depacketizer_header_extracter_sink_payload_dat[127:96];
-                litepciecore_litepcieendpoint_next_value_ce3 <= 1'd1;
+                litepcieendpoint_next_value0 <= depacketizer_header_extracter_sink_payload_dat[31:0];
+                litepcieendpoint_next_value_ce0 <= 1'd1;
+                litepcieendpoint_next_value1 <= depacketizer_header_extracter_sink_payload_dat[63:32];
+                litepcieendpoint_next_value_ce1 <= 1'd1;
+                litepcieendpoint_next_value2 <= depacketizer_header_extracter_sink_payload_dat[95:64];
+                litepcieendpoint_next_value_ce2 <= 1'd1;
+                litepcieendpoint_next_value3 <= depacketizer_header_extracter_sink_payload_dat[127:96];
+                litepcieendpoint_next_value_ce3 <= 1'd1;
                 if (depacketizer_header_extracter_sink_last) begin
                     depacketizer_header_extracter_last_litepcietlpdepacketizer_next_value1 <= 1'd1;
                     depacketizer_header_extracter_last_litepcietlpdepacketizer_next_value_ce1 <= 1'd1;
                 end
-                litepciecore_litepcieendpoint_next_state <= 2'd2;
+                litepcieendpoint_next_state <= 2'd2;
             end
         end
         2'd2: begin
@@ -3076,7 +3494,7 @@ always @(*) begin
                 depacketizer_header_extracter_first_litepcietlpdepacketizer_next_value_ce0 <= 1'd1;
                 depacketizer_header_extracter_sink_ready <= (1'd1 & (~depacketizer_header_extracter_last));
                 if (depacketizer_header_extracter_source_last) begin
-                    litepciecore_litepcieendpoint_next_state <= 1'd0;
+                    litepcieendpoint_next_state <= 1'd0;
                 end
             end
         end
@@ -3086,7 +3504,7 @@ always @(*) begin
             depacketizer_header_extracter_last_litepcietlpdepacketizer_next_value1 <= 1'd0;
             depacketizer_header_extracter_last_litepcietlpdepacketizer_next_value_ce1 <= 1'd1;
             if (depacketizer_header_extracter_sink_valid) begin
-                litepciecore_litepcieendpoint_next_state <= 1'd1;
+                litepcieendpoint_next_state <= 1'd1;
             end
         end
     endcase
@@ -3100,85 +3518,90 @@ always @(*) begin
     end
 end
 always @(*) begin
-    depacketizer_endpoint1_payload_dat <= 128'd0;
-    depacketizer_endpoint1_payload_be <= 16'd0;
-    depacketizer_endpoint2_valid <= 1'd0;
-    depacketizer_endpoint2_first <= 1'd0;
-    depacketizer_endpoint2_last <= 1'd0;
-    depacketizer_endpoint2_payload_fmt <= 2'd0;
-    depacketizer_endpoint2_payload_type <= 5'd0;
-    depacketizer_endpoint2_payload_dat <= 128'd0;
-    depacketizer_endpoint2_payload_be <= 16'd0;
-    depacketizer_dispatch_source_ready <= 1'd0;
-    depacketizer_endpoint0_valid <= 1'd0;
+    depacketizer_dispatch_sink_ready <= 1'd0;
     depacketizer_endpoint0_first <= 1'd0;
     depacketizer_endpoint0_last <= 1'd0;
+    depacketizer_endpoint0_payload_be <= 16'd0;
+    depacketizer_endpoint0_payload_dat <= 128'd0;
     depacketizer_endpoint0_payload_fmt <= 2'd0;
     depacketizer_endpoint0_payload_type <= 5'd0;
-    depacketizer_endpoint0_payload_dat <= 128'd0;
-    depacketizer_endpoint0_payload_be <= 16'd0;
-    depacketizer_endpoint1_valid <= 1'd0;
+    depacketizer_endpoint0_valid <= 1'd0;
     depacketizer_endpoint1_first <= 1'd0;
     depacketizer_endpoint1_last <= 1'd0;
+    depacketizer_endpoint1_payload_be <= 16'd0;
+    depacketizer_endpoint1_payload_dat <= 128'd0;
     depacketizer_endpoint1_payload_fmt <= 2'd0;
     depacketizer_endpoint1_payload_type <= 5'd0;
+    depacketizer_endpoint1_valid <= 1'd0;
+    depacketizer_endpoint2_first <= 1'd0;
+    depacketizer_endpoint2_last <= 1'd0;
+    depacketizer_endpoint2_payload_be <= 16'd0;
+    depacketizer_endpoint2_payload_dat <= 128'd0;
+    depacketizer_endpoint2_payload_fmt <= 2'd0;
+    depacketizer_endpoint2_payload_type <= 5'd0;
+    depacketizer_endpoint2_valid <= 1'd0;
     case (depacketizer_dispatcher_sel1)
         1'd0: begin
-            depacketizer_endpoint0_valid <= depacketizer_dispatch_source_valid;
-            depacketizer_dispatch_source_ready <= depacketizer_endpoint0_ready;
-            depacketizer_endpoint0_first <= depacketizer_dispatch_source_first;
-            depacketizer_endpoint0_last <= depacketizer_dispatch_source_last;
-            depacketizer_endpoint0_payload_fmt <= depacketizer_dispatch_source_payload_fmt;
-            depacketizer_endpoint0_payload_type <= depacketizer_dispatch_source_payload_type;
-            depacketizer_endpoint0_payload_dat <= depacketizer_dispatch_source_payload_dat;
-            depacketizer_endpoint0_payload_be <= depacketizer_dispatch_source_payload_be;
+            depacketizer_endpoint0_valid <= depacketizer_dispatch_sink_valid;
+            depacketizer_dispatch_sink_ready <= depacketizer_endpoint0_ready;
+            depacketizer_endpoint0_first <= depacketizer_dispatch_sink_first;
+            depacketizer_endpoint0_last <= depacketizer_dispatch_sink_last;
+            depacketizer_endpoint0_payload_fmt <= depacketizer_dispatch_sink_payload_fmt;
+            depacketizer_endpoint0_payload_type <= depacketizer_dispatch_sink_payload_type;
+            depacketizer_endpoint0_payload_dat <= depacketizer_dispatch_sink_payload_dat;
+            depacketizer_endpoint0_payload_be <= depacketizer_dispatch_sink_payload_be;
         end
         1'd1: begin
-            depacketizer_endpoint1_valid <= depacketizer_dispatch_source_valid;
-            depacketizer_dispatch_source_ready <= depacketizer_endpoint1_ready;
-            depacketizer_endpoint1_first <= depacketizer_dispatch_source_first;
-            depacketizer_endpoint1_last <= depacketizer_dispatch_source_last;
-            depacketizer_endpoint1_payload_fmt <= depacketizer_dispatch_source_payload_fmt;
-            depacketizer_endpoint1_payload_type <= depacketizer_dispatch_source_payload_type;
-            depacketizer_endpoint1_payload_dat <= depacketizer_dispatch_source_payload_dat;
-            depacketizer_endpoint1_payload_be <= depacketizer_dispatch_source_payload_be;
+            depacketizer_endpoint1_valid <= depacketizer_dispatch_sink_valid;
+            depacketizer_dispatch_sink_ready <= depacketizer_endpoint1_ready;
+            depacketizer_endpoint1_first <= depacketizer_dispatch_sink_first;
+            depacketizer_endpoint1_last <= depacketizer_dispatch_sink_last;
+            depacketizer_endpoint1_payload_fmt <= depacketizer_dispatch_sink_payload_fmt;
+            depacketizer_endpoint1_payload_type <= depacketizer_dispatch_sink_payload_type;
+            depacketizer_endpoint1_payload_dat <= depacketizer_dispatch_sink_payload_dat;
+            depacketizer_endpoint1_payload_be <= depacketizer_dispatch_sink_payload_be;
         end
         2'd2: begin
-            depacketizer_endpoint2_valid <= depacketizer_dispatch_source_valid;
-            depacketizer_dispatch_source_ready <= depacketizer_endpoint2_ready;
-            depacketizer_endpoint2_first <= depacketizer_dispatch_source_first;
-            depacketizer_endpoint2_last <= depacketizer_dispatch_source_last;
-            depacketizer_endpoint2_payload_fmt <= depacketizer_dispatch_source_payload_fmt;
-            depacketizer_endpoint2_payload_type <= depacketizer_dispatch_source_payload_type;
-            depacketizer_endpoint2_payload_dat <= depacketizer_dispatch_source_payload_dat;
-            depacketizer_endpoint2_payload_be <= depacketizer_dispatch_source_payload_be;
+            depacketizer_endpoint2_valid <= depacketizer_dispatch_sink_valid;
+            depacketizer_dispatch_sink_ready <= depacketizer_endpoint2_ready;
+            depacketizer_endpoint2_first <= depacketizer_dispatch_sink_first;
+            depacketizer_endpoint2_last <= depacketizer_dispatch_sink_last;
+            depacketizer_endpoint2_payload_fmt <= depacketizer_dispatch_sink_payload_fmt;
+            depacketizer_endpoint2_payload_type <= depacketizer_dispatch_sink_payload_type;
+            depacketizer_endpoint2_payload_dat <= depacketizer_dispatch_sink_payload_dat;
+            depacketizer_endpoint2_payload_be <= depacketizer_dispatch_sink_payload_be;
         end
         default: begin
-            depacketizer_dispatch_source_ready <= 1'd1;
+            depacketizer_dispatch_sink_ready <= 1'd1;
         end
     endcase
 end
-always @(*) begin
-    depacketizer_dispatcher_last <= 1'd0;
-    if (depacketizer_dispatch_source_valid) begin
-        depacketizer_dispatcher_last <= (depacketizer_dispatch_source_last & depacketizer_dispatch_source_ready);
-    end
-end
-assign depacketizer_dispatcher_ongoing0 = ((depacketizer_dispatch_source_valid | depacketizer_dispatcher_ongoing1) & (~depacketizer_dispatcher_last));
+assign depacketizer_dispatcher_last = ((depacketizer_dispatch_sink_valid & depacketizer_dispatch_sink_last) & depacketizer_dispatch_sink_ready);
+assign depacketizer_dispatcher_ongoing0 = ((depacketizer_dispatch_sink_valid | depacketizer_dispatcher_ongoing1) & (~depacketizer_dispatcher_last));
 assign packetizer_tlp_req_valid = packetizer_req_sink_valid;
 assign packetizer_req_sink_ready = packetizer_tlp_req_ready;
 assign packetizer_tlp_req_first = packetizer_req_sink_first;
 assign packetizer_tlp_req_last = packetizer_req_sink_last;
 assign packetizer_tlp_req_payload_type = 1'd0;
 always @(*) begin
+    packetizer_tlp_req_payload_address <= 64'd0;
     packetizer_tlp_req_payload_fmt <= 2'd0;
     if (packetizer_req_sink_payload_we) begin
         packetizer_tlp_req_payload_fmt <= 2'd2;
     end else begin
         packetizer_tlp_req_payload_fmt <= 1'd0;
     end
+    packetizer_tlp_req_payload_address <= packetizer_req_sink_payload_adr;
+    if (((packetizer_req_sink_payload_adr[63:32] != 1'd0) | 1'd0)) begin
+        packetizer_tlp_req_payload_address[31:0] <= packetizer_req_sink_payload_adr[63:32];
+        packetizer_tlp_req_payload_address[63:32] <= packetizer_req_sink_payload_adr[31:0];
+        if (packetizer_req_sink_payload_we) begin
+            packetizer_tlp_req_payload_fmt <= 2'd3;
+        end else begin
+            packetizer_tlp_req_payload_fmt <= 1'd1;
+        end
+    end
 end
-assign packetizer_tlp_req_payload_address = packetizer_req_sink_payload_adr;
 assign packetizer_tlp_req_payload_tc = 1'd0;
 assign packetizer_tlp_req_payload_td = 1'd0;
 assign packetizer_tlp_req_payload_ep = 1'd0;
@@ -3199,7 +3622,11 @@ assign packetizer_tlp_req_payload_dat = packetizer_req_sink_payload_dat;
 always @(*) begin
     packetizer_tlp_req_payload_be <= 16'd0;
     if (packetizer_req_sink_payload_we) begin
-        packetizer_tlp_req_payload_be <= 16'd65535;
+        if ((packetizer_req_sink_payload_len == 1'd1)) begin
+            packetizer_tlp_req_payload_be <= 4'd15;
+        end else begin
+            packetizer_tlp_req_payload_be <= 16'd65535;
+        end
     end else begin
         packetizer_tlp_req_payload_be <= 1'd0;
     end
@@ -3336,14 +3763,14 @@ always @(*) begin
 end
 always @(*) begin
     packetizer_tlp_raw_cmp_ready <= 1'd0;
-    packetizer_tlp_raw_valid <= 1'd0;
-    packetizer_tlp_raw_req_ready <= 1'd0;
     packetizer_tlp_raw_first <= 1'd0;
     packetizer_tlp_raw_last <= 1'd0;
+    packetizer_tlp_raw_payload_be <= 16'd0;
+    packetizer_tlp_raw_payload_dat <= 128'd0;
     packetizer_tlp_raw_payload_fmt <= 2'd0;
     packetizer_tlp_raw_payload_header <= 128'd0;
-    packetizer_tlp_raw_payload_dat <= 128'd0;
-    packetizer_tlp_raw_payload_be <= 16'd0;
+    packetizer_tlp_raw_req_ready <= 1'd0;
+    packetizer_tlp_raw_valid <= 1'd0;
     case (packetizer_grant)
         1'd0: begin
             packetizer_tlp_raw_valid <= packetizer_tlp_raw_req_valid;
@@ -3367,19 +3794,9 @@ always @(*) begin
         end
     endcase
 end
-always @(*) begin
-    packetizer_status0_last <= 1'd0;
-    if (packetizer_tlp_raw_req_valid) begin
-        packetizer_status0_last <= (packetizer_tlp_raw_req_last & packetizer_tlp_raw_req_ready);
-    end
-end
+assign packetizer_status0_last = ((packetizer_tlp_raw_req_valid & packetizer_tlp_raw_req_last) & packetizer_tlp_raw_req_ready);
 assign packetizer_status0_ongoing0 = ((packetizer_tlp_raw_req_valid | packetizer_status0_ongoing1) & (~packetizer_status0_last));
-always @(*) begin
-    packetizer_status1_last <= 1'd0;
-    if (packetizer_tlp_raw_cmp_valid) begin
-        packetizer_status1_last <= (packetizer_tlp_raw_cmp_last & packetizer_tlp_raw_cmp_ready);
-    end
-end
+assign packetizer_status1_last = ((packetizer_tlp_raw_cmp_valid & packetizer_tlp_raw_cmp_last) & packetizer_tlp_raw_cmp_ready);
 assign packetizer_status1_ongoing0 = ((packetizer_tlp_raw_cmp_valid | packetizer_status1_ongoing1) & (~packetizer_status1_last));
 always @(*) begin
     packetizer_header_sel <= 1'd0;
@@ -3399,27 +3816,27 @@ always @(*) begin
     endcase
 end
 always @(*) begin
-    packetizer_source_source_first <= 1'd0;
-    packetizer_source_source_last <= 1'd0;
-    packetizer_source_source_payload_dat <= 128'd0;
-    packetizer_source_source_payload_be <= 16'd0;
-    packetizer_header_inserter_3dws_sink_valid <= 1'd0;
     packetizer_header_inserter_3dws_sink_first <= 1'd0;
     packetizer_header_inserter_3dws_sink_last <= 1'd0;
+    packetizer_header_inserter_3dws_sink_payload_be <= 16'd0;
+    packetizer_header_inserter_3dws_sink_payload_dat <= 128'd0;
     packetizer_header_inserter_3dws_sink_payload_fmt <= 2'd0;
     packetizer_header_inserter_3dws_sink_payload_header <= 128'd0;
-    packetizer_header_inserter_3dws_sink_payload_dat <= 128'd0;
-    packetizer_header_inserter_3dws_sink_payload_be <= 16'd0;
+    packetizer_header_inserter_3dws_sink_valid <= 1'd0;
     packetizer_header_inserter_3dws_source_ready <= 1'd0;
-    packetizer_header_inserter_4dws_sink_valid <= 1'd0;
     packetizer_header_inserter_4dws_sink_first <= 1'd0;
     packetizer_header_inserter_4dws_sink_last <= 1'd0;
+    packetizer_header_inserter_4dws_sink_payload_be <= 16'd0;
+    packetizer_header_inserter_4dws_sink_payload_dat <= 128'd0;
     packetizer_header_inserter_4dws_sink_payload_fmt <= 2'd0;
     packetizer_header_inserter_4dws_sink_payload_header <= 128'd0;
-    packetizer_header_inserter_4dws_sink_payload_dat <= 128'd0;
-    packetizer_header_inserter_4dws_sink_payload_be <= 16'd0;
+    packetizer_header_inserter_4dws_sink_valid <= 1'd0;
     packetizer_header_inserter_4dws_source_ready <= 1'd0;
     packetizer_sink_sink_ready <= 1'd0;
+    packetizer_source_source_first <= 1'd0;
+    packetizer_source_source_last <= 1'd0;
+    packetizer_source_source_payload_be <= 16'd0;
+    packetizer_source_source_payload_dat <= 128'd0;
     packetizer_source_source_valid <= 1'd0;
     case (packetizer_header_sel)
         1'd0: begin
@@ -3457,15 +3874,15 @@ always @(*) begin
     endcase
 end
 always @(*) begin
-    packetizer_header_inserter_3dws_source_last <= 1'd0;
-    packetizer_header_inserter_3dws_source_payload_dat <= 128'd0;
-    packetizer_header_inserter_3dws_source_payload_be <= 16'd0;
-    litepciecore_litepcieendpoint_litepcietlpheaderinserter128b3dws_next_state <= 1'd0;
-    packetizer_header_inserter_3dws_source_valid <= 1'd0;
+    litepcieendpoint_litepcietlpheaderinserter128b3dws_next_state <= 1'd0;
     packetizer_header_inserter_3dws_sink_ready <= 1'd0;
     packetizer_header_inserter_3dws_source_first <= 1'd0;
-    litepciecore_litepcieendpoint_litepcietlpheaderinserter128b3dws_next_state <= litepciecore_litepcieendpoint_litepcietlpheaderinserter128b3dws_state;
-    case (litepciecore_litepcieendpoint_litepcietlpheaderinserter128b3dws_state)
+    packetizer_header_inserter_3dws_source_last <= 1'd0;
+    packetizer_header_inserter_3dws_source_payload_be <= 16'd0;
+    packetizer_header_inserter_3dws_source_payload_dat <= 128'd0;
+    packetizer_header_inserter_3dws_source_valid <= 1'd0;
+    litepcieendpoint_litepcietlpheaderinserter128b3dws_next_state <= litepcieendpoint_litepcietlpheaderinserter128b3dws_state;
+    case (litepcieendpoint_litepcietlpheaderinserter128b3dws_state)
         1'd1: begin
             packetizer_header_inserter_3dws_source_valid <= (packetizer_header_inserter_3dws_sink_valid | packetizer_header_inserter_3dws_last);
             packetizer_header_inserter_3dws_source_last <= packetizer_header_inserter_3dws_last;
@@ -3473,18 +3890,18 @@ always @(*) begin
             packetizer_header_inserter_3dws_source_payload_dat[63:32] <= packetizer_header_inserter_3dws_dat[127:64];
             packetizer_header_inserter_3dws_source_payload_dat[95:64] <= packetizer_header_inserter_3dws_dat[127:96];
             packetizer_header_inserter_3dws_source_payload_dat[127:96] <= packetizer_header_inserter_3dws_sink_payload_dat[127:0];
-            packetizer_header_inserter_3dws_source_payload_be[3:0] <= 4'd15;
-            packetizer_header_inserter_3dws_source_payload_be[7:4] <= 4'd15;
-            packetizer_header_inserter_3dws_source_payload_be[11:8] <= 4'd15;
+            packetizer_header_inserter_3dws_source_payload_be[3:0] <= packetizer_header_inserter_3dws_be[15:1];
+            packetizer_header_inserter_3dws_source_payload_be[7:4] <= packetizer_header_inserter_3dws_be[15:2];
+            packetizer_header_inserter_3dws_source_payload_be[11:8] <= packetizer_header_inserter_3dws_be[15:3];
             if (packetizer_header_inserter_3dws_last) begin
                 packetizer_header_inserter_3dws_source_payload_be[15:12] <= 1'd0;
             end else begin
-                packetizer_header_inserter_3dws_source_payload_be[15:12] <= 4'd15;
+                packetizer_header_inserter_3dws_source_payload_be[15:12] <= packetizer_header_inserter_3dws_sink_payload_be[15:0];
             end
             if ((packetizer_header_inserter_3dws_source_valid & packetizer_header_inserter_3dws_source_ready)) begin
                 packetizer_header_inserter_3dws_sink_ready <= (~packetizer_header_inserter_3dws_last);
                 if (packetizer_header_inserter_3dws_source_last) begin
-                    litepciecore_litepcieendpoint_litepcietlpheaderinserter128b3dws_next_state <= 1'd0;
+                    litepcieendpoint_litepcietlpheaderinserter128b3dws_next_state <= 1'd0;
                 end
             end
         end
@@ -3506,7 +3923,7 @@ always @(*) begin
                 if ((packetizer_header_inserter_3dws_source_valid & packetizer_header_inserter_3dws_source_ready)) begin
                     packetizer_header_inserter_3dws_sink_ready <= 1'd1;
                     if ((~packetizer_header_inserter_3dws_source_last)) begin
-                        litepciecore_litepcieendpoint_litepcietlpheaderinserter128b3dws_next_state <= 1'd1;
+                        litepcieendpoint_litepcietlpheaderinserter128b3dws_next_state <= 1'd1;
                     end
                 end
             end
@@ -3514,15 +3931,15 @@ always @(*) begin
     endcase
 end
 always @(*) begin
+    litepcieendpoint_litepcietlpheaderinserter128b4dws_next_state <= 1'd0;
+    packetizer_header_inserter_4dws_sink_ready <= 1'd0;
     packetizer_header_inserter_4dws_source_first <= 1'd0;
     packetizer_header_inserter_4dws_source_last <= 1'd0;
-    packetizer_header_inserter_4dws_source_payload_dat <= 128'd0;
     packetizer_header_inserter_4dws_source_payload_be <= 16'd0;
-    litepciecore_litepcieendpoint_litepcietlpheaderinserter128b4dws_next_state <= 1'd0;
+    packetizer_header_inserter_4dws_source_payload_dat <= 128'd0;
     packetizer_header_inserter_4dws_source_valid <= 1'd0;
-    packetizer_header_inserter_4dws_sink_ready <= 1'd0;
-    litepciecore_litepcieendpoint_litepcietlpheaderinserter128b4dws_next_state <= litepciecore_litepcieendpoint_litepcietlpheaderinserter128b4dws_state;
-    case (litepciecore_litepcieendpoint_litepcietlpheaderinserter128b4dws_state)
+    litepcieendpoint_litepcietlpheaderinserter128b4dws_next_state <= litepcieendpoint_litepcietlpheaderinserter128b4dws_state;
+    case (litepcieendpoint_litepcietlpheaderinserter128b4dws_state)
         1'd1: begin
             packetizer_header_inserter_4dws_source_valid <= packetizer_header_inserter_4dws_sink_valid;
             packetizer_header_inserter_4dws_source_last <= packetizer_header_inserter_4dws_sink_last;
@@ -3530,14 +3947,14 @@ always @(*) begin
             packetizer_header_inserter_4dws_source_payload_dat[63:32] <= packetizer_header_inserter_4dws_sink_payload_dat[127:32];
             packetizer_header_inserter_4dws_source_payload_dat[95:64] <= packetizer_header_inserter_4dws_sink_payload_dat[127:64];
             packetizer_header_inserter_4dws_source_payload_dat[127:96] <= packetizer_header_inserter_4dws_sink_payload_dat[127:96];
-            packetizer_header_inserter_4dws_source_payload_be[3:0] <= 4'd15;
-            packetizer_header_inserter_4dws_source_payload_be[7:4] <= 4'd15;
-            packetizer_header_inserter_4dws_source_payload_be[11:8] <= 4'd15;
-            packetizer_header_inserter_4dws_source_payload_be[15:12] <= 4'd15;
+            packetizer_header_inserter_4dws_source_payload_be[3:0] <= packetizer_header_inserter_4dws_sink_payload_be[15:0];
+            packetizer_header_inserter_4dws_source_payload_be[7:4] <= packetizer_header_inserter_4dws_sink_payload_be[15:4];
+            packetizer_header_inserter_4dws_source_payload_be[11:8] <= packetizer_header_inserter_4dws_sink_payload_be[15:8];
+            packetizer_header_inserter_4dws_source_payload_be[15:12] <= packetizer_header_inserter_4dws_sink_payload_be[15:12];
             if ((packetizer_header_inserter_4dws_source_valid & packetizer_header_inserter_4dws_source_ready)) begin
                 packetizer_header_inserter_4dws_sink_ready <= 1'd1;
                 if (packetizer_header_inserter_4dws_source_last) begin
-                    litepciecore_litepcieendpoint_litepcietlpheaderinserter128b4dws_next_state <= 1'd0;
+                    litepcieendpoint_litepcietlpheaderinserter128b4dws_next_state <= 1'd0;
                 end
             end
         end
@@ -3546,7 +3963,7 @@ always @(*) begin
             if ((packetizer_header_inserter_4dws_sink_valid & packetizer_header_inserter_4dws_sink_first)) begin
                 packetizer_header_inserter_4dws_sink_ready <= 1'd0;
                 packetizer_header_inserter_4dws_source_valid <= 1'd1;
-                packetizer_header_inserter_4dws_source_first <= packetizer_header_inserter_4dws_sink_first;
+                packetizer_header_inserter_4dws_source_first <= 1'd1;
                 packetizer_header_inserter_4dws_source_last <= (packetizer_header_inserter_4dws_sink_last & (packetizer_header_inserter_4dws_sink_payload_be == 1'd0));
                 packetizer_header_inserter_4dws_source_payload_dat[31:0] <= packetizer_header_inserter_4dws_sink_payload_header[127:0];
                 packetizer_header_inserter_4dws_source_payload_dat[63:32] <= packetizer_header_inserter_4dws_sink_payload_header[127:32];
@@ -3560,42 +3977,82 @@ always @(*) begin
                     packetizer_header_inserter_4dws_sink_ready <= 1'd1;
                     if ((~packetizer_header_inserter_4dws_source_last)) begin
                         packetizer_header_inserter_4dws_sink_ready <= 1'd0;
-                        litepciecore_litepcieendpoint_litepcietlpheaderinserter128b4dws_next_state <= 1'd1;
+                        litepcieendpoint_litepcietlpheaderinserter128b4dws_next_state <= 1'd1;
                     end
                 end
             end
         end
     endcase
 end
-assign litepciecore_litepcieendpoint_s_dispatcher_sel = 1'd1;
-assign litepciecore_litepcieendpoint_m_dispatcher_sel0 = (litepciecore_litepcieendpoint_master_in_source_payload_channel == 1'd1);
-assign litepciecore_litepcieendpoint_m_dispatcher_sel1 = (litepciecore_litepcieendpoint_source_payload_channel == 1'd0);
-assign litepciecore_litepcieendpoint_master_out_source_valid = master_source_valid;
-assign master_source_ready = litepciecore_litepcieendpoint_master_out_source_ready;
-assign litepciecore_litepcieendpoint_master_out_source_first = master_source_first;
-assign litepciecore_litepcieendpoint_master_out_source_last = master_source_last;
-assign litepciecore_litepcieendpoint_master_out_source_payload_req_id = master_source_payload_req_id;
-assign litepciecore_litepcieendpoint_master_out_source_payload_cmp_id = master_source_payload_cmp_id;
-assign litepciecore_litepcieendpoint_master_out_source_payload_adr = master_source_payload_adr;
-assign litepciecore_litepcieendpoint_master_out_source_payload_len = master_source_payload_len;
-assign litepciecore_litepcieendpoint_master_out_source_payload_end = master_source_payload_end;
-assign litepciecore_litepcieendpoint_master_out_source_payload_err = master_source_payload_err;
-assign litepciecore_litepcieendpoint_master_out_source_payload_tag = master_source_payload_tag;
-assign litepciecore_litepcieendpoint_master_out_source_payload_dat = master_source_payload_dat;
-assign litepciecore_litepcieendpoint_master_out_source_payload_channel = master_source_payload_channel;
-assign litepciecore_litepcieendpoint_master_out_source_payload_user_id = master_source_payload_user_id;
-assign pcie_wishbone_master_source_valid = slave_source_valid;
-assign slave_source_ready = pcie_wishbone_master_source_ready;
-assign pcie_wishbone_master_source_first = slave_source_first;
-assign pcie_wishbone_master_source_last = slave_source_last;
-assign pcie_wishbone_master_source_payload_req_id = slave_source_payload_req_id;
-assign pcie_wishbone_master_source_payload_we = slave_source_payload_we;
-assign pcie_wishbone_master_source_payload_adr = slave_source_payload_adr;
-assign pcie_wishbone_master_source_payload_len = slave_source_payload_len;
-assign pcie_wishbone_master_source_payload_tag = slave_source_payload_tag;
-assign pcie_wishbone_master_source_payload_dat = slave_source_payload_dat;
-assign pcie_wishbone_master_source_payload_channel = slave_source_payload_channel;
-assign pcie_wishbone_master_source_payload_user_id = slave_source_payload_user_id;
+always @(*) begin
+    litepcieendpoint_sel0 <= 1'd0;
+    litepcieendpoint_sel0 <= 1'd1;
+end
+always @(*) begin
+    litepcieendpoint_dispatcher0_sel0 <= 1'd0;
+    litepcieendpoint_dispatcher0_sel0 <= (litepcieendpoint_master_in_source_payload_channel == 1'd1);
+end
+always @(*) begin
+    litepcieendpoint_dispatcher1_sel0 <= 1'd0;
+    litepcieendpoint_dispatcher1_sel0 <= (litepcieendpoint_source_payload_channel == 1'd0);
+end
+assign litepcieendpoint_master_out_source_valid = master_source_valid;
+assign master_source_ready = litepcieendpoint_master_out_source_ready;
+assign litepcieendpoint_master_out_source_first = master_source_first;
+assign litepcieendpoint_master_out_source_last = master_source_last;
+assign litepcieendpoint_master_out_source_payload_req_id = master_source_payload_req_id;
+assign litepcieendpoint_master_out_source_payload_cmp_id = master_source_payload_cmp_id;
+assign litepcieendpoint_master_out_source_payload_adr = master_source_payload_adr;
+assign litepcieendpoint_master_out_source_payload_len = master_source_payload_len;
+assign litepcieendpoint_master_out_source_payload_end = master_source_payload_end;
+assign litepcieendpoint_master_out_source_payload_err = master_source_payload_err;
+assign litepcieendpoint_master_out_source_payload_tag = master_source_payload_tag;
+assign litepcieendpoint_master_out_source_payload_dat = master_source_payload_dat;
+assign litepcieendpoint_master_out_source_payload_channel = master_source_payload_channel;
+assign litepcieendpoint_master_out_source_payload_user_id = master_source_payload_user_id;
+always @(*) begin
+    litepcieendpoint_sel1 <= 1'd0;
+    if (litepcieendpoint_first) begin
+        litepcieendpoint_sel1 <= litepcieendpoint_sel0;
+    end else begin
+        litepcieendpoint_sel1 <= litepcieendpoint_sel_ongoing;
+    end
+end
+always @(*) begin
+    pcie_wishbone_master_source_first <= 1'd0;
+    pcie_wishbone_master_source_last <= 1'd0;
+    pcie_wishbone_master_source_payload_adr <= 32'd0;
+    pcie_wishbone_master_source_payload_channel <= 8'd0;
+    pcie_wishbone_master_source_payload_dat <= 128'd0;
+    pcie_wishbone_master_source_payload_len <= 10'd0;
+    pcie_wishbone_master_source_payload_req_id <= 16'd0;
+    pcie_wishbone_master_source_payload_tag <= 8'd0;
+    pcie_wishbone_master_source_payload_user_id <= 8'd0;
+    pcie_wishbone_master_source_payload_we <= 1'd0;
+    pcie_wishbone_master_source_valid <= 1'd0;
+    slave_source_ready <= 1'd0;
+    case (litepcieendpoint_sel1)
+        1'd1: begin
+            pcie_wishbone_master_source_valid <= slave_source_valid;
+            slave_source_ready <= pcie_wishbone_master_source_ready;
+            pcie_wishbone_master_source_first <= slave_source_first;
+            pcie_wishbone_master_source_last <= slave_source_last;
+            pcie_wishbone_master_source_payload_req_id <= slave_source_payload_req_id;
+            pcie_wishbone_master_source_payload_we <= slave_source_payload_we;
+            pcie_wishbone_master_source_payload_adr <= slave_source_payload_adr;
+            pcie_wishbone_master_source_payload_len <= slave_source_payload_len;
+            pcie_wishbone_master_source_payload_tag <= slave_source_payload_tag;
+            pcie_wishbone_master_source_payload_dat <= slave_source_payload_dat;
+            pcie_wishbone_master_source_payload_channel <= slave_source_payload_channel;
+            pcie_wishbone_master_source_payload_user_id <= slave_source_payload_user_id;
+        end
+        default: begin
+            slave_source_ready <= 1'd1;
+        end
+    endcase
+end
+assign litepcieendpoint_last = ((slave_source_valid & slave_source_last) & slave_source_ready);
+assign litepcieendpoint_ongoing0 = ((slave_source_valid | litepcieendpoint_ongoing1) & (~litepcieendpoint_last));
 assign slave_sink_valid = pcie_wishbone_master_sink_valid;
 assign pcie_wishbone_master_sink_ready = slave_sink_ready;
 assign slave_sink_first = pcie_wishbone_master_sink_first;
@@ -3610,715 +4067,768 @@ assign slave_sink_payload_tag = pcie_wishbone_master_sink_payload_tag;
 assign slave_sink_payload_dat = pcie_wishbone_master_sink_payload_dat;
 assign slave_sink_payload_channel = pcie_wishbone_master_sink_payload_channel;
 assign slave_sink_payload_user_id = pcie_wishbone_master_sink_payload_user_id;
-assign litepciecore_litepcieendpoint_master_out_sink_first = litepciecore_litepcieendpoint_master_in_sink_first;
-assign litepciecore_litepcieendpoint_master_out_sink_last = litepciecore_litepcieendpoint_master_in_sink_last;
-assign litepciecore_litepcieendpoint_master_out_sink_payload_req_id = litepciecore_litepcieendpoint_master_in_sink_payload_req_id;
-assign litepciecore_litepcieendpoint_master_out_sink_payload_we = litepciecore_litepcieendpoint_master_in_sink_payload_we;
-assign litepciecore_litepcieendpoint_master_out_sink_payload_adr = litepciecore_litepcieendpoint_master_in_sink_payload_adr;
-assign litepciecore_litepcieendpoint_master_out_sink_payload_len = litepciecore_litepcieendpoint_master_in_sink_payload_len;
-assign litepciecore_litepcieendpoint_master_out_sink_payload_dat = litepciecore_litepcieendpoint_master_in_sink_payload_dat;
-assign litepciecore_litepcieendpoint_master_out_sink_payload_channel = litepciecore_litepcieendpoint_master_in_sink_payload_channel;
-assign litepciecore_litepcieendpoint_master_out_sink_payload_user_id = litepciecore_litepcieendpoint_master_in_sink_payload_user_id;
+assign litepcieendpoint_master_out_sink_first = litepcieendpoint_master_in_sink_first;
+assign litepcieendpoint_master_out_sink_last = litepcieendpoint_master_in_sink_last;
+assign litepcieendpoint_master_out_sink_payload_req_id = litepcieendpoint_master_in_sink_payload_req_id;
+assign litepcieendpoint_master_out_sink_payload_we = litepcieendpoint_master_in_sink_payload_we;
+assign litepcieendpoint_master_out_sink_payload_adr = litepcieendpoint_master_in_sink_payload_adr;
+assign litepcieendpoint_master_out_sink_payload_len = litepcieendpoint_master_in_sink_payload_len;
+assign litepcieendpoint_master_out_sink_payload_dat = litepcieendpoint_master_in_sink_payload_dat;
+assign litepcieendpoint_master_out_sink_payload_channel = litepcieendpoint_master_in_sink_payload_channel;
+assign litepcieendpoint_master_out_sink_payload_user_id = litepcieendpoint_master_in_sink_payload_user_id;
+assign litepcieendpoint_req_queue_sink_payload_tag = litepcieendpoint_tag_queue_source_payload_tag;
+assign litepcieendpoint_req_queue_sink_payload_channel = litepcieendpoint_master_in_sink_payload_channel;
+assign litepcieendpoint_req_queue_sink_payload_user_id = litepcieendpoint_master_in_sink_payload_user_id;
 always @(*) begin
-    litepciecore_litepcieendpoint_syncfifo1_sink_payload_len <= 10'd0;
-    litepciecore_litepcieendpoint_syncfifo3_sink_payload_end <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo1_sink_payload_end <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo3_sink_payload_err <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo1_sink_payload_err <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo3_sink_payload_tag <= 8'd0;
-    litepciecore_litepcieendpoint_syncfifo1_sink_payload_tag <= 8'd0;
-    litepciecore_litepcieendpoint_syncfifo3_sink_payload_dat <= 128'd0;
-    litepciecore_litepcieendpoint_syncfifo1_sink_payload_dat <= 128'd0;
-    litepciecore_litepcieendpoint_syncfifo3_sink_payload_channel <= 8'd0;
-    litepciecore_litepcieendpoint_syncfifo1_sink_payload_channel <= 8'd0;
-    litepciecore_litepcieendpoint_syncfifo3_sink_payload_user_id <= 8'd0;
-    litepciecore_litepcieendpoint_syncfifo1_sink_payload_user_id <= 8'd0;
-    litepciecore_litepcieendpoint_syncfifo3_sink_payload_adr <= 32'd0;
-    litepciecore_litepcieendpoint_cmp_reorder_ready <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo3_sink_last <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo3_sink_payload_req_id <= 16'd0;
-    litepciecore_litepcieendpoint_syncfifo2_sink_valid <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo3_sink_payload_cmp_id <= 16'd0;
-    litepciecore_litepcieendpoint_syncfifo0_sink_valid <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo2_sink_first <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo0_sink_first <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo2_sink_last <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo0_sink_last <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo2_sink_payload_req_id <= 16'd0;
-    litepciecore_litepcieendpoint_syncfifo0_sink_payload_req_id <= 16'd0;
-    litepciecore_litepcieendpoint_syncfifo2_sink_payload_cmp_id <= 16'd0;
-    litepciecore_litepcieendpoint_syncfifo0_sink_payload_cmp_id <= 16'd0;
-    litepciecore_litepcieendpoint_syncfifo2_sink_payload_adr <= 32'd0;
-    litepciecore_litepcieendpoint_syncfifo0_sink_payload_adr <= 32'd0;
-    litepciecore_litepcieendpoint_syncfifo2_sink_payload_len <= 10'd0;
-    litepciecore_litepcieendpoint_syncfifo0_sink_payload_len <= 10'd0;
-    litepciecore_litepcieendpoint_syncfifo2_sink_payload_end <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo0_sink_payload_end <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo2_sink_payload_err <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo0_sink_payload_err <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo2_sink_payload_tag <= 8'd0;
-    litepciecore_litepcieendpoint_syncfifo0_sink_payload_tag <= 8'd0;
-    litepciecore_litepcieendpoint_syncfifo2_sink_payload_dat <= 128'd0;
-    litepciecore_litepcieendpoint_syncfifo0_sink_payload_dat <= 128'd0;
-    litepciecore_litepcieendpoint_syncfifo2_sink_payload_channel <= 8'd0;
-    litepciecore_litepcieendpoint_syncfifo0_sink_payload_channel <= 8'd0;
-    litepciecore_litepcieendpoint_syncfifo2_sink_payload_user_id <= 8'd0;
-    litepciecore_litepcieendpoint_syncfifo0_sink_payload_user_id <= 8'd0;
-    litepciecore_litepcieendpoint_syncfifo3_sink_payload_len <= 10'd0;
-    litepciecore_litepcieendpoint_syncfifo3_sink_valid <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo1_sink_valid <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo3_sink_first <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo1_sink_first <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo1_sink_last <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo1_sink_payload_req_id <= 16'd0;
-    litepciecore_litepcieendpoint_syncfifo1_sink_payload_cmp_id <= 16'd0;
-    litepciecore_litepcieendpoint_syncfifo1_sink_payload_adr <= 32'd0;
-    case (litepciecore_litepcieendpoint_cmp_reorder_payload_tag)
+    litepcieendpoint_cmp_reorder_ready <= 1'd0;
+    litepcieendpoint_syncfifo0_sink_first <= 1'd0;
+    litepcieendpoint_syncfifo0_sink_last <= 1'd0;
+    litepcieendpoint_syncfifo0_sink_payload_adr <= 32'd0;
+    litepcieendpoint_syncfifo0_sink_payload_channel <= 8'd0;
+    litepcieendpoint_syncfifo0_sink_payload_cmp_id <= 16'd0;
+    litepcieendpoint_syncfifo0_sink_payload_dat <= 128'd0;
+    litepcieendpoint_syncfifo0_sink_payload_end <= 1'd0;
+    litepcieendpoint_syncfifo0_sink_payload_err <= 1'd0;
+    litepcieendpoint_syncfifo0_sink_payload_len <= 10'd0;
+    litepcieendpoint_syncfifo0_sink_payload_req_id <= 16'd0;
+    litepcieendpoint_syncfifo0_sink_payload_tag <= 8'd0;
+    litepcieendpoint_syncfifo0_sink_payload_user_id <= 8'd0;
+    litepcieendpoint_syncfifo0_sink_valid <= 1'd0;
+    litepcieendpoint_syncfifo1_sink_first <= 1'd0;
+    litepcieendpoint_syncfifo1_sink_last <= 1'd0;
+    litepcieendpoint_syncfifo1_sink_payload_adr <= 32'd0;
+    litepcieendpoint_syncfifo1_sink_payload_channel <= 8'd0;
+    litepcieendpoint_syncfifo1_sink_payload_cmp_id <= 16'd0;
+    litepcieendpoint_syncfifo1_sink_payload_dat <= 128'd0;
+    litepcieendpoint_syncfifo1_sink_payload_end <= 1'd0;
+    litepcieendpoint_syncfifo1_sink_payload_err <= 1'd0;
+    litepcieendpoint_syncfifo1_sink_payload_len <= 10'd0;
+    litepcieendpoint_syncfifo1_sink_payload_req_id <= 16'd0;
+    litepcieendpoint_syncfifo1_sink_payload_tag <= 8'd0;
+    litepcieendpoint_syncfifo1_sink_payload_user_id <= 8'd0;
+    litepcieendpoint_syncfifo1_sink_valid <= 1'd0;
+    litepcieendpoint_syncfifo2_sink_first <= 1'd0;
+    litepcieendpoint_syncfifo2_sink_last <= 1'd0;
+    litepcieendpoint_syncfifo2_sink_payload_adr <= 32'd0;
+    litepcieendpoint_syncfifo2_sink_payload_channel <= 8'd0;
+    litepcieendpoint_syncfifo2_sink_payload_cmp_id <= 16'd0;
+    litepcieendpoint_syncfifo2_sink_payload_dat <= 128'd0;
+    litepcieendpoint_syncfifo2_sink_payload_end <= 1'd0;
+    litepcieendpoint_syncfifo2_sink_payload_err <= 1'd0;
+    litepcieendpoint_syncfifo2_sink_payload_len <= 10'd0;
+    litepcieendpoint_syncfifo2_sink_payload_req_id <= 16'd0;
+    litepcieendpoint_syncfifo2_sink_payload_tag <= 8'd0;
+    litepcieendpoint_syncfifo2_sink_payload_user_id <= 8'd0;
+    litepcieendpoint_syncfifo2_sink_valid <= 1'd0;
+    litepcieendpoint_syncfifo3_sink_first <= 1'd0;
+    litepcieendpoint_syncfifo3_sink_last <= 1'd0;
+    litepcieendpoint_syncfifo3_sink_payload_adr <= 32'd0;
+    litepcieendpoint_syncfifo3_sink_payload_channel <= 8'd0;
+    litepcieendpoint_syncfifo3_sink_payload_cmp_id <= 16'd0;
+    litepcieendpoint_syncfifo3_sink_payload_dat <= 128'd0;
+    litepcieendpoint_syncfifo3_sink_payload_end <= 1'd0;
+    litepcieendpoint_syncfifo3_sink_payload_err <= 1'd0;
+    litepcieendpoint_syncfifo3_sink_payload_len <= 10'd0;
+    litepcieendpoint_syncfifo3_sink_payload_req_id <= 16'd0;
+    litepcieendpoint_syncfifo3_sink_payload_tag <= 8'd0;
+    litepcieendpoint_syncfifo3_sink_payload_user_id <= 8'd0;
+    litepcieendpoint_syncfifo3_sink_valid <= 1'd0;
+    case (litepcieendpoint_cmp_reorder_payload_tag)
         1'd0: begin
-            litepciecore_litepcieendpoint_syncfifo0_sink_valid <= litepciecore_litepcieendpoint_cmp_reorder_valid;
-            litepciecore_litepcieendpoint_cmp_reorder_ready <= litepciecore_litepcieendpoint_syncfifo0_sink_ready;
-            litepciecore_litepcieendpoint_syncfifo0_sink_first <= litepciecore_litepcieendpoint_cmp_reorder_first;
-            litepciecore_litepcieendpoint_syncfifo0_sink_last <= litepciecore_litepcieendpoint_cmp_reorder_last;
-            litepciecore_litepcieendpoint_syncfifo0_sink_payload_req_id <= litepciecore_litepcieendpoint_cmp_reorder_payload_req_id;
-            litepciecore_litepcieendpoint_syncfifo0_sink_payload_cmp_id <= litepciecore_litepcieendpoint_cmp_reorder_payload_cmp_id;
-            litepciecore_litepcieendpoint_syncfifo0_sink_payload_adr <= litepciecore_litepcieendpoint_cmp_reorder_payload_adr;
-            litepciecore_litepcieendpoint_syncfifo0_sink_payload_len <= litepciecore_litepcieendpoint_cmp_reorder_payload_len;
-            litepciecore_litepcieendpoint_syncfifo0_sink_payload_end <= litepciecore_litepcieendpoint_cmp_reorder_payload_end;
-            litepciecore_litepcieendpoint_syncfifo0_sink_payload_err <= litepciecore_litepcieendpoint_cmp_reorder_payload_err;
-            litepciecore_litepcieendpoint_syncfifo0_sink_payload_tag <= litepciecore_litepcieendpoint_cmp_reorder_payload_tag;
-            litepciecore_litepcieendpoint_syncfifo0_sink_payload_dat <= litepciecore_litepcieendpoint_cmp_reorder_payload_dat;
-            litepciecore_litepcieendpoint_syncfifo0_sink_payload_channel <= litepciecore_litepcieendpoint_cmp_reorder_payload_channel;
-            litepciecore_litepcieendpoint_syncfifo0_sink_payload_user_id <= litepciecore_litepcieendpoint_cmp_reorder_payload_user_id;
+            litepcieendpoint_syncfifo0_sink_valid <= litepcieendpoint_cmp_reorder_valid;
+            litepcieendpoint_cmp_reorder_ready <= litepcieendpoint_syncfifo0_sink_ready;
+            litepcieendpoint_syncfifo0_sink_first <= litepcieendpoint_cmp_reorder_first;
+            litepcieendpoint_syncfifo0_sink_last <= litepcieendpoint_cmp_reorder_last;
+            litepcieendpoint_syncfifo0_sink_payload_req_id <= litepcieendpoint_cmp_reorder_payload_req_id;
+            litepcieendpoint_syncfifo0_sink_payload_cmp_id <= litepcieendpoint_cmp_reorder_payload_cmp_id;
+            litepcieendpoint_syncfifo0_sink_payload_adr <= litepcieendpoint_cmp_reorder_payload_adr;
+            litepcieendpoint_syncfifo0_sink_payload_len <= litepcieendpoint_cmp_reorder_payload_len;
+            litepcieendpoint_syncfifo0_sink_payload_end <= litepcieendpoint_cmp_reorder_payload_end;
+            litepcieendpoint_syncfifo0_sink_payload_err <= litepcieendpoint_cmp_reorder_payload_err;
+            litepcieendpoint_syncfifo0_sink_payload_tag <= litepcieendpoint_cmp_reorder_payload_tag;
+            litepcieendpoint_syncfifo0_sink_payload_dat <= litepcieendpoint_cmp_reorder_payload_dat;
+            litepcieendpoint_syncfifo0_sink_payload_channel <= litepcieendpoint_cmp_reorder_payload_channel;
+            litepcieendpoint_syncfifo0_sink_payload_user_id <= litepcieendpoint_cmp_reorder_payload_user_id;
         end
         1'd1: begin
-            litepciecore_litepcieendpoint_syncfifo1_sink_valid <= litepciecore_litepcieendpoint_cmp_reorder_valid;
-            litepciecore_litepcieendpoint_cmp_reorder_ready <= litepciecore_litepcieendpoint_syncfifo1_sink_ready;
-            litepciecore_litepcieendpoint_syncfifo1_sink_first <= litepciecore_litepcieendpoint_cmp_reorder_first;
-            litepciecore_litepcieendpoint_syncfifo1_sink_last <= litepciecore_litepcieendpoint_cmp_reorder_last;
-            litepciecore_litepcieendpoint_syncfifo1_sink_payload_req_id <= litepciecore_litepcieendpoint_cmp_reorder_payload_req_id;
-            litepciecore_litepcieendpoint_syncfifo1_sink_payload_cmp_id <= litepciecore_litepcieendpoint_cmp_reorder_payload_cmp_id;
-            litepciecore_litepcieendpoint_syncfifo1_sink_payload_adr <= litepciecore_litepcieendpoint_cmp_reorder_payload_adr;
-            litepciecore_litepcieendpoint_syncfifo1_sink_payload_len <= litepciecore_litepcieendpoint_cmp_reorder_payload_len;
-            litepciecore_litepcieendpoint_syncfifo1_sink_payload_end <= litepciecore_litepcieendpoint_cmp_reorder_payload_end;
-            litepciecore_litepcieendpoint_syncfifo1_sink_payload_err <= litepciecore_litepcieendpoint_cmp_reorder_payload_err;
-            litepciecore_litepcieendpoint_syncfifo1_sink_payload_tag <= litepciecore_litepcieendpoint_cmp_reorder_payload_tag;
-            litepciecore_litepcieendpoint_syncfifo1_sink_payload_dat <= litepciecore_litepcieendpoint_cmp_reorder_payload_dat;
-            litepciecore_litepcieendpoint_syncfifo1_sink_payload_channel <= litepciecore_litepcieendpoint_cmp_reorder_payload_channel;
-            litepciecore_litepcieendpoint_syncfifo1_sink_payload_user_id <= litepciecore_litepcieendpoint_cmp_reorder_payload_user_id;
+            litepcieendpoint_syncfifo1_sink_valid <= litepcieendpoint_cmp_reorder_valid;
+            litepcieendpoint_cmp_reorder_ready <= litepcieendpoint_syncfifo1_sink_ready;
+            litepcieendpoint_syncfifo1_sink_first <= litepcieendpoint_cmp_reorder_first;
+            litepcieendpoint_syncfifo1_sink_last <= litepcieendpoint_cmp_reorder_last;
+            litepcieendpoint_syncfifo1_sink_payload_req_id <= litepcieendpoint_cmp_reorder_payload_req_id;
+            litepcieendpoint_syncfifo1_sink_payload_cmp_id <= litepcieendpoint_cmp_reorder_payload_cmp_id;
+            litepcieendpoint_syncfifo1_sink_payload_adr <= litepcieendpoint_cmp_reorder_payload_adr;
+            litepcieendpoint_syncfifo1_sink_payload_len <= litepcieendpoint_cmp_reorder_payload_len;
+            litepcieendpoint_syncfifo1_sink_payload_end <= litepcieendpoint_cmp_reorder_payload_end;
+            litepcieendpoint_syncfifo1_sink_payload_err <= litepcieendpoint_cmp_reorder_payload_err;
+            litepcieendpoint_syncfifo1_sink_payload_tag <= litepcieendpoint_cmp_reorder_payload_tag;
+            litepcieendpoint_syncfifo1_sink_payload_dat <= litepcieendpoint_cmp_reorder_payload_dat;
+            litepcieendpoint_syncfifo1_sink_payload_channel <= litepcieendpoint_cmp_reorder_payload_channel;
+            litepcieendpoint_syncfifo1_sink_payload_user_id <= litepcieendpoint_cmp_reorder_payload_user_id;
         end
         2'd2: begin
-            litepciecore_litepcieendpoint_syncfifo2_sink_valid <= litepciecore_litepcieendpoint_cmp_reorder_valid;
-            litepciecore_litepcieendpoint_cmp_reorder_ready <= litepciecore_litepcieendpoint_syncfifo2_sink_ready;
-            litepciecore_litepcieendpoint_syncfifo2_sink_first <= litepciecore_litepcieendpoint_cmp_reorder_first;
-            litepciecore_litepcieendpoint_syncfifo2_sink_last <= litepciecore_litepcieendpoint_cmp_reorder_last;
-            litepciecore_litepcieendpoint_syncfifo2_sink_payload_req_id <= litepciecore_litepcieendpoint_cmp_reorder_payload_req_id;
-            litepciecore_litepcieendpoint_syncfifo2_sink_payload_cmp_id <= litepciecore_litepcieendpoint_cmp_reorder_payload_cmp_id;
-            litepciecore_litepcieendpoint_syncfifo2_sink_payload_adr <= litepciecore_litepcieendpoint_cmp_reorder_payload_adr;
-            litepciecore_litepcieendpoint_syncfifo2_sink_payload_len <= litepciecore_litepcieendpoint_cmp_reorder_payload_len;
-            litepciecore_litepcieendpoint_syncfifo2_sink_payload_end <= litepciecore_litepcieendpoint_cmp_reorder_payload_end;
-            litepciecore_litepcieendpoint_syncfifo2_sink_payload_err <= litepciecore_litepcieendpoint_cmp_reorder_payload_err;
-            litepciecore_litepcieendpoint_syncfifo2_sink_payload_tag <= litepciecore_litepcieendpoint_cmp_reorder_payload_tag;
-            litepciecore_litepcieendpoint_syncfifo2_sink_payload_dat <= litepciecore_litepcieendpoint_cmp_reorder_payload_dat;
-            litepciecore_litepcieendpoint_syncfifo2_sink_payload_channel <= litepciecore_litepcieendpoint_cmp_reorder_payload_channel;
-            litepciecore_litepcieendpoint_syncfifo2_sink_payload_user_id <= litepciecore_litepcieendpoint_cmp_reorder_payload_user_id;
+            litepcieendpoint_syncfifo2_sink_valid <= litepcieendpoint_cmp_reorder_valid;
+            litepcieendpoint_cmp_reorder_ready <= litepcieendpoint_syncfifo2_sink_ready;
+            litepcieendpoint_syncfifo2_sink_first <= litepcieendpoint_cmp_reorder_first;
+            litepcieendpoint_syncfifo2_sink_last <= litepcieendpoint_cmp_reorder_last;
+            litepcieendpoint_syncfifo2_sink_payload_req_id <= litepcieendpoint_cmp_reorder_payload_req_id;
+            litepcieendpoint_syncfifo2_sink_payload_cmp_id <= litepcieendpoint_cmp_reorder_payload_cmp_id;
+            litepcieendpoint_syncfifo2_sink_payload_adr <= litepcieendpoint_cmp_reorder_payload_adr;
+            litepcieendpoint_syncfifo2_sink_payload_len <= litepcieendpoint_cmp_reorder_payload_len;
+            litepcieendpoint_syncfifo2_sink_payload_end <= litepcieendpoint_cmp_reorder_payload_end;
+            litepcieendpoint_syncfifo2_sink_payload_err <= litepcieendpoint_cmp_reorder_payload_err;
+            litepcieendpoint_syncfifo2_sink_payload_tag <= litepcieendpoint_cmp_reorder_payload_tag;
+            litepcieendpoint_syncfifo2_sink_payload_dat <= litepcieendpoint_cmp_reorder_payload_dat;
+            litepcieendpoint_syncfifo2_sink_payload_channel <= litepcieendpoint_cmp_reorder_payload_channel;
+            litepcieendpoint_syncfifo2_sink_payload_user_id <= litepcieendpoint_cmp_reorder_payload_user_id;
         end
         2'd3: begin
-            litepciecore_litepcieendpoint_syncfifo3_sink_valid <= litepciecore_litepcieendpoint_cmp_reorder_valid;
-            litepciecore_litepcieendpoint_cmp_reorder_ready <= litepciecore_litepcieendpoint_syncfifo3_sink_ready;
-            litepciecore_litepcieendpoint_syncfifo3_sink_first <= litepciecore_litepcieendpoint_cmp_reorder_first;
-            litepciecore_litepcieendpoint_syncfifo3_sink_last <= litepciecore_litepcieendpoint_cmp_reorder_last;
-            litepciecore_litepcieendpoint_syncfifo3_sink_payload_req_id <= litepciecore_litepcieendpoint_cmp_reorder_payload_req_id;
-            litepciecore_litepcieendpoint_syncfifo3_sink_payload_cmp_id <= litepciecore_litepcieendpoint_cmp_reorder_payload_cmp_id;
-            litepciecore_litepcieendpoint_syncfifo3_sink_payload_adr <= litepciecore_litepcieendpoint_cmp_reorder_payload_adr;
-            litepciecore_litepcieendpoint_syncfifo3_sink_payload_len <= litepciecore_litepcieendpoint_cmp_reorder_payload_len;
-            litepciecore_litepcieendpoint_syncfifo3_sink_payload_end <= litepciecore_litepcieendpoint_cmp_reorder_payload_end;
-            litepciecore_litepcieendpoint_syncfifo3_sink_payload_err <= litepciecore_litepcieendpoint_cmp_reorder_payload_err;
-            litepciecore_litepcieendpoint_syncfifo3_sink_payload_tag <= litepciecore_litepcieendpoint_cmp_reorder_payload_tag;
-            litepciecore_litepcieendpoint_syncfifo3_sink_payload_dat <= litepciecore_litepcieendpoint_cmp_reorder_payload_dat;
-            litepciecore_litepcieendpoint_syncfifo3_sink_payload_channel <= litepciecore_litepcieendpoint_cmp_reorder_payload_channel;
-            litepciecore_litepcieendpoint_syncfifo3_sink_payload_user_id <= litepciecore_litepcieendpoint_cmp_reorder_payload_user_id;
+            litepcieendpoint_syncfifo3_sink_valid <= litepcieendpoint_cmp_reorder_valid;
+            litepcieendpoint_cmp_reorder_ready <= litepcieendpoint_syncfifo3_sink_ready;
+            litepcieendpoint_syncfifo3_sink_first <= litepcieendpoint_cmp_reorder_first;
+            litepcieendpoint_syncfifo3_sink_last <= litepcieendpoint_cmp_reorder_last;
+            litepcieendpoint_syncfifo3_sink_payload_req_id <= litepcieendpoint_cmp_reorder_payload_req_id;
+            litepcieendpoint_syncfifo3_sink_payload_cmp_id <= litepcieendpoint_cmp_reorder_payload_cmp_id;
+            litepcieendpoint_syncfifo3_sink_payload_adr <= litepcieendpoint_cmp_reorder_payload_adr;
+            litepcieendpoint_syncfifo3_sink_payload_len <= litepcieendpoint_cmp_reorder_payload_len;
+            litepcieendpoint_syncfifo3_sink_payload_end <= litepcieendpoint_cmp_reorder_payload_end;
+            litepcieendpoint_syncfifo3_sink_payload_err <= litepcieendpoint_cmp_reorder_payload_err;
+            litepcieendpoint_syncfifo3_sink_payload_tag <= litepcieendpoint_cmp_reorder_payload_tag;
+            litepcieendpoint_syncfifo3_sink_payload_dat <= litepcieendpoint_cmp_reorder_payload_dat;
+            litepcieendpoint_syncfifo3_sink_payload_channel <= litepcieendpoint_cmp_reorder_payload_channel;
+            litepcieendpoint_syncfifo3_sink_payload_user_id <= litepcieendpoint_cmp_reorder_payload_user_id;
         end
     endcase
 end
 always @(*) begin
-    litepciecore_litepcieendpoint_req_queue_source_ready <= 1'd0;
-    if (((litepciecore_litepcieendpoint_master_in_source_valid & litepciecore_litepcieendpoint_master_in_source_last) & litepciecore_litepcieendpoint_master_in_source_payload_end)) begin
-        litepciecore_litepcieendpoint_req_queue_source_ready <= litepciecore_litepcieendpoint_master_in_source_ready;
+    litepcieendpoint_req_queue_source_ready <= 1'd0;
+    if (((litepcieendpoint_master_in_source_valid & litepcieendpoint_master_in_source_last) & litepcieendpoint_master_in_source_payload_end)) begin
+        litepcieendpoint_req_queue_source_ready <= litepcieendpoint_master_in_source_ready;
     end
 end
 always @(*) begin
-    litepciecore_litepcieendpoint_master_in_source_valid <= 1'd0;
-    litepciecore_litepcieendpoint_master_in_source_first <= 1'd0;
-    litepciecore_litepcieendpoint_master_in_source_last <= 1'd0;
-    litepciecore_litepcieendpoint_master_in_source_payload_req_id <= 16'd0;
-    litepciecore_litepcieendpoint_master_in_source_payload_cmp_id <= 16'd0;
-    litepciecore_litepcieendpoint_master_in_source_payload_adr <= 32'd0;
-    litepciecore_litepcieendpoint_master_in_source_payload_len <= 10'd0;
-    litepciecore_litepcieendpoint_syncfifo2_source_ready <= 1'd0;
-    litepciecore_litepcieendpoint_master_in_source_payload_end <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo0_source_ready <= 1'd0;
-    litepciecore_litepcieendpoint_master_in_source_payload_err <= 1'd0;
-    litepciecore_litepcieendpoint_syncfifo1_source_ready <= 1'd0;
-    litepciecore_litepcieendpoint_master_in_source_payload_tag <= 8'd0;
-    litepciecore_litepcieendpoint_syncfifo3_source_ready <= 1'd0;
-    litepciecore_litepcieendpoint_master_in_source_payload_dat <= 128'd0;
-    litepciecore_litepcieendpoint_master_in_source_payload_channel <= 8'd0;
-    litepciecore_litepcieendpoint_master_in_source_payload_user_id <= 8'd0;
-    case (litepciecore_litepcieendpoint_req_queue_source_payload_tag)
+    litepcieendpoint_master_in_source_first <= 1'd0;
+    litepcieendpoint_master_in_source_last <= 1'd0;
+    litepcieendpoint_master_in_source_payload_adr <= 32'd0;
+    litepcieendpoint_master_in_source_payload_channel <= 8'd0;
+    litepcieendpoint_master_in_source_payload_cmp_id <= 16'd0;
+    litepcieendpoint_master_in_source_payload_dat <= 128'd0;
+    litepcieendpoint_master_in_source_payload_end <= 1'd0;
+    litepcieendpoint_master_in_source_payload_err <= 1'd0;
+    litepcieendpoint_master_in_source_payload_len <= 10'd0;
+    litepcieendpoint_master_in_source_payload_req_id <= 16'd0;
+    litepcieendpoint_master_in_source_payload_tag <= 8'd0;
+    litepcieendpoint_master_in_source_payload_user_id <= 8'd0;
+    litepcieendpoint_master_in_source_valid <= 1'd0;
+    litepcieendpoint_syncfifo0_source_ready <= 1'd0;
+    litepcieendpoint_syncfifo1_source_ready <= 1'd0;
+    litepcieendpoint_syncfifo2_source_ready <= 1'd0;
+    litepcieendpoint_syncfifo3_source_ready <= 1'd0;
+    case (litepcieendpoint_req_queue_source_payload_tag)
         1'd0: begin
-            litepciecore_litepcieendpoint_master_in_source_valid <= litepciecore_litepcieendpoint_syncfifo0_source_valid;
-            litepciecore_litepcieendpoint_syncfifo0_source_ready <= litepciecore_litepcieendpoint_master_in_source_ready;
-            litepciecore_litepcieendpoint_master_in_source_first <= litepciecore_litepcieendpoint_syncfifo0_source_first;
-            litepciecore_litepcieendpoint_master_in_source_last <= litepciecore_litepcieendpoint_syncfifo0_source_last;
-            litepciecore_litepcieendpoint_master_in_source_payload_req_id <= litepciecore_litepcieendpoint_syncfifo0_source_payload_req_id;
-            litepciecore_litepcieendpoint_master_in_source_payload_cmp_id <= litepciecore_litepcieendpoint_syncfifo0_source_payload_cmp_id;
-            litepciecore_litepcieendpoint_master_in_source_payload_adr <= litepciecore_litepcieendpoint_syncfifo0_source_payload_adr;
-            litepciecore_litepcieendpoint_master_in_source_payload_len <= litepciecore_litepcieendpoint_syncfifo0_source_payload_len;
-            litepciecore_litepcieendpoint_master_in_source_payload_end <= litepciecore_litepcieendpoint_syncfifo0_source_payload_end;
-            litepciecore_litepcieendpoint_master_in_source_payload_err <= litepciecore_litepcieendpoint_syncfifo0_source_payload_err;
-            litepciecore_litepcieendpoint_master_in_source_payload_tag <= litepciecore_litepcieendpoint_syncfifo0_source_payload_tag;
-            litepciecore_litepcieendpoint_master_in_source_payload_dat <= litepciecore_litepcieendpoint_syncfifo0_source_payload_dat;
-            litepciecore_litepcieendpoint_master_in_source_payload_channel <= litepciecore_litepcieendpoint_syncfifo0_source_payload_channel;
-            litepciecore_litepcieendpoint_master_in_source_payload_user_id <= litepciecore_litepcieendpoint_syncfifo0_source_payload_user_id;
+            litepcieendpoint_master_in_source_valid <= litepcieendpoint_syncfifo0_source_valid;
+            litepcieendpoint_syncfifo0_source_ready <= litepcieendpoint_master_in_source_ready;
+            litepcieendpoint_master_in_source_first <= litepcieendpoint_syncfifo0_source_first;
+            litepcieendpoint_master_in_source_last <= litepcieendpoint_syncfifo0_source_last;
+            litepcieendpoint_master_in_source_payload_req_id <= litepcieendpoint_syncfifo0_source_payload_req_id;
+            litepcieendpoint_master_in_source_payload_cmp_id <= litepcieendpoint_syncfifo0_source_payload_cmp_id;
+            litepcieendpoint_master_in_source_payload_adr <= litepcieendpoint_syncfifo0_source_payload_adr;
+            litepcieendpoint_master_in_source_payload_len <= litepcieendpoint_syncfifo0_source_payload_len;
+            litepcieendpoint_master_in_source_payload_end <= litepcieendpoint_syncfifo0_source_payload_end;
+            litepcieendpoint_master_in_source_payload_err <= litepcieendpoint_syncfifo0_source_payload_err;
+            litepcieendpoint_master_in_source_payload_tag <= litepcieendpoint_syncfifo0_source_payload_tag;
+            litepcieendpoint_master_in_source_payload_dat <= litepcieendpoint_syncfifo0_source_payload_dat;
+            litepcieendpoint_master_in_source_payload_channel <= litepcieendpoint_syncfifo0_source_payload_channel;
+            litepcieendpoint_master_in_source_payload_user_id <= litepcieendpoint_syncfifo0_source_payload_user_id;
         end
         1'd1: begin
-            litepciecore_litepcieendpoint_master_in_source_valid <= litepciecore_litepcieendpoint_syncfifo1_source_valid;
-            litepciecore_litepcieendpoint_syncfifo1_source_ready <= litepciecore_litepcieendpoint_master_in_source_ready;
-            litepciecore_litepcieendpoint_master_in_source_first <= litepciecore_litepcieendpoint_syncfifo1_source_first;
-            litepciecore_litepcieendpoint_master_in_source_last <= litepciecore_litepcieendpoint_syncfifo1_source_last;
-            litepciecore_litepcieendpoint_master_in_source_payload_req_id <= litepciecore_litepcieendpoint_syncfifo1_source_payload_req_id;
-            litepciecore_litepcieendpoint_master_in_source_payload_cmp_id <= litepciecore_litepcieendpoint_syncfifo1_source_payload_cmp_id;
-            litepciecore_litepcieendpoint_master_in_source_payload_adr <= litepciecore_litepcieendpoint_syncfifo1_source_payload_adr;
-            litepciecore_litepcieendpoint_master_in_source_payload_len <= litepciecore_litepcieendpoint_syncfifo1_source_payload_len;
-            litepciecore_litepcieendpoint_master_in_source_payload_end <= litepciecore_litepcieendpoint_syncfifo1_source_payload_end;
-            litepciecore_litepcieendpoint_master_in_source_payload_err <= litepciecore_litepcieendpoint_syncfifo1_source_payload_err;
-            litepciecore_litepcieendpoint_master_in_source_payload_tag <= litepciecore_litepcieendpoint_syncfifo1_source_payload_tag;
-            litepciecore_litepcieendpoint_master_in_source_payload_dat <= litepciecore_litepcieendpoint_syncfifo1_source_payload_dat;
-            litepciecore_litepcieendpoint_master_in_source_payload_channel <= litepciecore_litepcieendpoint_syncfifo1_source_payload_channel;
-            litepciecore_litepcieendpoint_master_in_source_payload_user_id <= litepciecore_litepcieendpoint_syncfifo1_source_payload_user_id;
+            litepcieendpoint_master_in_source_valid <= litepcieendpoint_syncfifo1_source_valid;
+            litepcieendpoint_syncfifo1_source_ready <= litepcieendpoint_master_in_source_ready;
+            litepcieendpoint_master_in_source_first <= litepcieendpoint_syncfifo1_source_first;
+            litepcieendpoint_master_in_source_last <= litepcieendpoint_syncfifo1_source_last;
+            litepcieendpoint_master_in_source_payload_req_id <= litepcieendpoint_syncfifo1_source_payload_req_id;
+            litepcieendpoint_master_in_source_payload_cmp_id <= litepcieendpoint_syncfifo1_source_payload_cmp_id;
+            litepcieendpoint_master_in_source_payload_adr <= litepcieendpoint_syncfifo1_source_payload_adr;
+            litepcieendpoint_master_in_source_payload_len <= litepcieendpoint_syncfifo1_source_payload_len;
+            litepcieendpoint_master_in_source_payload_end <= litepcieendpoint_syncfifo1_source_payload_end;
+            litepcieendpoint_master_in_source_payload_err <= litepcieendpoint_syncfifo1_source_payload_err;
+            litepcieendpoint_master_in_source_payload_tag <= litepcieendpoint_syncfifo1_source_payload_tag;
+            litepcieendpoint_master_in_source_payload_dat <= litepcieendpoint_syncfifo1_source_payload_dat;
+            litepcieendpoint_master_in_source_payload_channel <= litepcieendpoint_syncfifo1_source_payload_channel;
+            litepcieendpoint_master_in_source_payload_user_id <= litepcieendpoint_syncfifo1_source_payload_user_id;
         end
         2'd2: begin
-            litepciecore_litepcieendpoint_master_in_source_valid <= litepciecore_litepcieendpoint_syncfifo2_source_valid;
-            litepciecore_litepcieendpoint_syncfifo2_source_ready <= litepciecore_litepcieendpoint_master_in_source_ready;
-            litepciecore_litepcieendpoint_master_in_source_first <= litepciecore_litepcieendpoint_syncfifo2_source_first;
-            litepciecore_litepcieendpoint_master_in_source_last <= litepciecore_litepcieendpoint_syncfifo2_source_last;
-            litepciecore_litepcieendpoint_master_in_source_payload_req_id <= litepciecore_litepcieendpoint_syncfifo2_source_payload_req_id;
-            litepciecore_litepcieendpoint_master_in_source_payload_cmp_id <= litepciecore_litepcieendpoint_syncfifo2_source_payload_cmp_id;
-            litepciecore_litepcieendpoint_master_in_source_payload_adr <= litepciecore_litepcieendpoint_syncfifo2_source_payload_adr;
-            litepciecore_litepcieendpoint_master_in_source_payload_len <= litepciecore_litepcieendpoint_syncfifo2_source_payload_len;
-            litepciecore_litepcieendpoint_master_in_source_payload_end <= litepciecore_litepcieendpoint_syncfifo2_source_payload_end;
-            litepciecore_litepcieendpoint_master_in_source_payload_err <= litepciecore_litepcieendpoint_syncfifo2_source_payload_err;
-            litepciecore_litepcieendpoint_master_in_source_payload_tag <= litepciecore_litepcieendpoint_syncfifo2_source_payload_tag;
-            litepciecore_litepcieendpoint_master_in_source_payload_dat <= litepciecore_litepcieendpoint_syncfifo2_source_payload_dat;
-            litepciecore_litepcieendpoint_master_in_source_payload_channel <= litepciecore_litepcieendpoint_syncfifo2_source_payload_channel;
-            litepciecore_litepcieendpoint_master_in_source_payload_user_id <= litepciecore_litepcieendpoint_syncfifo2_source_payload_user_id;
+            litepcieendpoint_master_in_source_valid <= litepcieendpoint_syncfifo2_source_valid;
+            litepcieendpoint_syncfifo2_source_ready <= litepcieendpoint_master_in_source_ready;
+            litepcieendpoint_master_in_source_first <= litepcieendpoint_syncfifo2_source_first;
+            litepcieendpoint_master_in_source_last <= litepcieendpoint_syncfifo2_source_last;
+            litepcieendpoint_master_in_source_payload_req_id <= litepcieendpoint_syncfifo2_source_payload_req_id;
+            litepcieendpoint_master_in_source_payload_cmp_id <= litepcieendpoint_syncfifo2_source_payload_cmp_id;
+            litepcieendpoint_master_in_source_payload_adr <= litepcieendpoint_syncfifo2_source_payload_adr;
+            litepcieendpoint_master_in_source_payload_len <= litepcieendpoint_syncfifo2_source_payload_len;
+            litepcieendpoint_master_in_source_payload_end <= litepcieendpoint_syncfifo2_source_payload_end;
+            litepcieendpoint_master_in_source_payload_err <= litepcieendpoint_syncfifo2_source_payload_err;
+            litepcieendpoint_master_in_source_payload_tag <= litepcieendpoint_syncfifo2_source_payload_tag;
+            litepcieendpoint_master_in_source_payload_dat <= litepcieendpoint_syncfifo2_source_payload_dat;
+            litepcieendpoint_master_in_source_payload_channel <= litepcieendpoint_syncfifo2_source_payload_channel;
+            litepcieendpoint_master_in_source_payload_user_id <= litepcieendpoint_syncfifo2_source_payload_user_id;
         end
         2'd3: begin
-            litepciecore_litepcieendpoint_master_in_source_valid <= litepciecore_litepcieendpoint_syncfifo3_source_valid;
-            litepciecore_litepcieendpoint_syncfifo3_source_ready <= litepciecore_litepcieendpoint_master_in_source_ready;
-            litepciecore_litepcieendpoint_master_in_source_first <= litepciecore_litepcieendpoint_syncfifo3_source_first;
-            litepciecore_litepcieendpoint_master_in_source_last <= litepciecore_litepcieendpoint_syncfifo3_source_last;
-            litepciecore_litepcieendpoint_master_in_source_payload_req_id <= litepciecore_litepcieendpoint_syncfifo3_source_payload_req_id;
-            litepciecore_litepcieendpoint_master_in_source_payload_cmp_id <= litepciecore_litepcieendpoint_syncfifo3_source_payload_cmp_id;
-            litepciecore_litepcieendpoint_master_in_source_payload_adr <= litepciecore_litepcieendpoint_syncfifo3_source_payload_adr;
-            litepciecore_litepcieendpoint_master_in_source_payload_len <= litepciecore_litepcieendpoint_syncfifo3_source_payload_len;
-            litepciecore_litepcieendpoint_master_in_source_payload_end <= litepciecore_litepcieendpoint_syncfifo3_source_payload_end;
-            litepciecore_litepcieendpoint_master_in_source_payload_err <= litepciecore_litepcieendpoint_syncfifo3_source_payload_err;
-            litepciecore_litepcieendpoint_master_in_source_payload_tag <= litepciecore_litepcieendpoint_syncfifo3_source_payload_tag;
-            litepciecore_litepcieendpoint_master_in_source_payload_dat <= litepciecore_litepcieendpoint_syncfifo3_source_payload_dat;
-            litepciecore_litepcieendpoint_master_in_source_payload_channel <= litepciecore_litepcieendpoint_syncfifo3_source_payload_channel;
-            litepciecore_litepcieendpoint_master_in_source_payload_user_id <= litepciecore_litepcieendpoint_syncfifo3_source_payload_user_id;
+            litepcieendpoint_master_in_source_valid <= litepcieendpoint_syncfifo3_source_valid;
+            litepcieendpoint_syncfifo3_source_ready <= litepcieendpoint_master_in_source_ready;
+            litepcieendpoint_master_in_source_first <= litepcieendpoint_syncfifo3_source_first;
+            litepcieendpoint_master_in_source_last <= litepcieendpoint_syncfifo3_source_last;
+            litepcieendpoint_master_in_source_payload_req_id <= litepcieendpoint_syncfifo3_source_payload_req_id;
+            litepcieendpoint_master_in_source_payload_cmp_id <= litepcieendpoint_syncfifo3_source_payload_cmp_id;
+            litepcieendpoint_master_in_source_payload_adr <= litepcieendpoint_syncfifo3_source_payload_adr;
+            litepcieendpoint_master_in_source_payload_len <= litepcieendpoint_syncfifo3_source_payload_len;
+            litepcieendpoint_master_in_source_payload_end <= litepcieendpoint_syncfifo3_source_payload_end;
+            litepcieendpoint_master_in_source_payload_err <= litepcieendpoint_syncfifo3_source_payload_err;
+            litepcieendpoint_master_in_source_payload_tag <= litepcieendpoint_syncfifo3_source_payload_tag;
+            litepcieendpoint_master_in_source_payload_dat <= litepcieendpoint_syncfifo3_source_payload_dat;
+            litepcieendpoint_master_in_source_payload_channel <= litepcieendpoint_syncfifo3_source_payload_channel;
+            litepcieendpoint_master_in_source_payload_user_id <= litepcieendpoint_syncfifo3_source_payload_user_id;
         end
     endcase
-    litepciecore_litepcieendpoint_master_in_source_payload_channel <= litepciecore_litepcieendpoint_req_queue_source_payload_channel;
-    litepciecore_litepcieendpoint_master_in_source_payload_user_id <= litepciecore_litepcieendpoint_req_queue_source_payload_user_id;
+    litepcieendpoint_master_in_source_payload_channel <= litepcieendpoint_req_queue_source_payload_channel;
+    litepcieendpoint_master_in_source_payload_user_id <= litepcieendpoint_req_queue_source_payload_user_id;
 end
-assign litepciecore_litepcieendpoint_cmp_reorder_first = litepciecore_litepcieendpoint_master_out_source_first;
-assign litepciecore_litepcieendpoint_cmp_reorder_last = litepciecore_litepcieendpoint_master_out_source_last;
-assign litepciecore_litepcieendpoint_cmp_reorder_payload_req_id = litepciecore_litepcieendpoint_master_out_source_payload_req_id;
-assign litepciecore_litepcieendpoint_cmp_reorder_payload_cmp_id = litepciecore_litepcieendpoint_master_out_source_payload_cmp_id;
-assign litepciecore_litepcieendpoint_cmp_reorder_payload_adr = litepciecore_litepcieendpoint_master_out_source_payload_adr;
-assign litepciecore_litepcieendpoint_cmp_reorder_payload_len = litepciecore_litepcieendpoint_master_out_source_payload_len;
-assign litepciecore_litepcieendpoint_cmp_reorder_payload_end = litepciecore_litepcieendpoint_master_out_source_payload_end;
-assign litepciecore_litepcieendpoint_cmp_reorder_payload_err = litepciecore_litepcieendpoint_master_out_source_payload_err;
-assign litepciecore_litepcieendpoint_cmp_reorder_payload_tag = litepciecore_litepcieendpoint_master_out_source_payload_tag;
-assign litepciecore_litepcieendpoint_cmp_reorder_payload_dat = litepciecore_litepcieendpoint_master_out_source_payload_dat;
-assign litepciecore_litepcieendpoint_cmp_reorder_payload_channel = litepciecore_litepcieendpoint_master_out_source_payload_channel;
-assign litepciecore_litepcieendpoint_cmp_reorder_payload_user_id = litepciecore_litepcieendpoint_master_out_source_payload_user_id;
-assign litepciecore_litepcieendpoint_tag_queue_syncfifo_din = {litepciecore_litepcieendpoint_tag_queue_fifo_in_last, litepciecore_litepcieendpoint_tag_queue_fifo_in_first, litepciecore_litepcieendpoint_tag_queue_fifo_in_payload_tag};
-assign {litepciecore_litepcieendpoint_tag_queue_fifo_out_last, litepciecore_litepcieendpoint_tag_queue_fifo_out_first, litepciecore_litepcieendpoint_tag_queue_fifo_out_payload_tag} = litepciecore_litepcieendpoint_tag_queue_syncfifo_dout;
-assign litepciecore_litepcieendpoint_tag_queue_sink_ready = litepciecore_litepcieendpoint_tag_queue_syncfifo_writable;
-assign litepciecore_litepcieendpoint_tag_queue_syncfifo_we = litepciecore_litepcieendpoint_tag_queue_sink_valid;
-assign litepciecore_litepcieendpoint_tag_queue_fifo_in_first = litepciecore_litepcieendpoint_tag_queue_sink_first;
-assign litepciecore_litepcieendpoint_tag_queue_fifo_in_last = litepciecore_litepcieendpoint_tag_queue_sink_last;
-assign litepciecore_litepcieendpoint_tag_queue_fifo_in_payload_tag = litepciecore_litepcieendpoint_tag_queue_sink_payload_tag;
-assign litepciecore_litepcieendpoint_tag_queue_source_valid = litepciecore_litepcieendpoint_tag_queue_readable;
-assign litepciecore_litepcieendpoint_tag_queue_source_first = litepciecore_litepcieendpoint_tag_queue_fifo_out_first;
-assign litepciecore_litepcieendpoint_tag_queue_source_last = litepciecore_litepcieendpoint_tag_queue_fifo_out_last;
-assign litepciecore_litepcieendpoint_tag_queue_source_payload_tag = litepciecore_litepcieendpoint_tag_queue_fifo_out_payload_tag;
-assign litepciecore_litepcieendpoint_tag_queue_re = litepciecore_litepcieendpoint_tag_queue_source_ready;
-assign litepciecore_litepcieendpoint_tag_queue_syncfifo_re = (litepciecore_litepcieendpoint_tag_queue_syncfifo_readable & ((~litepciecore_litepcieendpoint_tag_queue_readable) | litepciecore_litepcieendpoint_tag_queue_re));
-assign litepciecore_litepcieendpoint_tag_queue_level1 = (litepciecore_litepcieendpoint_tag_queue_level0 + litepciecore_litepcieendpoint_tag_queue_readable);
+assign litepcieendpoint_cmp_reorder_first = litepcieendpoint_master_out_source_first;
+assign litepcieendpoint_cmp_reorder_last = litepcieendpoint_master_out_source_last;
+assign litepcieendpoint_cmp_reorder_payload_req_id = litepcieendpoint_master_out_source_payload_req_id;
+assign litepcieendpoint_cmp_reorder_payload_cmp_id = litepcieendpoint_master_out_source_payload_cmp_id;
+assign litepcieendpoint_cmp_reorder_payload_adr = litepcieendpoint_master_out_source_payload_adr;
+assign litepcieendpoint_cmp_reorder_payload_len = litepcieendpoint_master_out_source_payload_len;
+assign litepcieendpoint_cmp_reorder_payload_end = litepcieendpoint_master_out_source_payload_end;
+assign litepcieendpoint_cmp_reorder_payload_err = litepcieendpoint_master_out_source_payload_err;
+assign litepcieendpoint_cmp_reorder_payload_tag = litepcieendpoint_master_out_source_payload_tag;
+assign litepcieendpoint_cmp_reorder_payload_dat = litepcieendpoint_master_out_source_payload_dat;
+assign litepcieendpoint_cmp_reorder_payload_channel = litepcieendpoint_master_out_source_payload_channel;
+assign litepcieendpoint_cmp_reorder_payload_user_id = litepcieendpoint_master_out_source_payload_user_id;
+assign litepcieendpoint_tag_queue_syncfifo_din = {litepcieendpoint_tag_queue_fifo_in_last, litepcieendpoint_tag_queue_fifo_in_first, litepcieendpoint_tag_queue_fifo_in_payload_tag};
+assign {litepcieendpoint_tag_queue_fifo_out_last, litepcieendpoint_tag_queue_fifo_out_first, litepcieendpoint_tag_queue_fifo_out_payload_tag} = litepcieendpoint_tag_queue_syncfifo_dout;
+assign litepcieendpoint_tag_queue_sink_ready = litepcieendpoint_tag_queue_syncfifo_writable;
+assign litepcieendpoint_tag_queue_syncfifo_we = litepcieendpoint_tag_queue_sink_valid;
+assign litepcieendpoint_tag_queue_fifo_in_first = litepcieendpoint_tag_queue_sink_first;
+assign litepcieendpoint_tag_queue_fifo_in_last = litepcieendpoint_tag_queue_sink_last;
+assign litepcieendpoint_tag_queue_fifo_in_payload_tag = litepcieendpoint_tag_queue_sink_payload_tag;
+assign litepcieendpoint_tag_queue_source_valid = litepcieendpoint_tag_queue_readable;
+assign litepcieendpoint_tag_queue_source_first = litepcieendpoint_tag_queue_fifo_out_first;
+assign litepcieendpoint_tag_queue_source_last = litepcieendpoint_tag_queue_fifo_out_last;
+assign litepcieendpoint_tag_queue_source_payload_tag = litepcieendpoint_tag_queue_fifo_out_payload_tag;
+assign litepcieendpoint_tag_queue_re = litepcieendpoint_tag_queue_source_ready;
+assign litepcieendpoint_tag_queue_syncfifo_re = (litepcieendpoint_tag_queue_syncfifo_readable & ((~litepcieendpoint_tag_queue_readable) | litepcieendpoint_tag_queue_re));
+assign litepcieendpoint_tag_queue_level1 = (litepcieendpoint_tag_queue_level0 + litepcieendpoint_tag_queue_readable);
 always @(*) begin
-    litepciecore_litepcieendpoint_tag_queue_wrport_adr <= 2'd0;
-    if (litepciecore_litepcieendpoint_tag_queue_replace) begin
-        litepciecore_litepcieendpoint_tag_queue_wrport_adr <= (litepciecore_litepcieendpoint_tag_queue_produce - 1'd1);
+    litepcieendpoint_tag_queue_wrport_adr <= 2'd0;
+    if (litepcieendpoint_tag_queue_replace) begin
+        litepcieendpoint_tag_queue_wrport_adr <= (litepcieendpoint_tag_queue_produce - 1'd1);
     end else begin
-        litepciecore_litepcieendpoint_tag_queue_wrport_adr <= litepciecore_litepcieendpoint_tag_queue_produce;
+        litepcieendpoint_tag_queue_wrport_adr <= litepcieendpoint_tag_queue_produce;
     end
 end
-assign litepciecore_litepcieendpoint_tag_queue_wrport_dat_w = litepciecore_litepcieendpoint_tag_queue_syncfifo_din;
-assign litepciecore_litepcieendpoint_tag_queue_wrport_we = (litepciecore_litepcieendpoint_tag_queue_syncfifo_we & (litepciecore_litepcieendpoint_tag_queue_syncfifo_writable | litepciecore_litepcieendpoint_tag_queue_replace));
-assign litepciecore_litepcieendpoint_tag_queue_do_read = (litepciecore_litepcieendpoint_tag_queue_syncfifo_readable & litepciecore_litepcieendpoint_tag_queue_syncfifo_re);
-assign litepciecore_litepcieendpoint_tag_queue_rdport_adr = litepciecore_litepcieendpoint_tag_queue_consume;
-assign litepciecore_litepcieendpoint_tag_queue_syncfifo_dout = litepciecore_litepcieendpoint_tag_queue_rdport_dat_r;
-assign litepciecore_litepcieendpoint_tag_queue_rdport_re = litepciecore_litepcieendpoint_tag_queue_do_read;
-assign litepciecore_litepcieendpoint_tag_queue_syncfifo_writable = (litepciecore_litepcieendpoint_tag_queue_level0 != 3'd4);
-assign litepciecore_litepcieendpoint_tag_queue_syncfifo_readable = (litepciecore_litepcieendpoint_tag_queue_level0 != 1'd0);
-assign litepciecore_litepcieendpoint_req_queue_syncfifo_din = {litepciecore_litepcieendpoint_req_queue_fifo_in_last, litepciecore_litepcieendpoint_req_queue_fifo_in_first, litepciecore_litepcieendpoint_req_queue_fifo_in_payload_user_id, litepciecore_litepcieendpoint_req_queue_fifo_in_payload_channel, litepciecore_litepcieendpoint_req_queue_fifo_in_payload_tag};
-assign {litepciecore_litepcieendpoint_req_queue_fifo_out_last, litepciecore_litepcieendpoint_req_queue_fifo_out_first, litepciecore_litepcieendpoint_req_queue_fifo_out_payload_user_id, litepciecore_litepcieendpoint_req_queue_fifo_out_payload_channel, litepciecore_litepcieendpoint_req_queue_fifo_out_payload_tag} = litepciecore_litepcieendpoint_req_queue_syncfifo_dout;
-assign litepciecore_litepcieendpoint_req_queue_sink_ready = litepciecore_litepcieendpoint_req_queue_syncfifo_writable;
-assign litepciecore_litepcieendpoint_req_queue_syncfifo_we = litepciecore_litepcieendpoint_req_queue_sink_valid;
-assign litepciecore_litepcieendpoint_req_queue_fifo_in_first = litepciecore_litepcieendpoint_req_queue_sink_first;
-assign litepciecore_litepcieendpoint_req_queue_fifo_in_last = litepciecore_litepcieendpoint_req_queue_sink_last;
-assign litepciecore_litepcieendpoint_req_queue_fifo_in_payload_tag = litepciecore_litepcieendpoint_req_queue_sink_payload_tag;
-assign litepciecore_litepcieendpoint_req_queue_fifo_in_payload_channel = litepciecore_litepcieendpoint_req_queue_sink_payload_channel;
-assign litepciecore_litepcieendpoint_req_queue_fifo_in_payload_user_id = litepciecore_litepcieendpoint_req_queue_sink_payload_user_id;
-assign litepciecore_litepcieendpoint_req_queue_source_valid = litepciecore_litepcieendpoint_req_queue_readable;
-assign litepciecore_litepcieendpoint_req_queue_source_first = litepciecore_litepcieendpoint_req_queue_fifo_out_first;
-assign litepciecore_litepcieendpoint_req_queue_source_last = litepciecore_litepcieendpoint_req_queue_fifo_out_last;
-assign litepciecore_litepcieendpoint_req_queue_source_payload_tag = litepciecore_litepcieendpoint_req_queue_fifo_out_payload_tag;
-assign litepciecore_litepcieendpoint_req_queue_source_payload_channel = litepciecore_litepcieendpoint_req_queue_fifo_out_payload_channel;
-assign litepciecore_litepcieendpoint_req_queue_source_payload_user_id = litepciecore_litepcieendpoint_req_queue_fifo_out_payload_user_id;
-assign litepciecore_litepcieendpoint_req_queue_re = litepciecore_litepcieendpoint_req_queue_source_ready;
-assign litepciecore_litepcieendpoint_req_queue_syncfifo_re = (litepciecore_litepcieendpoint_req_queue_syncfifo_readable & ((~litepciecore_litepcieendpoint_req_queue_readable) | litepciecore_litepcieendpoint_req_queue_re));
-assign litepciecore_litepcieendpoint_req_queue_level1 = (litepciecore_litepcieendpoint_req_queue_level0 + litepciecore_litepcieendpoint_req_queue_readable);
+assign litepcieendpoint_tag_queue_wrport_dat_w = litepcieendpoint_tag_queue_syncfifo_din;
+assign litepcieendpoint_tag_queue_wrport_we = (litepcieendpoint_tag_queue_syncfifo_we & (litepcieendpoint_tag_queue_syncfifo_writable | litepcieendpoint_tag_queue_replace));
+assign litepcieendpoint_tag_queue_do_read = (litepcieendpoint_tag_queue_syncfifo_readable & litepcieendpoint_tag_queue_syncfifo_re);
+assign litepcieendpoint_tag_queue_rdport_adr = litepcieendpoint_tag_queue_consume;
+assign litepcieendpoint_tag_queue_syncfifo_dout = litepcieendpoint_tag_queue_rdport_dat_r;
+assign litepcieendpoint_tag_queue_rdport_re = litepcieendpoint_tag_queue_do_read;
+assign litepcieendpoint_tag_queue_syncfifo_writable = (litepcieendpoint_tag_queue_level0 != 3'd4);
+assign litepcieendpoint_tag_queue_syncfifo_readable = (litepcieendpoint_tag_queue_level0 != 1'd0);
+assign litepcieendpoint_req_queue_syncfifo_din = {litepcieendpoint_req_queue_fifo_in_last, litepcieendpoint_req_queue_fifo_in_first, litepcieendpoint_req_queue_fifo_in_payload_user_id, litepcieendpoint_req_queue_fifo_in_payload_channel, litepcieendpoint_req_queue_fifo_in_payload_tag};
+assign {litepcieendpoint_req_queue_fifo_out_last, litepcieendpoint_req_queue_fifo_out_first, litepcieendpoint_req_queue_fifo_out_payload_user_id, litepcieendpoint_req_queue_fifo_out_payload_channel, litepcieendpoint_req_queue_fifo_out_payload_tag} = litepcieendpoint_req_queue_syncfifo_dout;
+assign litepcieendpoint_req_queue_sink_ready = litepcieendpoint_req_queue_syncfifo_writable;
+assign litepcieendpoint_req_queue_syncfifo_we = litepcieendpoint_req_queue_sink_valid;
+assign litepcieendpoint_req_queue_fifo_in_first = litepcieendpoint_req_queue_sink_first;
+assign litepcieendpoint_req_queue_fifo_in_last = litepcieendpoint_req_queue_sink_last;
+assign litepcieendpoint_req_queue_fifo_in_payload_tag = litepcieendpoint_req_queue_sink_payload_tag;
+assign litepcieendpoint_req_queue_fifo_in_payload_channel = litepcieendpoint_req_queue_sink_payload_channel;
+assign litepcieendpoint_req_queue_fifo_in_payload_user_id = litepcieendpoint_req_queue_sink_payload_user_id;
+assign litepcieendpoint_req_queue_source_valid = litepcieendpoint_req_queue_readable;
+assign litepcieendpoint_req_queue_source_first = litepcieendpoint_req_queue_fifo_out_first;
+assign litepcieendpoint_req_queue_source_last = litepcieendpoint_req_queue_fifo_out_last;
+assign litepcieendpoint_req_queue_source_payload_tag = litepcieendpoint_req_queue_fifo_out_payload_tag;
+assign litepcieendpoint_req_queue_source_payload_channel = litepcieendpoint_req_queue_fifo_out_payload_channel;
+assign litepcieendpoint_req_queue_source_payload_user_id = litepcieendpoint_req_queue_fifo_out_payload_user_id;
+assign litepcieendpoint_req_queue_re = litepcieendpoint_req_queue_source_ready;
+assign litepcieendpoint_req_queue_syncfifo_re = (litepcieendpoint_req_queue_syncfifo_readable & ((~litepcieendpoint_req_queue_readable) | litepcieendpoint_req_queue_re));
+assign litepcieendpoint_req_queue_level1 = (litepcieendpoint_req_queue_level0 + litepcieendpoint_req_queue_readable);
 always @(*) begin
-    litepciecore_litepcieendpoint_req_queue_wrport_adr <= 2'd0;
-    if (litepciecore_litepcieendpoint_req_queue_replace) begin
-        litepciecore_litepcieendpoint_req_queue_wrport_adr <= (litepciecore_litepcieendpoint_req_queue_produce - 1'd1);
+    litepcieendpoint_req_queue_wrport_adr <= 2'd0;
+    if (litepcieendpoint_req_queue_replace) begin
+        litepcieendpoint_req_queue_wrport_adr <= (litepcieendpoint_req_queue_produce - 1'd1);
     end else begin
-        litepciecore_litepcieendpoint_req_queue_wrport_adr <= litepciecore_litepcieendpoint_req_queue_produce;
+        litepcieendpoint_req_queue_wrport_adr <= litepcieendpoint_req_queue_produce;
     end
 end
-assign litepciecore_litepcieendpoint_req_queue_wrport_dat_w = litepciecore_litepcieendpoint_req_queue_syncfifo_din;
-assign litepciecore_litepcieendpoint_req_queue_wrport_we = (litepciecore_litepcieendpoint_req_queue_syncfifo_we & (litepciecore_litepcieendpoint_req_queue_syncfifo_writable | litepciecore_litepcieendpoint_req_queue_replace));
-assign litepciecore_litepcieendpoint_req_queue_do_read = (litepciecore_litepcieendpoint_req_queue_syncfifo_readable & litepciecore_litepcieendpoint_req_queue_syncfifo_re);
-assign litepciecore_litepcieendpoint_req_queue_rdport_adr = litepciecore_litepcieendpoint_req_queue_consume;
-assign litepciecore_litepcieendpoint_req_queue_syncfifo_dout = litepciecore_litepcieendpoint_req_queue_rdport_dat_r;
-assign litepciecore_litepcieendpoint_req_queue_rdport_re = litepciecore_litepcieendpoint_req_queue_do_read;
-assign litepciecore_litepcieendpoint_req_queue_syncfifo_writable = (litepciecore_litepcieendpoint_req_queue_level0 != 3'd4);
-assign litepciecore_litepcieendpoint_req_queue_syncfifo_readable = (litepciecore_litepcieendpoint_req_queue_level0 != 1'd0);
+assign litepcieendpoint_req_queue_wrport_dat_w = litepcieendpoint_req_queue_syncfifo_din;
+assign litepcieendpoint_req_queue_wrport_we = (litepcieendpoint_req_queue_syncfifo_we & (litepcieendpoint_req_queue_syncfifo_writable | litepcieendpoint_req_queue_replace));
+assign litepcieendpoint_req_queue_do_read = (litepcieendpoint_req_queue_syncfifo_readable & litepcieendpoint_req_queue_syncfifo_re);
+assign litepcieendpoint_req_queue_rdport_adr = litepcieendpoint_req_queue_consume;
+assign litepcieendpoint_req_queue_syncfifo_dout = litepcieendpoint_req_queue_rdport_dat_r;
+assign litepcieendpoint_req_queue_rdport_re = litepcieendpoint_req_queue_do_read;
+assign litepcieendpoint_req_queue_syncfifo_writable = (litepcieendpoint_req_queue_level0 != 3'd4);
+assign litepcieendpoint_req_queue_syncfifo_readable = (litepcieendpoint_req_queue_level0 != 1'd0);
 always @(*) begin
-    litepciecore_litepcieendpoint_fsm0_next_state <= 2'd0;
-    litepciecore_litepcieendpoint_master_out_sink_valid <= 1'd0;
-    litepciecore_litepcieendpoint_req_queue_sink_valid <= 1'd0;
-    litepciecore_litepcieendpoint_master_in_sink_ready <= 1'd0;
-    litepciecore_litepcieendpoint_master_out_sink_payload_tag <= 8'd0;
-    litepciecore_litepcieendpoint_req_queue_sink_payload_tag <= 2'd0;
-    litepciecore_litepcieendpoint_req_queue_sink_payload_channel <= 8'd0;
-    litepciecore_litepcieendpoint_req_queue_sink_payload_user_id <= 8'd0;
-    litepciecore_litepcieendpoint_tag_queue_source_ready <= 1'd0;
-    litepciecore_litepcieendpoint_fsm0_next_state <= litepciecore_litepcieendpoint_fsm0_state;
-    case (litepciecore_litepcieendpoint_fsm0_state)
+    litepcieendpoint_fsm0_next_state <= 2'd0;
+    litepcieendpoint_master_in_sink_ready <= 1'd0;
+    litepcieendpoint_master_out_sink_payload_tag <= 8'd0;
+    litepcieendpoint_master_out_sink_valid <= 1'd0;
+    litepcieendpoint_req_queue_sink_valid <= 1'd0;
+    litepcieendpoint_tag_queue_source_ready <= 1'd0;
+    litepcieendpoint_fsm0_next_state <= litepcieendpoint_fsm0_state;
+    case (litepcieendpoint_fsm0_state)
         1'd1: begin
-            litepciecore_litepcieendpoint_master_out_sink_valid <= litepciecore_litepcieendpoint_master_in_sink_valid;
-            litepciecore_litepcieendpoint_master_in_sink_ready <= litepciecore_litepcieendpoint_master_out_sink_ready;
-            litepciecore_litepcieendpoint_master_out_sink_payload_tag <= 6'd32;
-            if (((litepciecore_litepcieendpoint_master_out_sink_valid & litepciecore_litepcieendpoint_master_out_sink_ready) & litepciecore_litepcieendpoint_master_out_sink_last)) begin
-                litepciecore_litepcieendpoint_fsm0_next_state <= 1'd0;
+            litepcieendpoint_master_out_sink_valid <= litepcieendpoint_master_in_sink_valid;
+            litepcieendpoint_master_in_sink_ready <= litepcieendpoint_master_out_sink_ready;
+            litepcieendpoint_master_out_sink_payload_tag <= 6'd32;
+            if (((litepcieendpoint_master_out_sink_valid & litepcieendpoint_master_out_sink_ready) & litepcieendpoint_master_out_sink_last)) begin
+                litepcieendpoint_fsm0_next_state <= 1'd0;
             end
         end
         2'd2: begin
-            litepciecore_litepcieendpoint_master_out_sink_valid <= litepciecore_litepcieendpoint_master_in_sink_valid;
-            litepciecore_litepcieendpoint_master_in_sink_ready <= litepciecore_litepcieendpoint_master_out_sink_ready;
-            litepciecore_litepcieendpoint_master_out_sink_payload_tag <= litepciecore_litepcieendpoint_tag_queue_source_payload_tag;
-            if (((litepciecore_litepcieendpoint_master_out_sink_valid & litepciecore_litepcieendpoint_master_out_sink_ready) & litepciecore_litepcieendpoint_master_out_sink_last)) begin
-                litepciecore_litepcieendpoint_tag_queue_source_ready <= 1'd1;
-                litepciecore_litepcieendpoint_req_queue_sink_valid <= 1'd1;
-                litepciecore_litepcieendpoint_req_queue_sink_payload_tag <= litepciecore_litepcieendpoint_tag_queue_source_payload_tag;
-                litepciecore_litepcieendpoint_req_queue_sink_payload_channel <= litepciecore_litepcieendpoint_master_in_sink_payload_channel;
-                litepciecore_litepcieendpoint_req_queue_sink_payload_user_id <= litepciecore_litepcieendpoint_master_in_sink_payload_user_id;
-                litepciecore_litepcieendpoint_fsm0_next_state <= 1'd0;
+            litepcieendpoint_master_out_sink_valid <= litepcieendpoint_master_in_sink_valid;
+            litepcieendpoint_master_in_sink_ready <= litepcieendpoint_master_out_sink_ready;
+            litepcieendpoint_master_out_sink_payload_tag <= litepcieendpoint_tag_queue_source_payload_tag;
+            if (((litepcieendpoint_master_out_sink_valid & litepcieendpoint_master_out_sink_ready) & litepcieendpoint_master_out_sink_last)) begin
+                litepcieendpoint_tag_queue_source_ready <= 1'd1;
+                litepcieendpoint_req_queue_sink_valid <= 1'd1;
+                litepcieendpoint_fsm0_next_state <= 1'd0;
             end
         end
         default: begin
-            if ((litepciecore_litepcieendpoint_master_in_sink_valid & litepciecore_litepcieendpoint_master_in_sink_first)) begin
-                if (litepciecore_litepcieendpoint_master_in_sink_payload_we) begin
-                    litepciecore_litepcieendpoint_fsm0_next_state <= 1'd1;
+            if ((litepcieendpoint_master_in_sink_valid & litepcieendpoint_master_in_sink_first)) begin
+                if (litepcieendpoint_master_in_sink_payload_we) begin
+                    litepcieendpoint_fsm0_next_state <= 1'd1;
                 end else begin
-                    if ((litepciecore_litepcieendpoint_tag_queue_source_valid & litepciecore_litepcieendpoint_req_queue_sink_ready)) begin
-                        litepciecore_litepcieendpoint_fsm0_next_state <= 2'd2;
+                    if ((litepcieendpoint_tag_queue_source_valid & litepcieendpoint_req_queue_sink_ready)) begin
+                        litepcieendpoint_fsm0_next_state <= 2'd2;
                     end
                 end
             end
         end
     endcase
 end
-assign litepciecore_litepcieendpoint_syncfifo0_syncfifo0_din = {litepciecore_litepcieendpoint_syncfifo0_fifo_in_last, litepciecore_litepcieendpoint_syncfifo0_fifo_in_first, litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_user_id, litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_channel, litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_dat, litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_tag, litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_err, litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_end, litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_len, litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_adr, litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_cmp_id, litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_req_id};
-assign {litepciecore_litepcieendpoint_syncfifo0_fifo_out_last, litepciecore_litepcieendpoint_syncfifo0_fifo_out_first, litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_user_id, litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_channel, litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_dat, litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_tag, litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_err, litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_end, litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_len, litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_adr, litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_cmp_id, litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_req_id} = litepciecore_litepcieendpoint_syncfifo0_syncfifo0_dout;
-assign litepciecore_litepcieendpoint_syncfifo0_sink_ready = litepciecore_litepcieendpoint_syncfifo0_syncfifo0_writable;
-assign litepciecore_litepcieendpoint_syncfifo0_syncfifo0_we = litepciecore_litepcieendpoint_syncfifo0_sink_valid;
-assign litepciecore_litepcieendpoint_syncfifo0_fifo_in_first = litepciecore_litepcieendpoint_syncfifo0_sink_first;
-assign litepciecore_litepcieendpoint_syncfifo0_fifo_in_last = litepciecore_litepcieendpoint_syncfifo0_sink_last;
-assign litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_req_id = litepciecore_litepcieendpoint_syncfifo0_sink_payload_req_id;
-assign litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_cmp_id = litepciecore_litepcieendpoint_syncfifo0_sink_payload_cmp_id;
-assign litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_adr = litepciecore_litepcieendpoint_syncfifo0_sink_payload_adr;
-assign litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_len = litepciecore_litepcieendpoint_syncfifo0_sink_payload_len;
-assign litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_end = litepciecore_litepcieendpoint_syncfifo0_sink_payload_end;
-assign litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_err = litepciecore_litepcieendpoint_syncfifo0_sink_payload_err;
-assign litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_tag = litepciecore_litepcieendpoint_syncfifo0_sink_payload_tag;
-assign litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_dat = litepciecore_litepcieendpoint_syncfifo0_sink_payload_dat;
-assign litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_channel = litepciecore_litepcieendpoint_syncfifo0_sink_payload_channel;
-assign litepciecore_litepcieendpoint_syncfifo0_fifo_in_payload_user_id = litepciecore_litepcieendpoint_syncfifo0_sink_payload_user_id;
-assign litepciecore_litepcieendpoint_syncfifo0_source_valid = litepciecore_litepcieendpoint_syncfifo0_readable;
-assign litepciecore_litepcieendpoint_syncfifo0_source_first = litepciecore_litepcieendpoint_syncfifo0_fifo_out_first;
-assign litepciecore_litepcieendpoint_syncfifo0_source_last = litepciecore_litepcieendpoint_syncfifo0_fifo_out_last;
-assign litepciecore_litepcieendpoint_syncfifo0_source_payload_req_id = litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_req_id;
-assign litepciecore_litepcieendpoint_syncfifo0_source_payload_cmp_id = litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_cmp_id;
-assign litepciecore_litepcieendpoint_syncfifo0_source_payload_adr = litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_adr;
-assign litepciecore_litepcieendpoint_syncfifo0_source_payload_len = litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_len;
-assign litepciecore_litepcieendpoint_syncfifo0_source_payload_end = litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_end;
-assign litepciecore_litepcieendpoint_syncfifo0_source_payload_err = litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_err;
-assign litepciecore_litepcieendpoint_syncfifo0_source_payload_tag = litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_tag;
-assign litepciecore_litepcieendpoint_syncfifo0_source_payload_dat = litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_dat;
-assign litepciecore_litepcieendpoint_syncfifo0_source_payload_channel = litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_channel;
-assign litepciecore_litepcieendpoint_syncfifo0_source_payload_user_id = litepciecore_litepcieendpoint_syncfifo0_fifo_out_payload_user_id;
-assign litepciecore_litepcieendpoint_syncfifo0_re = litepciecore_litepcieendpoint_syncfifo0_source_ready;
-assign litepciecore_litepcieendpoint_syncfifo0_syncfifo0_re = (litepciecore_litepcieendpoint_syncfifo0_syncfifo0_readable & ((~litepciecore_litepcieendpoint_syncfifo0_readable) | litepciecore_litepcieendpoint_syncfifo0_re));
-assign litepciecore_litepcieendpoint_syncfifo0_level1 = (litepciecore_litepcieendpoint_syncfifo0_level0 + litepciecore_litepcieendpoint_syncfifo0_readable);
+assign litepcieendpoint_syncfifo0_syncfifo0_din = {litepcieendpoint_syncfifo0_fifo_in_last, litepcieendpoint_syncfifo0_fifo_in_first, litepcieendpoint_syncfifo0_fifo_in_payload_user_id, litepcieendpoint_syncfifo0_fifo_in_payload_channel, litepcieendpoint_syncfifo0_fifo_in_payload_dat, litepcieendpoint_syncfifo0_fifo_in_payload_tag, litepcieendpoint_syncfifo0_fifo_in_payload_err, litepcieendpoint_syncfifo0_fifo_in_payload_end, litepcieendpoint_syncfifo0_fifo_in_payload_len, litepcieendpoint_syncfifo0_fifo_in_payload_adr, litepcieendpoint_syncfifo0_fifo_in_payload_cmp_id, litepcieendpoint_syncfifo0_fifo_in_payload_req_id};
+assign {litepcieendpoint_syncfifo0_fifo_out_last, litepcieendpoint_syncfifo0_fifo_out_first, litepcieendpoint_syncfifo0_fifo_out_payload_user_id, litepcieendpoint_syncfifo0_fifo_out_payload_channel, litepcieendpoint_syncfifo0_fifo_out_payload_dat, litepcieendpoint_syncfifo0_fifo_out_payload_tag, litepcieendpoint_syncfifo0_fifo_out_payload_err, litepcieendpoint_syncfifo0_fifo_out_payload_end, litepcieendpoint_syncfifo0_fifo_out_payload_len, litepcieendpoint_syncfifo0_fifo_out_payload_adr, litepcieendpoint_syncfifo0_fifo_out_payload_cmp_id, litepcieendpoint_syncfifo0_fifo_out_payload_req_id} = litepcieendpoint_syncfifo0_syncfifo0_dout;
+assign litepcieendpoint_syncfifo0_sink_ready = litepcieendpoint_syncfifo0_syncfifo0_writable;
+assign litepcieendpoint_syncfifo0_syncfifo0_we = litepcieendpoint_syncfifo0_sink_valid;
+assign litepcieendpoint_syncfifo0_fifo_in_first = litepcieendpoint_syncfifo0_sink_first;
+assign litepcieendpoint_syncfifo0_fifo_in_last = litepcieendpoint_syncfifo0_sink_last;
+assign litepcieendpoint_syncfifo0_fifo_in_payload_req_id = litepcieendpoint_syncfifo0_sink_payload_req_id;
+assign litepcieendpoint_syncfifo0_fifo_in_payload_cmp_id = litepcieendpoint_syncfifo0_sink_payload_cmp_id;
+assign litepcieendpoint_syncfifo0_fifo_in_payload_adr = litepcieendpoint_syncfifo0_sink_payload_adr;
+assign litepcieendpoint_syncfifo0_fifo_in_payload_len = litepcieendpoint_syncfifo0_sink_payload_len;
+assign litepcieendpoint_syncfifo0_fifo_in_payload_end = litepcieendpoint_syncfifo0_sink_payload_end;
+assign litepcieendpoint_syncfifo0_fifo_in_payload_err = litepcieendpoint_syncfifo0_sink_payload_err;
+assign litepcieendpoint_syncfifo0_fifo_in_payload_tag = litepcieendpoint_syncfifo0_sink_payload_tag;
+assign litepcieendpoint_syncfifo0_fifo_in_payload_dat = litepcieendpoint_syncfifo0_sink_payload_dat;
+assign litepcieendpoint_syncfifo0_fifo_in_payload_channel = litepcieendpoint_syncfifo0_sink_payload_channel;
+assign litepcieendpoint_syncfifo0_fifo_in_payload_user_id = litepcieendpoint_syncfifo0_sink_payload_user_id;
+assign litepcieendpoint_syncfifo0_source_valid = litepcieendpoint_syncfifo0_readable;
+assign litepcieendpoint_syncfifo0_source_first = litepcieendpoint_syncfifo0_fifo_out_first;
+assign litepcieendpoint_syncfifo0_source_last = litepcieendpoint_syncfifo0_fifo_out_last;
+assign litepcieendpoint_syncfifo0_source_payload_req_id = litepcieendpoint_syncfifo0_fifo_out_payload_req_id;
+assign litepcieendpoint_syncfifo0_source_payload_cmp_id = litepcieendpoint_syncfifo0_fifo_out_payload_cmp_id;
+assign litepcieendpoint_syncfifo0_source_payload_adr = litepcieendpoint_syncfifo0_fifo_out_payload_adr;
+assign litepcieendpoint_syncfifo0_source_payload_len = litepcieendpoint_syncfifo0_fifo_out_payload_len;
+assign litepcieendpoint_syncfifo0_source_payload_end = litepcieendpoint_syncfifo0_fifo_out_payload_end;
+assign litepcieendpoint_syncfifo0_source_payload_err = litepcieendpoint_syncfifo0_fifo_out_payload_err;
+assign litepcieendpoint_syncfifo0_source_payload_tag = litepcieendpoint_syncfifo0_fifo_out_payload_tag;
+assign litepcieendpoint_syncfifo0_source_payload_dat = litepcieendpoint_syncfifo0_fifo_out_payload_dat;
+assign litepcieendpoint_syncfifo0_source_payload_channel = litepcieendpoint_syncfifo0_fifo_out_payload_channel;
+assign litepcieendpoint_syncfifo0_source_payload_user_id = litepcieendpoint_syncfifo0_fifo_out_payload_user_id;
+assign litepcieendpoint_syncfifo0_re = litepcieendpoint_syncfifo0_source_ready;
+assign litepcieendpoint_syncfifo0_syncfifo0_re = (litepcieendpoint_syncfifo0_syncfifo0_readable & ((~litepcieendpoint_syncfifo0_readable) | litepcieendpoint_syncfifo0_re));
+assign litepcieendpoint_syncfifo0_level1 = (litepcieendpoint_syncfifo0_level0 + litepcieendpoint_syncfifo0_readable);
 always @(*) begin
-    litepciecore_litepcieendpoint_syncfifo0_wrport_adr <= 7'd0;
-    if (litepciecore_litepcieendpoint_syncfifo0_replace) begin
-        litepciecore_litepcieendpoint_syncfifo0_wrport_adr <= (litepciecore_litepcieendpoint_syncfifo0_produce - 1'd1);
+    litepcieendpoint_syncfifo0_wrport_adr <= 7'd0;
+    if (litepcieendpoint_syncfifo0_replace) begin
+        litepcieendpoint_syncfifo0_wrport_adr <= (litepcieendpoint_syncfifo0_produce - 1'd1);
     end else begin
-        litepciecore_litepcieendpoint_syncfifo0_wrport_adr <= litepciecore_litepcieendpoint_syncfifo0_produce;
+        litepcieendpoint_syncfifo0_wrport_adr <= litepcieendpoint_syncfifo0_produce;
     end
 end
-assign litepciecore_litepcieendpoint_syncfifo0_wrport_dat_w = litepciecore_litepcieendpoint_syncfifo0_syncfifo0_din;
-assign litepciecore_litepcieendpoint_syncfifo0_wrport_we = (litepciecore_litepcieendpoint_syncfifo0_syncfifo0_we & (litepciecore_litepcieendpoint_syncfifo0_syncfifo0_writable | litepciecore_litepcieendpoint_syncfifo0_replace));
-assign litepciecore_litepcieendpoint_syncfifo0_do_read = (litepciecore_litepcieendpoint_syncfifo0_syncfifo0_readable & litepciecore_litepcieendpoint_syncfifo0_syncfifo0_re);
-assign litepciecore_litepcieendpoint_syncfifo0_rdport_adr = litepciecore_litepcieendpoint_syncfifo0_consume;
-assign litepciecore_litepcieendpoint_syncfifo0_syncfifo0_dout = litepciecore_litepcieendpoint_syncfifo0_rdport_dat_r;
-assign litepciecore_litepcieendpoint_syncfifo0_rdport_re = litepciecore_litepcieendpoint_syncfifo0_do_read;
-assign litepciecore_litepcieendpoint_syncfifo0_syncfifo0_writable = (litepciecore_litepcieendpoint_syncfifo0_level0 != 8'd128);
-assign litepciecore_litepcieendpoint_syncfifo0_syncfifo0_readable = (litepciecore_litepcieendpoint_syncfifo0_level0 != 1'd0);
-assign litepciecore_litepcieendpoint_syncfifo1_syncfifo1_din = {litepciecore_litepcieendpoint_syncfifo1_fifo_in_last, litepciecore_litepcieendpoint_syncfifo1_fifo_in_first, litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_user_id, litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_channel, litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_dat, litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_tag, litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_err, litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_end, litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_len, litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_adr, litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_cmp_id, litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_req_id};
-assign {litepciecore_litepcieendpoint_syncfifo1_fifo_out_last, litepciecore_litepcieendpoint_syncfifo1_fifo_out_first, litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_user_id, litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_channel, litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_dat, litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_tag, litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_err, litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_end, litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_len, litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_adr, litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_cmp_id, litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_req_id} = litepciecore_litepcieendpoint_syncfifo1_syncfifo1_dout;
-assign litepciecore_litepcieendpoint_syncfifo1_sink_ready = litepciecore_litepcieendpoint_syncfifo1_syncfifo1_writable;
-assign litepciecore_litepcieendpoint_syncfifo1_syncfifo1_we = litepciecore_litepcieendpoint_syncfifo1_sink_valid;
-assign litepciecore_litepcieendpoint_syncfifo1_fifo_in_first = litepciecore_litepcieendpoint_syncfifo1_sink_first;
-assign litepciecore_litepcieendpoint_syncfifo1_fifo_in_last = litepciecore_litepcieendpoint_syncfifo1_sink_last;
-assign litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_req_id = litepciecore_litepcieendpoint_syncfifo1_sink_payload_req_id;
-assign litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_cmp_id = litepciecore_litepcieendpoint_syncfifo1_sink_payload_cmp_id;
-assign litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_adr = litepciecore_litepcieendpoint_syncfifo1_sink_payload_adr;
-assign litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_len = litepciecore_litepcieendpoint_syncfifo1_sink_payload_len;
-assign litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_end = litepciecore_litepcieendpoint_syncfifo1_sink_payload_end;
-assign litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_err = litepciecore_litepcieendpoint_syncfifo1_sink_payload_err;
-assign litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_tag = litepciecore_litepcieendpoint_syncfifo1_sink_payload_tag;
-assign litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_dat = litepciecore_litepcieendpoint_syncfifo1_sink_payload_dat;
-assign litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_channel = litepciecore_litepcieendpoint_syncfifo1_sink_payload_channel;
-assign litepciecore_litepcieendpoint_syncfifo1_fifo_in_payload_user_id = litepciecore_litepcieendpoint_syncfifo1_sink_payload_user_id;
-assign litepciecore_litepcieendpoint_syncfifo1_source_valid = litepciecore_litepcieendpoint_syncfifo1_readable;
-assign litepciecore_litepcieendpoint_syncfifo1_source_first = litepciecore_litepcieendpoint_syncfifo1_fifo_out_first;
-assign litepciecore_litepcieendpoint_syncfifo1_source_last = litepciecore_litepcieendpoint_syncfifo1_fifo_out_last;
-assign litepciecore_litepcieendpoint_syncfifo1_source_payload_req_id = litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_req_id;
-assign litepciecore_litepcieendpoint_syncfifo1_source_payload_cmp_id = litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_cmp_id;
-assign litepciecore_litepcieendpoint_syncfifo1_source_payload_adr = litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_adr;
-assign litepciecore_litepcieendpoint_syncfifo1_source_payload_len = litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_len;
-assign litepciecore_litepcieendpoint_syncfifo1_source_payload_end = litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_end;
-assign litepciecore_litepcieendpoint_syncfifo1_source_payload_err = litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_err;
-assign litepciecore_litepcieendpoint_syncfifo1_source_payload_tag = litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_tag;
-assign litepciecore_litepcieendpoint_syncfifo1_source_payload_dat = litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_dat;
-assign litepciecore_litepcieendpoint_syncfifo1_source_payload_channel = litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_channel;
-assign litepciecore_litepcieendpoint_syncfifo1_source_payload_user_id = litepciecore_litepcieendpoint_syncfifo1_fifo_out_payload_user_id;
-assign litepciecore_litepcieendpoint_syncfifo1_re = litepciecore_litepcieendpoint_syncfifo1_source_ready;
-assign litepciecore_litepcieendpoint_syncfifo1_syncfifo1_re = (litepciecore_litepcieendpoint_syncfifo1_syncfifo1_readable & ((~litepciecore_litepcieendpoint_syncfifo1_readable) | litepciecore_litepcieendpoint_syncfifo1_re));
-assign litepciecore_litepcieendpoint_syncfifo1_level1 = (litepciecore_litepcieendpoint_syncfifo1_level0 + litepciecore_litepcieendpoint_syncfifo1_readable);
+assign litepcieendpoint_syncfifo0_wrport_dat_w = litepcieendpoint_syncfifo0_syncfifo0_din;
+assign litepcieendpoint_syncfifo0_wrport_we = (litepcieendpoint_syncfifo0_syncfifo0_we & (litepcieendpoint_syncfifo0_syncfifo0_writable | litepcieendpoint_syncfifo0_replace));
+assign litepcieendpoint_syncfifo0_do_read = (litepcieendpoint_syncfifo0_syncfifo0_readable & litepcieendpoint_syncfifo0_syncfifo0_re);
+assign litepcieendpoint_syncfifo0_rdport_adr = litepcieendpoint_syncfifo0_consume;
+assign litepcieendpoint_syncfifo0_syncfifo0_dout = litepcieendpoint_syncfifo0_rdport_dat_r;
+assign litepcieendpoint_syncfifo0_rdport_re = litepcieendpoint_syncfifo0_do_read;
+assign litepcieendpoint_syncfifo0_syncfifo0_writable = (litepcieendpoint_syncfifo0_level0 != 8'd128);
+assign litepcieendpoint_syncfifo0_syncfifo0_readable = (litepcieendpoint_syncfifo0_level0 != 1'd0);
+assign litepcieendpoint_syncfifo1_syncfifo1_din = {litepcieendpoint_syncfifo1_fifo_in_last, litepcieendpoint_syncfifo1_fifo_in_first, litepcieendpoint_syncfifo1_fifo_in_payload_user_id, litepcieendpoint_syncfifo1_fifo_in_payload_channel, litepcieendpoint_syncfifo1_fifo_in_payload_dat, litepcieendpoint_syncfifo1_fifo_in_payload_tag, litepcieendpoint_syncfifo1_fifo_in_payload_err, litepcieendpoint_syncfifo1_fifo_in_payload_end, litepcieendpoint_syncfifo1_fifo_in_payload_len, litepcieendpoint_syncfifo1_fifo_in_payload_adr, litepcieendpoint_syncfifo1_fifo_in_payload_cmp_id, litepcieendpoint_syncfifo1_fifo_in_payload_req_id};
+assign {litepcieendpoint_syncfifo1_fifo_out_last, litepcieendpoint_syncfifo1_fifo_out_first, litepcieendpoint_syncfifo1_fifo_out_payload_user_id, litepcieendpoint_syncfifo1_fifo_out_payload_channel, litepcieendpoint_syncfifo1_fifo_out_payload_dat, litepcieendpoint_syncfifo1_fifo_out_payload_tag, litepcieendpoint_syncfifo1_fifo_out_payload_err, litepcieendpoint_syncfifo1_fifo_out_payload_end, litepcieendpoint_syncfifo1_fifo_out_payload_len, litepcieendpoint_syncfifo1_fifo_out_payload_adr, litepcieendpoint_syncfifo1_fifo_out_payload_cmp_id, litepcieendpoint_syncfifo1_fifo_out_payload_req_id} = litepcieendpoint_syncfifo1_syncfifo1_dout;
+assign litepcieendpoint_syncfifo1_sink_ready = litepcieendpoint_syncfifo1_syncfifo1_writable;
+assign litepcieendpoint_syncfifo1_syncfifo1_we = litepcieendpoint_syncfifo1_sink_valid;
+assign litepcieendpoint_syncfifo1_fifo_in_first = litepcieendpoint_syncfifo1_sink_first;
+assign litepcieendpoint_syncfifo1_fifo_in_last = litepcieendpoint_syncfifo1_sink_last;
+assign litepcieendpoint_syncfifo1_fifo_in_payload_req_id = litepcieendpoint_syncfifo1_sink_payload_req_id;
+assign litepcieendpoint_syncfifo1_fifo_in_payload_cmp_id = litepcieendpoint_syncfifo1_sink_payload_cmp_id;
+assign litepcieendpoint_syncfifo1_fifo_in_payload_adr = litepcieendpoint_syncfifo1_sink_payload_adr;
+assign litepcieendpoint_syncfifo1_fifo_in_payload_len = litepcieendpoint_syncfifo1_sink_payload_len;
+assign litepcieendpoint_syncfifo1_fifo_in_payload_end = litepcieendpoint_syncfifo1_sink_payload_end;
+assign litepcieendpoint_syncfifo1_fifo_in_payload_err = litepcieendpoint_syncfifo1_sink_payload_err;
+assign litepcieendpoint_syncfifo1_fifo_in_payload_tag = litepcieendpoint_syncfifo1_sink_payload_tag;
+assign litepcieendpoint_syncfifo1_fifo_in_payload_dat = litepcieendpoint_syncfifo1_sink_payload_dat;
+assign litepcieendpoint_syncfifo1_fifo_in_payload_channel = litepcieendpoint_syncfifo1_sink_payload_channel;
+assign litepcieendpoint_syncfifo1_fifo_in_payload_user_id = litepcieendpoint_syncfifo1_sink_payload_user_id;
+assign litepcieendpoint_syncfifo1_source_valid = litepcieendpoint_syncfifo1_readable;
+assign litepcieendpoint_syncfifo1_source_first = litepcieendpoint_syncfifo1_fifo_out_first;
+assign litepcieendpoint_syncfifo1_source_last = litepcieendpoint_syncfifo1_fifo_out_last;
+assign litepcieendpoint_syncfifo1_source_payload_req_id = litepcieendpoint_syncfifo1_fifo_out_payload_req_id;
+assign litepcieendpoint_syncfifo1_source_payload_cmp_id = litepcieendpoint_syncfifo1_fifo_out_payload_cmp_id;
+assign litepcieendpoint_syncfifo1_source_payload_adr = litepcieendpoint_syncfifo1_fifo_out_payload_adr;
+assign litepcieendpoint_syncfifo1_source_payload_len = litepcieendpoint_syncfifo1_fifo_out_payload_len;
+assign litepcieendpoint_syncfifo1_source_payload_end = litepcieendpoint_syncfifo1_fifo_out_payload_end;
+assign litepcieendpoint_syncfifo1_source_payload_err = litepcieendpoint_syncfifo1_fifo_out_payload_err;
+assign litepcieendpoint_syncfifo1_source_payload_tag = litepcieendpoint_syncfifo1_fifo_out_payload_tag;
+assign litepcieendpoint_syncfifo1_source_payload_dat = litepcieendpoint_syncfifo1_fifo_out_payload_dat;
+assign litepcieendpoint_syncfifo1_source_payload_channel = litepcieendpoint_syncfifo1_fifo_out_payload_channel;
+assign litepcieendpoint_syncfifo1_source_payload_user_id = litepcieendpoint_syncfifo1_fifo_out_payload_user_id;
+assign litepcieendpoint_syncfifo1_re = litepcieendpoint_syncfifo1_source_ready;
+assign litepcieendpoint_syncfifo1_syncfifo1_re = (litepcieendpoint_syncfifo1_syncfifo1_readable & ((~litepcieendpoint_syncfifo1_readable) | litepcieendpoint_syncfifo1_re));
+assign litepcieendpoint_syncfifo1_level1 = (litepcieendpoint_syncfifo1_level0 + litepcieendpoint_syncfifo1_readable);
 always @(*) begin
-    litepciecore_litepcieendpoint_syncfifo1_wrport_adr <= 7'd0;
-    if (litepciecore_litepcieendpoint_syncfifo1_replace) begin
-        litepciecore_litepcieendpoint_syncfifo1_wrport_adr <= (litepciecore_litepcieendpoint_syncfifo1_produce - 1'd1);
+    litepcieendpoint_syncfifo1_wrport_adr <= 7'd0;
+    if (litepcieendpoint_syncfifo1_replace) begin
+        litepcieendpoint_syncfifo1_wrport_adr <= (litepcieendpoint_syncfifo1_produce - 1'd1);
     end else begin
-        litepciecore_litepcieendpoint_syncfifo1_wrport_adr <= litepciecore_litepcieendpoint_syncfifo1_produce;
+        litepcieendpoint_syncfifo1_wrport_adr <= litepcieendpoint_syncfifo1_produce;
     end
 end
-assign litepciecore_litepcieendpoint_syncfifo1_wrport_dat_w = litepciecore_litepcieendpoint_syncfifo1_syncfifo1_din;
-assign litepciecore_litepcieendpoint_syncfifo1_wrport_we = (litepciecore_litepcieendpoint_syncfifo1_syncfifo1_we & (litepciecore_litepcieendpoint_syncfifo1_syncfifo1_writable | litepciecore_litepcieendpoint_syncfifo1_replace));
-assign litepciecore_litepcieendpoint_syncfifo1_do_read = (litepciecore_litepcieendpoint_syncfifo1_syncfifo1_readable & litepciecore_litepcieendpoint_syncfifo1_syncfifo1_re);
-assign litepciecore_litepcieendpoint_syncfifo1_rdport_adr = litepciecore_litepcieendpoint_syncfifo1_consume;
-assign litepciecore_litepcieendpoint_syncfifo1_syncfifo1_dout = litepciecore_litepcieendpoint_syncfifo1_rdport_dat_r;
-assign litepciecore_litepcieendpoint_syncfifo1_rdport_re = litepciecore_litepcieendpoint_syncfifo1_do_read;
-assign litepciecore_litepcieendpoint_syncfifo1_syncfifo1_writable = (litepciecore_litepcieendpoint_syncfifo1_level0 != 8'd128);
-assign litepciecore_litepcieendpoint_syncfifo1_syncfifo1_readable = (litepciecore_litepcieendpoint_syncfifo1_level0 != 1'd0);
-assign litepciecore_litepcieendpoint_syncfifo2_syncfifo2_din = {litepciecore_litepcieendpoint_syncfifo2_fifo_in_last, litepciecore_litepcieendpoint_syncfifo2_fifo_in_first, litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_user_id, litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_channel, litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_dat, litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_tag, litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_err, litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_end, litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_len, litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_adr, litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_cmp_id, litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_req_id};
-assign {litepciecore_litepcieendpoint_syncfifo2_fifo_out_last, litepciecore_litepcieendpoint_syncfifo2_fifo_out_first, litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_user_id, litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_channel, litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_dat, litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_tag, litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_err, litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_end, litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_len, litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_adr, litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_cmp_id, litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_req_id} = litepciecore_litepcieendpoint_syncfifo2_syncfifo2_dout;
-assign litepciecore_litepcieendpoint_syncfifo2_sink_ready = litepciecore_litepcieendpoint_syncfifo2_syncfifo2_writable;
-assign litepciecore_litepcieendpoint_syncfifo2_syncfifo2_we = litepciecore_litepcieendpoint_syncfifo2_sink_valid;
-assign litepciecore_litepcieendpoint_syncfifo2_fifo_in_first = litepciecore_litepcieendpoint_syncfifo2_sink_first;
-assign litepciecore_litepcieendpoint_syncfifo2_fifo_in_last = litepciecore_litepcieendpoint_syncfifo2_sink_last;
-assign litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_req_id = litepciecore_litepcieendpoint_syncfifo2_sink_payload_req_id;
-assign litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_cmp_id = litepciecore_litepcieendpoint_syncfifo2_sink_payload_cmp_id;
-assign litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_adr = litepciecore_litepcieendpoint_syncfifo2_sink_payload_adr;
-assign litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_len = litepciecore_litepcieendpoint_syncfifo2_sink_payload_len;
-assign litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_end = litepciecore_litepcieendpoint_syncfifo2_sink_payload_end;
-assign litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_err = litepciecore_litepcieendpoint_syncfifo2_sink_payload_err;
-assign litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_tag = litepciecore_litepcieendpoint_syncfifo2_sink_payload_tag;
-assign litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_dat = litepciecore_litepcieendpoint_syncfifo2_sink_payload_dat;
-assign litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_channel = litepciecore_litepcieendpoint_syncfifo2_sink_payload_channel;
-assign litepciecore_litepcieendpoint_syncfifo2_fifo_in_payload_user_id = litepciecore_litepcieendpoint_syncfifo2_sink_payload_user_id;
-assign litepciecore_litepcieendpoint_syncfifo2_source_valid = litepciecore_litepcieendpoint_syncfifo2_readable;
-assign litepciecore_litepcieendpoint_syncfifo2_source_first = litepciecore_litepcieendpoint_syncfifo2_fifo_out_first;
-assign litepciecore_litepcieendpoint_syncfifo2_source_last = litepciecore_litepcieendpoint_syncfifo2_fifo_out_last;
-assign litepciecore_litepcieendpoint_syncfifo2_source_payload_req_id = litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_req_id;
-assign litepciecore_litepcieendpoint_syncfifo2_source_payload_cmp_id = litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_cmp_id;
-assign litepciecore_litepcieendpoint_syncfifo2_source_payload_adr = litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_adr;
-assign litepciecore_litepcieendpoint_syncfifo2_source_payload_len = litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_len;
-assign litepciecore_litepcieendpoint_syncfifo2_source_payload_end = litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_end;
-assign litepciecore_litepcieendpoint_syncfifo2_source_payload_err = litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_err;
-assign litepciecore_litepcieendpoint_syncfifo2_source_payload_tag = litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_tag;
-assign litepciecore_litepcieendpoint_syncfifo2_source_payload_dat = litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_dat;
-assign litepciecore_litepcieendpoint_syncfifo2_source_payload_channel = litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_channel;
-assign litepciecore_litepcieendpoint_syncfifo2_source_payload_user_id = litepciecore_litepcieendpoint_syncfifo2_fifo_out_payload_user_id;
-assign litepciecore_litepcieendpoint_syncfifo2_re = litepciecore_litepcieendpoint_syncfifo2_source_ready;
-assign litepciecore_litepcieendpoint_syncfifo2_syncfifo2_re = (litepciecore_litepcieendpoint_syncfifo2_syncfifo2_readable & ((~litepciecore_litepcieendpoint_syncfifo2_readable) | litepciecore_litepcieendpoint_syncfifo2_re));
-assign litepciecore_litepcieendpoint_syncfifo2_level1 = (litepciecore_litepcieendpoint_syncfifo2_level0 + litepciecore_litepcieendpoint_syncfifo2_readable);
+assign litepcieendpoint_syncfifo1_wrport_dat_w = litepcieendpoint_syncfifo1_syncfifo1_din;
+assign litepcieendpoint_syncfifo1_wrport_we = (litepcieendpoint_syncfifo1_syncfifo1_we & (litepcieendpoint_syncfifo1_syncfifo1_writable | litepcieendpoint_syncfifo1_replace));
+assign litepcieendpoint_syncfifo1_do_read = (litepcieendpoint_syncfifo1_syncfifo1_readable & litepcieendpoint_syncfifo1_syncfifo1_re);
+assign litepcieendpoint_syncfifo1_rdport_adr = litepcieendpoint_syncfifo1_consume;
+assign litepcieendpoint_syncfifo1_syncfifo1_dout = litepcieendpoint_syncfifo1_rdport_dat_r;
+assign litepcieendpoint_syncfifo1_rdport_re = litepcieendpoint_syncfifo1_do_read;
+assign litepcieendpoint_syncfifo1_syncfifo1_writable = (litepcieendpoint_syncfifo1_level0 != 8'd128);
+assign litepcieendpoint_syncfifo1_syncfifo1_readable = (litepcieendpoint_syncfifo1_level0 != 1'd0);
+assign litepcieendpoint_syncfifo2_syncfifo2_din = {litepcieendpoint_syncfifo2_fifo_in_last, litepcieendpoint_syncfifo2_fifo_in_first, litepcieendpoint_syncfifo2_fifo_in_payload_user_id, litepcieendpoint_syncfifo2_fifo_in_payload_channel, litepcieendpoint_syncfifo2_fifo_in_payload_dat, litepcieendpoint_syncfifo2_fifo_in_payload_tag, litepcieendpoint_syncfifo2_fifo_in_payload_err, litepcieendpoint_syncfifo2_fifo_in_payload_end, litepcieendpoint_syncfifo2_fifo_in_payload_len, litepcieendpoint_syncfifo2_fifo_in_payload_adr, litepcieendpoint_syncfifo2_fifo_in_payload_cmp_id, litepcieendpoint_syncfifo2_fifo_in_payload_req_id};
+assign {litepcieendpoint_syncfifo2_fifo_out_last, litepcieendpoint_syncfifo2_fifo_out_first, litepcieendpoint_syncfifo2_fifo_out_payload_user_id, litepcieendpoint_syncfifo2_fifo_out_payload_channel, litepcieendpoint_syncfifo2_fifo_out_payload_dat, litepcieendpoint_syncfifo2_fifo_out_payload_tag, litepcieendpoint_syncfifo2_fifo_out_payload_err, litepcieendpoint_syncfifo2_fifo_out_payload_end, litepcieendpoint_syncfifo2_fifo_out_payload_len, litepcieendpoint_syncfifo2_fifo_out_payload_adr, litepcieendpoint_syncfifo2_fifo_out_payload_cmp_id, litepcieendpoint_syncfifo2_fifo_out_payload_req_id} = litepcieendpoint_syncfifo2_syncfifo2_dout;
+assign litepcieendpoint_syncfifo2_sink_ready = litepcieendpoint_syncfifo2_syncfifo2_writable;
+assign litepcieendpoint_syncfifo2_syncfifo2_we = litepcieendpoint_syncfifo2_sink_valid;
+assign litepcieendpoint_syncfifo2_fifo_in_first = litepcieendpoint_syncfifo2_sink_first;
+assign litepcieendpoint_syncfifo2_fifo_in_last = litepcieendpoint_syncfifo2_sink_last;
+assign litepcieendpoint_syncfifo2_fifo_in_payload_req_id = litepcieendpoint_syncfifo2_sink_payload_req_id;
+assign litepcieendpoint_syncfifo2_fifo_in_payload_cmp_id = litepcieendpoint_syncfifo2_sink_payload_cmp_id;
+assign litepcieendpoint_syncfifo2_fifo_in_payload_adr = litepcieendpoint_syncfifo2_sink_payload_adr;
+assign litepcieendpoint_syncfifo2_fifo_in_payload_len = litepcieendpoint_syncfifo2_sink_payload_len;
+assign litepcieendpoint_syncfifo2_fifo_in_payload_end = litepcieendpoint_syncfifo2_sink_payload_end;
+assign litepcieendpoint_syncfifo2_fifo_in_payload_err = litepcieendpoint_syncfifo2_sink_payload_err;
+assign litepcieendpoint_syncfifo2_fifo_in_payload_tag = litepcieendpoint_syncfifo2_sink_payload_tag;
+assign litepcieendpoint_syncfifo2_fifo_in_payload_dat = litepcieendpoint_syncfifo2_sink_payload_dat;
+assign litepcieendpoint_syncfifo2_fifo_in_payload_channel = litepcieendpoint_syncfifo2_sink_payload_channel;
+assign litepcieendpoint_syncfifo2_fifo_in_payload_user_id = litepcieendpoint_syncfifo2_sink_payload_user_id;
+assign litepcieendpoint_syncfifo2_source_valid = litepcieendpoint_syncfifo2_readable;
+assign litepcieendpoint_syncfifo2_source_first = litepcieendpoint_syncfifo2_fifo_out_first;
+assign litepcieendpoint_syncfifo2_source_last = litepcieendpoint_syncfifo2_fifo_out_last;
+assign litepcieendpoint_syncfifo2_source_payload_req_id = litepcieendpoint_syncfifo2_fifo_out_payload_req_id;
+assign litepcieendpoint_syncfifo2_source_payload_cmp_id = litepcieendpoint_syncfifo2_fifo_out_payload_cmp_id;
+assign litepcieendpoint_syncfifo2_source_payload_adr = litepcieendpoint_syncfifo2_fifo_out_payload_adr;
+assign litepcieendpoint_syncfifo2_source_payload_len = litepcieendpoint_syncfifo2_fifo_out_payload_len;
+assign litepcieendpoint_syncfifo2_source_payload_end = litepcieendpoint_syncfifo2_fifo_out_payload_end;
+assign litepcieendpoint_syncfifo2_source_payload_err = litepcieendpoint_syncfifo2_fifo_out_payload_err;
+assign litepcieendpoint_syncfifo2_source_payload_tag = litepcieendpoint_syncfifo2_fifo_out_payload_tag;
+assign litepcieendpoint_syncfifo2_source_payload_dat = litepcieendpoint_syncfifo2_fifo_out_payload_dat;
+assign litepcieendpoint_syncfifo2_source_payload_channel = litepcieendpoint_syncfifo2_fifo_out_payload_channel;
+assign litepcieendpoint_syncfifo2_source_payload_user_id = litepcieendpoint_syncfifo2_fifo_out_payload_user_id;
+assign litepcieendpoint_syncfifo2_re = litepcieendpoint_syncfifo2_source_ready;
+assign litepcieendpoint_syncfifo2_syncfifo2_re = (litepcieendpoint_syncfifo2_syncfifo2_readable & ((~litepcieendpoint_syncfifo2_readable) | litepcieendpoint_syncfifo2_re));
+assign litepcieendpoint_syncfifo2_level1 = (litepcieendpoint_syncfifo2_level0 + litepcieendpoint_syncfifo2_readable);
 always @(*) begin
-    litepciecore_litepcieendpoint_syncfifo2_wrport_adr <= 7'd0;
-    if (litepciecore_litepcieendpoint_syncfifo2_replace) begin
-        litepciecore_litepcieendpoint_syncfifo2_wrport_adr <= (litepciecore_litepcieendpoint_syncfifo2_produce - 1'd1);
+    litepcieendpoint_syncfifo2_wrport_adr <= 7'd0;
+    if (litepcieendpoint_syncfifo2_replace) begin
+        litepcieendpoint_syncfifo2_wrport_adr <= (litepcieendpoint_syncfifo2_produce - 1'd1);
     end else begin
-        litepciecore_litepcieendpoint_syncfifo2_wrport_adr <= litepciecore_litepcieendpoint_syncfifo2_produce;
+        litepcieendpoint_syncfifo2_wrport_adr <= litepcieendpoint_syncfifo2_produce;
     end
 end
-assign litepciecore_litepcieendpoint_syncfifo2_wrport_dat_w = litepciecore_litepcieendpoint_syncfifo2_syncfifo2_din;
-assign litepciecore_litepcieendpoint_syncfifo2_wrport_we = (litepciecore_litepcieendpoint_syncfifo2_syncfifo2_we & (litepciecore_litepcieendpoint_syncfifo2_syncfifo2_writable | litepciecore_litepcieendpoint_syncfifo2_replace));
-assign litepciecore_litepcieendpoint_syncfifo2_do_read = (litepciecore_litepcieendpoint_syncfifo2_syncfifo2_readable & litepciecore_litepcieendpoint_syncfifo2_syncfifo2_re);
-assign litepciecore_litepcieendpoint_syncfifo2_rdport_adr = litepciecore_litepcieendpoint_syncfifo2_consume;
-assign litepciecore_litepcieendpoint_syncfifo2_syncfifo2_dout = litepciecore_litepcieendpoint_syncfifo2_rdport_dat_r;
-assign litepciecore_litepcieendpoint_syncfifo2_rdport_re = litepciecore_litepcieendpoint_syncfifo2_do_read;
-assign litepciecore_litepcieendpoint_syncfifo2_syncfifo2_writable = (litepciecore_litepcieendpoint_syncfifo2_level0 != 8'd128);
-assign litepciecore_litepcieendpoint_syncfifo2_syncfifo2_readable = (litepciecore_litepcieendpoint_syncfifo2_level0 != 1'd0);
-assign litepciecore_litepcieendpoint_syncfifo3_syncfifo3_din = {litepciecore_litepcieendpoint_syncfifo3_fifo_in_last, litepciecore_litepcieendpoint_syncfifo3_fifo_in_first, litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_user_id, litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_channel, litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_dat, litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_tag, litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_err, litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_end, litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_len, litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_adr, litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_cmp_id, litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_req_id};
-assign {litepciecore_litepcieendpoint_syncfifo3_fifo_out_last, litepciecore_litepcieendpoint_syncfifo3_fifo_out_first, litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_user_id, litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_channel, litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_dat, litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_tag, litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_err, litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_end, litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_len, litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_adr, litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_cmp_id, litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_req_id} = litepciecore_litepcieendpoint_syncfifo3_syncfifo3_dout;
-assign litepciecore_litepcieendpoint_syncfifo3_sink_ready = litepciecore_litepcieendpoint_syncfifo3_syncfifo3_writable;
-assign litepciecore_litepcieendpoint_syncfifo3_syncfifo3_we = litepciecore_litepcieendpoint_syncfifo3_sink_valid;
-assign litepciecore_litepcieendpoint_syncfifo3_fifo_in_first = litepciecore_litepcieendpoint_syncfifo3_sink_first;
-assign litepciecore_litepcieendpoint_syncfifo3_fifo_in_last = litepciecore_litepcieendpoint_syncfifo3_sink_last;
-assign litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_req_id = litepciecore_litepcieendpoint_syncfifo3_sink_payload_req_id;
-assign litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_cmp_id = litepciecore_litepcieendpoint_syncfifo3_sink_payload_cmp_id;
-assign litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_adr = litepciecore_litepcieendpoint_syncfifo3_sink_payload_adr;
-assign litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_len = litepciecore_litepcieendpoint_syncfifo3_sink_payload_len;
-assign litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_end = litepciecore_litepcieendpoint_syncfifo3_sink_payload_end;
-assign litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_err = litepciecore_litepcieendpoint_syncfifo3_sink_payload_err;
-assign litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_tag = litepciecore_litepcieendpoint_syncfifo3_sink_payload_tag;
-assign litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_dat = litepciecore_litepcieendpoint_syncfifo3_sink_payload_dat;
-assign litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_channel = litepciecore_litepcieendpoint_syncfifo3_sink_payload_channel;
-assign litepciecore_litepcieendpoint_syncfifo3_fifo_in_payload_user_id = litepciecore_litepcieendpoint_syncfifo3_sink_payload_user_id;
-assign litepciecore_litepcieendpoint_syncfifo3_source_valid = litepciecore_litepcieendpoint_syncfifo3_readable;
-assign litepciecore_litepcieendpoint_syncfifo3_source_first = litepciecore_litepcieendpoint_syncfifo3_fifo_out_first;
-assign litepciecore_litepcieendpoint_syncfifo3_source_last = litepciecore_litepcieendpoint_syncfifo3_fifo_out_last;
-assign litepciecore_litepcieendpoint_syncfifo3_source_payload_req_id = litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_req_id;
-assign litepciecore_litepcieendpoint_syncfifo3_source_payload_cmp_id = litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_cmp_id;
-assign litepciecore_litepcieendpoint_syncfifo3_source_payload_adr = litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_adr;
-assign litepciecore_litepcieendpoint_syncfifo3_source_payload_len = litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_len;
-assign litepciecore_litepcieendpoint_syncfifo3_source_payload_end = litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_end;
-assign litepciecore_litepcieendpoint_syncfifo3_source_payload_err = litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_err;
-assign litepciecore_litepcieendpoint_syncfifo3_source_payload_tag = litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_tag;
-assign litepciecore_litepcieendpoint_syncfifo3_source_payload_dat = litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_dat;
-assign litepciecore_litepcieendpoint_syncfifo3_source_payload_channel = litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_channel;
-assign litepciecore_litepcieendpoint_syncfifo3_source_payload_user_id = litepciecore_litepcieendpoint_syncfifo3_fifo_out_payload_user_id;
-assign litepciecore_litepcieendpoint_syncfifo3_re = litepciecore_litepcieendpoint_syncfifo3_source_ready;
-assign litepciecore_litepcieendpoint_syncfifo3_syncfifo3_re = (litepciecore_litepcieendpoint_syncfifo3_syncfifo3_readable & ((~litepciecore_litepcieendpoint_syncfifo3_readable) | litepciecore_litepcieendpoint_syncfifo3_re));
-assign litepciecore_litepcieendpoint_syncfifo3_level1 = (litepciecore_litepcieendpoint_syncfifo3_level0 + litepciecore_litepcieendpoint_syncfifo3_readable);
+assign litepcieendpoint_syncfifo2_wrport_dat_w = litepcieendpoint_syncfifo2_syncfifo2_din;
+assign litepcieendpoint_syncfifo2_wrport_we = (litepcieendpoint_syncfifo2_syncfifo2_we & (litepcieendpoint_syncfifo2_syncfifo2_writable | litepcieendpoint_syncfifo2_replace));
+assign litepcieendpoint_syncfifo2_do_read = (litepcieendpoint_syncfifo2_syncfifo2_readable & litepcieendpoint_syncfifo2_syncfifo2_re);
+assign litepcieendpoint_syncfifo2_rdport_adr = litepcieendpoint_syncfifo2_consume;
+assign litepcieendpoint_syncfifo2_syncfifo2_dout = litepcieendpoint_syncfifo2_rdport_dat_r;
+assign litepcieendpoint_syncfifo2_rdport_re = litepcieendpoint_syncfifo2_do_read;
+assign litepcieendpoint_syncfifo2_syncfifo2_writable = (litepcieendpoint_syncfifo2_level0 != 8'd128);
+assign litepcieendpoint_syncfifo2_syncfifo2_readable = (litepcieendpoint_syncfifo2_level0 != 1'd0);
+assign litepcieendpoint_syncfifo3_syncfifo3_din = {litepcieendpoint_syncfifo3_fifo_in_last, litepcieendpoint_syncfifo3_fifo_in_first, litepcieendpoint_syncfifo3_fifo_in_payload_user_id, litepcieendpoint_syncfifo3_fifo_in_payload_channel, litepcieendpoint_syncfifo3_fifo_in_payload_dat, litepcieendpoint_syncfifo3_fifo_in_payload_tag, litepcieendpoint_syncfifo3_fifo_in_payload_err, litepcieendpoint_syncfifo3_fifo_in_payload_end, litepcieendpoint_syncfifo3_fifo_in_payload_len, litepcieendpoint_syncfifo3_fifo_in_payload_adr, litepcieendpoint_syncfifo3_fifo_in_payload_cmp_id, litepcieendpoint_syncfifo3_fifo_in_payload_req_id};
+assign {litepcieendpoint_syncfifo3_fifo_out_last, litepcieendpoint_syncfifo3_fifo_out_first, litepcieendpoint_syncfifo3_fifo_out_payload_user_id, litepcieendpoint_syncfifo3_fifo_out_payload_channel, litepcieendpoint_syncfifo3_fifo_out_payload_dat, litepcieendpoint_syncfifo3_fifo_out_payload_tag, litepcieendpoint_syncfifo3_fifo_out_payload_err, litepcieendpoint_syncfifo3_fifo_out_payload_end, litepcieendpoint_syncfifo3_fifo_out_payload_len, litepcieendpoint_syncfifo3_fifo_out_payload_adr, litepcieendpoint_syncfifo3_fifo_out_payload_cmp_id, litepcieendpoint_syncfifo3_fifo_out_payload_req_id} = litepcieendpoint_syncfifo3_syncfifo3_dout;
+assign litepcieendpoint_syncfifo3_sink_ready = litepcieendpoint_syncfifo3_syncfifo3_writable;
+assign litepcieendpoint_syncfifo3_syncfifo3_we = litepcieendpoint_syncfifo3_sink_valid;
+assign litepcieendpoint_syncfifo3_fifo_in_first = litepcieendpoint_syncfifo3_sink_first;
+assign litepcieendpoint_syncfifo3_fifo_in_last = litepcieendpoint_syncfifo3_sink_last;
+assign litepcieendpoint_syncfifo3_fifo_in_payload_req_id = litepcieendpoint_syncfifo3_sink_payload_req_id;
+assign litepcieendpoint_syncfifo3_fifo_in_payload_cmp_id = litepcieendpoint_syncfifo3_sink_payload_cmp_id;
+assign litepcieendpoint_syncfifo3_fifo_in_payload_adr = litepcieendpoint_syncfifo3_sink_payload_adr;
+assign litepcieendpoint_syncfifo3_fifo_in_payload_len = litepcieendpoint_syncfifo3_sink_payload_len;
+assign litepcieendpoint_syncfifo3_fifo_in_payload_end = litepcieendpoint_syncfifo3_sink_payload_end;
+assign litepcieendpoint_syncfifo3_fifo_in_payload_err = litepcieendpoint_syncfifo3_sink_payload_err;
+assign litepcieendpoint_syncfifo3_fifo_in_payload_tag = litepcieendpoint_syncfifo3_sink_payload_tag;
+assign litepcieendpoint_syncfifo3_fifo_in_payload_dat = litepcieendpoint_syncfifo3_sink_payload_dat;
+assign litepcieendpoint_syncfifo3_fifo_in_payload_channel = litepcieendpoint_syncfifo3_sink_payload_channel;
+assign litepcieendpoint_syncfifo3_fifo_in_payload_user_id = litepcieendpoint_syncfifo3_sink_payload_user_id;
+assign litepcieendpoint_syncfifo3_source_valid = litepcieendpoint_syncfifo3_readable;
+assign litepcieendpoint_syncfifo3_source_first = litepcieendpoint_syncfifo3_fifo_out_first;
+assign litepcieendpoint_syncfifo3_source_last = litepcieendpoint_syncfifo3_fifo_out_last;
+assign litepcieendpoint_syncfifo3_source_payload_req_id = litepcieendpoint_syncfifo3_fifo_out_payload_req_id;
+assign litepcieendpoint_syncfifo3_source_payload_cmp_id = litepcieendpoint_syncfifo3_fifo_out_payload_cmp_id;
+assign litepcieendpoint_syncfifo3_source_payload_adr = litepcieendpoint_syncfifo3_fifo_out_payload_adr;
+assign litepcieendpoint_syncfifo3_source_payload_len = litepcieendpoint_syncfifo3_fifo_out_payload_len;
+assign litepcieendpoint_syncfifo3_source_payload_end = litepcieendpoint_syncfifo3_fifo_out_payload_end;
+assign litepcieendpoint_syncfifo3_source_payload_err = litepcieendpoint_syncfifo3_fifo_out_payload_err;
+assign litepcieendpoint_syncfifo3_source_payload_tag = litepcieendpoint_syncfifo3_fifo_out_payload_tag;
+assign litepcieendpoint_syncfifo3_source_payload_dat = litepcieendpoint_syncfifo3_fifo_out_payload_dat;
+assign litepcieendpoint_syncfifo3_source_payload_channel = litepcieendpoint_syncfifo3_fifo_out_payload_channel;
+assign litepcieendpoint_syncfifo3_source_payload_user_id = litepcieendpoint_syncfifo3_fifo_out_payload_user_id;
+assign litepcieendpoint_syncfifo3_re = litepcieendpoint_syncfifo3_source_ready;
+assign litepcieendpoint_syncfifo3_syncfifo3_re = (litepcieendpoint_syncfifo3_syncfifo3_readable & ((~litepcieendpoint_syncfifo3_readable) | litepcieendpoint_syncfifo3_re));
+assign litepcieendpoint_syncfifo3_level1 = (litepcieendpoint_syncfifo3_level0 + litepcieendpoint_syncfifo3_readable);
 always @(*) begin
-    litepciecore_litepcieendpoint_syncfifo3_wrport_adr <= 7'd0;
-    if (litepciecore_litepcieendpoint_syncfifo3_replace) begin
-        litepciecore_litepcieendpoint_syncfifo3_wrport_adr <= (litepciecore_litepcieendpoint_syncfifo3_produce - 1'd1);
+    litepcieendpoint_syncfifo3_wrport_adr <= 7'd0;
+    if (litepcieendpoint_syncfifo3_replace) begin
+        litepcieendpoint_syncfifo3_wrport_adr <= (litepcieendpoint_syncfifo3_produce - 1'd1);
     end else begin
-        litepciecore_litepcieendpoint_syncfifo3_wrport_adr <= litepciecore_litepcieendpoint_syncfifo3_produce;
+        litepcieendpoint_syncfifo3_wrport_adr <= litepcieendpoint_syncfifo3_produce;
     end
 end
-assign litepciecore_litepcieendpoint_syncfifo3_wrport_dat_w = litepciecore_litepcieendpoint_syncfifo3_syncfifo3_din;
-assign litepciecore_litepcieendpoint_syncfifo3_wrport_we = (litepciecore_litepcieendpoint_syncfifo3_syncfifo3_we & (litepciecore_litepcieendpoint_syncfifo3_syncfifo3_writable | litepciecore_litepcieendpoint_syncfifo3_replace));
-assign litepciecore_litepcieendpoint_syncfifo3_do_read = (litepciecore_litepcieendpoint_syncfifo3_syncfifo3_readable & litepciecore_litepcieendpoint_syncfifo3_syncfifo3_re);
-assign litepciecore_litepcieendpoint_syncfifo3_rdport_adr = litepciecore_litepcieendpoint_syncfifo3_consume;
-assign litepciecore_litepcieendpoint_syncfifo3_syncfifo3_dout = litepciecore_litepcieendpoint_syncfifo3_rdport_dat_r;
-assign litepciecore_litepcieendpoint_syncfifo3_rdport_re = litepciecore_litepcieendpoint_syncfifo3_do_read;
-assign litepciecore_litepcieendpoint_syncfifo3_syncfifo3_writable = (litepciecore_litepcieendpoint_syncfifo3_level0 != 8'd128);
-assign litepciecore_litepcieendpoint_syncfifo3_syncfifo3_readable = (litepciecore_litepcieendpoint_syncfifo3_level0 != 1'd0);
+assign litepcieendpoint_syncfifo3_wrport_dat_w = litepcieendpoint_syncfifo3_syncfifo3_din;
+assign litepcieendpoint_syncfifo3_wrport_we = (litepcieendpoint_syncfifo3_syncfifo3_we & (litepcieendpoint_syncfifo3_syncfifo3_writable | litepcieendpoint_syncfifo3_replace));
+assign litepcieendpoint_syncfifo3_do_read = (litepcieendpoint_syncfifo3_syncfifo3_readable & litepcieendpoint_syncfifo3_syncfifo3_re);
+assign litepcieendpoint_syncfifo3_rdport_adr = litepcieendpoint_syncfifo3_consume;
+assign litepcieendpoint_syncfifo3_syncfifo3_dout = litepcieendpoint_syncfifo3_rdport_dat_r;
+assign litepcieendpoint_syncfifo3_rdport_re = litepcieendpoint_syncfifo3_do_read;
+assign litepcieendpoint_syncfifo3_syncfifo3_writable = (litepcieendpoint_syncfifo3_level0 != 8'd128);
+assign litepcieendpoint_syncfifo3_syncfifo3_readable = (litepcieendpoint_syncfifo3_level0 != 1'd0);
 always @(*) begin
-    litepciecore_litepcieendpoint_tag_queue_sink_valid <= 1'd0;
-    litepciecore_litepcieendpoint_fsm1_next_state <= 2'd0;
-    litepciecore_litepcieendpoint_fill_tag_litepciecrossbar_next_value <= 2'd0;
-    litepciecore_litepcieendpoint_master_out_source_ready <= 1'd0;
-    litepciecore_litepcieendpoint_cmp_reorder_valid <= 1'd0;
-    litepciecore_litepcieendpoint_tag_queue_sink_payload_tag <= 2'd0;
-    litepciecore_litepcieendpoint_fill_tag_litepciecrossbar_next_value_ce <= 1'd0;
-    litepciecore_litepcieendpoint_fsm1_next_state <= litepciecore_litepcieendpoint_fsm1_state;
-    case (litepciecore_litepcieendpoint_fsm1_state)
+    litepcieendpoint_cmp_reorder_valid <= 1'd0;
+    litepcieendpoint_fill_tag_litepciecrossbar_next_value <= 2'd0;
+    litepcieendpoint_fill_tag_litepciecrossbar_next_value_ce <= 1'd0;
+    litepcieendpoint_fsm1_next_state <= 2'd0;
+    litepcieendpoint_master_out_source_ready <= 1'd0;
+    litepcieendpoint_tag_queue_sink_payload_tag <= 2'd0;
+    litepcieendpoint_tag_queue_sink_valid <= 1'd0;
+    litepcieendpoint_fsm1_next_state <= litepcieendpoint_fsm1_state;
+    case (litepcieendpoint_fsm1_state)
         1'd1: begin
-            if ((litepciecore_litepcieendpoint_master_out_source_valid & litepciecore_litepcieendpoint_master_out_source_first)) begin
-                litepciecore_litepcieendpoint_fsm1_next_state <= 2'd2;
+            if ((litepcieendpoint_master_out_source_valid & litepcieendpoint_master_out_source_first)) begin
+                litepcieendpoint_fsm1_next_state <= 2'd2;
             end else begin
-                litepciecore_litepcieendpoint_master_out_source_ready <= 1'd1;
+                litepcieendpoint_master_out_source_ready <= 1'd1;
             end
         end
         2'd2: begin
-            litepciecore_litepcieendpoint_cmp_reorder_valid <= litepciecore_litepcieendpoint_master_out_source_valid;
-            litepciecore_litepcieendpoint_master_out_source_ready <= litepciecore_litepcieendpoint_cmp_reorder_ready;
-            if (((litepciecore_litepcieendpoint_master_out_source_valid & litepciecore_litepcieendpoint_master_out_source_ready) & litepciecore_litepcieendpoint_master_out_source_last)) begin
-                if (litepciecore_litepcieendpoint_master_out_source_payload_end) begin
-                    litepciecore_litepcieendpoint_tag_queue_sink_valid <= 1'd1;
-                    litepciecore_litepcieendpoint_tag_queue_sink_payload_tag <= litepciecore_litepcieendpoint_master_out_source_payload_tag;
+            litepcieendpoint_cmp_reorder_valid <= litepcieendpoint_master_out_source_valid;
+            litepcieendpoint_master_out_source_ready <= litepcieendpoint_cmp_reorder_ready;
+            if (((litepcieendpoint_master_out_source_valid & litepcieendpoint_master_out_source_ready) & litepcieendpoint_master_out_source_last)) begin
+                if (litepcieendpoint_master_out_source_payload_end) begin
+                    litepcieendpoint_tag_queue_sink_valid <= 1'd1;
+                    litepcieendpoint_tag_queue_sink_payload_tag <= litepcieendpoint_master_out_source_payload_tag;
                 end
-                litepciecore_litepcieendpoint_fsm1_next_state <= 1'd1;
+                litepcieendpoint_fsm1_next_state <= 1'd1;
             end
         end
         default: begin
-            litepciecore_litepcieendpoint_tag_queue_sink_valid <= 1'd1;
-            litepciecore_litepcieendpoint_tag_queue_sink_payload_tag <= litepciecore_litepcieendpoint_fill_tag;
-            litepciecore_litepcieendpoint_fill_tag_litepciecrossbar_next_value <= (litepciecore_litepcieendpoint_fill_tag + 1'd1);
-            litepciecore_litepcieendpoint_fill_tag_litepciecrossbar_next_value_ce <= 1'd1;
-            if ((litepciecore_litepcieendpoint_fill_tag == 2'd3)) begin
-                litepciecore_litepcieendpoint_fsm1_next_state <= 1'd1;
+            litepcieendpoint_tag_queue_sink_valid <= 1'd1;
+            litepcieendpoint_tag_queue_sink_payload_tag <= litepcieendpoint_fill_tag;
+            litepcieendpoint_fill_tag_litepciecrossbar_next_value <= (litepcieendpoint_fill_tag + 1'd1);
+            litepcieendpoint_fill_tag_litepciecrossbar_next_value_ce <= 1'd1;
+            if ((litepcieendpoint_fill_tag == 2'd3)) begin
+                litepcieendpoint_fsm1_next_state <= 1'd1;
             end
         end
     endcase
 end
-assign litepciecore_litepcieendpoint_master_in_sink_valid = litepciemasterinternalport1_sink_valid;
-assign litepciemasterinternalport1_sink_ready = litepciecore_litepcieendpoint_master_in_sink_ready;
-assign litepciecore_litepcieendpoint_master_in_sink_first = litepciemasterinternalport1_sink_first;
-assign litepciecore_litepcieendpoint_master_in_sink_last = litepciemasterinternalport1_sink_last;
-assign litepciecore_litepcieendpoint_master_in_sink_payload_req_id = litepciemasterinternalport1_sink_payload_req_id;
-assign litepciecore_litepcieendpoint_master_in_sink_payload_we = litepciemasterinternalport1_sink_payload_we;
-assign litepciecore_litepcieendpoint_master_in_sink_payload_adr = litepciemasterinternalport1_sink_payload_adr;
-assign litepciecore_litepcieendpoint_master_in_sink_payload_len = litepciemasterinternalport1_sink_payload_len;
-assign litepciecore_litepcieendpoint_master_in_sink_payload_tag = litepciemasterinternalport1_sink_payload_tag;
-assign litepciecore_litepcieendpoint_master_in_sink_payload_dat = litepciemasterinternalport1_sink_payload_dat;
-assign litepciecore_litepcieendpoint_master_in_sink_payload_channel = litepciemasterinternalport1_sink_payload_channel;
-assign litepciecore_litepcieendpoint_master_in_sink_payload_user_id = litepciemasterinternalport1_sink_payload_user_id;
-assign litepciemasterinternalport1_source_valid = litepciecore_litepcieendpoint_master_in_source_valid;
-assign litepciecore_litepcieendpoint_master_in_source_ready = litepciemasterinternalport1_source_ready;
-assign litepciemasterinternalport1_source_first = litepciecore_litepcieendpoint_master_in_source_first;
-assign litepciemasterinternalport1_source_last = litepciecore_litepcieendpoint_master_in_source_last;
-assign litepciemasterinternalport1_source_payload_req_id = litepciecore_litepcieendpoint_master_in_source_payload_req_id;
-assign litepciemasterinternalport1_source_payload_cmp_id = litepciecore_litepcieendpoint_master_in_source_payload_cmp_id;
-assign litepciemasterinternalport1_source_payload_adr = litepciecore_litepcieendpoint_master_in_source_payload_adr;
-assign litepciemasterinternalport1_source_payload_len = litepciecore_litepcieendpoint_master_in_source_payload_len;
-assign litepciemasterinternalport1_source_payload_end = litepciecore_litepcieendpoint_master_in_source_payload_end;
-assign litepciemasterinternalport1_source_payload_err = litepciecore_litepcieendpoint_master_in_source_payload_err;
-assign litepciemasterinternalport1_source_payload_tag = litepciecore_litepcieendpoint_master_in_source_payload_tag;
-assign litepciemasterinternalport1_source_payload_dat = litepciecore_litepcieendpoint_master_in_source_payload_dat;
-assign litepciemasterinternalport1_source_payload_channel = litepciecore_litepcieendpoint_master_in_source_payload_channel;
-assign litepciemasterinternalport1_source_payload_user_id = litepciecore_litepcieendpoint_master_in_source_payload_user_id;
-assign litepciecore_litepcieendpoint_sink_valid = litepciemasterinternalport0_sink_valid;
-assign litepciemasterinternalport0_sink_ready = litepciecore_litepcieendpoint_sink_ready;
-assign litepciecore_litepcieendpoint_sink_first = litepciemasterinternalport0_sink_first;
-assign litepciecore_litepcieendpoint_sink_last = litepciemasterinternalport0_sink_last;
-assign litepciecore_litepcieendpoint_sink_payload_req_id = litepciemasterinternalport0_sink_payload_req_id;
-assign litepciecore_litepcieendpoint_sink_payload_we = litepciemasterinternalport0_sink_payload_we;
-assign litepciecore_litepcieendpoint_sink_payload_adr = litepciemasterinternalport0_sink_payload_adr;
-assign litepciecore_litepcieendpoint_sink_payload_len = litepciemasterinternalport0_sink_payload_len;
-assign litepciecore_litepcieendpoint_sink_payload_tag = litepciemasterinternalport0_sink_payload_tag;
-assign litepciecore_litepcieendpoint_sink_payload_dat = litepciemasterinternalport0_sink_payload_dat;
-assign litepciecore_litepcieendpoint_sink_payload_channel = litepciemasterinternalport0_sink_payload_channel;
-assign litepciecore_litepcieendpoint_sink_payload_user_id = litepciemasterinternalport0_sink_payload_user_id;
-assign litepciemasterinternalport0_source_valid = litepciecore_litepcieendpoint_source_valid;
-assign litepciecore_litepcieendpoint_source_ready = litepciemasterinternalport0_source_ready;
-assign litepciemasterinternalport0_source_first = litepciecore_litepcieendpoint_source_first;
-assign litepciemasterinternalport0_source_last = litepciecore_litepcieendpoint_source_last;
-assign litepciemasterinternalport0_source_payload_req_id = litepciecore_litepcieendpoint_source_payload_req_id;
-assign litepciemasterinternalport0_source_payload_cmp_id = litepciecore_litepcieendpoint_source_payload_cmp_id;
-assign litepciemasterinternalport0_source_payload_adr = litepciecore_litepcieendpoint_source_payload_adr;
-assign litepciemasterinternalport0_source_payload_len = litepciecore_litepcieendpoint_source_payload_len;
-assign litepciemasterinternalport0_source_payload_end = litepciecore_litepcieendpoint_source_payload_end;
-assign litepciemasterinternalport0_source_payload_err = litepciecore_litepcieendpoint_source_payload_err;
-assign litepciemasterinternalport0_source_payload_tag = litepciecore_litepcieendpoint_source_payload_tag;
-assign litepciemasterinternalport0_source_payload_dat = litepciecore_litepcieendpoint_source_payload_dat;
-assign litepciemasterinternalport0_source_payload_channel = litepciecore_litepcieendpoint_source_payload_channel;
-assign litepciemasterinternalport0_source_payload_user_id = litepciecore_litepcieendpoint_source_payload_user_id;
+assign litepcieendpoint_master_in_sink_valid = pcie_dma_litepciemasterinternalport1_sink_valid;
+assign pcie_dma_litepciemasterinternalport1_sink_ready = litepcieendpoint_master_in_sink_ready;
+assign litepcieendpoint_master_in_sink_first = pcie_dma_litepciemasterinternalport1_sink_first;
+assign litepcieendpoint_master_in_sink_last = pcie_dma_litepciemasterinternalport1_sink_last;
+assign litepcieendpoint_master_in_sink_payload_req_id = pcie_dma_litepciemasterinternalport1_sink_payload_req_id;
+assign litepcieendpoint_master_in_sink_payload_we = pcie_dma_litepciemasterinternalport1_sink_payload_we;
+assign litepcieendpoint_master_in_sink_payload_adr = pcie_dma_litepciemasterinternalport1_sink_payload_adr;
+assign litepcieendpoint_master_in_sink_payload_len = pcie_dma_litepciemasterinternalport1_sink_payload_len;
+assign litepcieendpoint_master_in_sink_payload_tag = pcie_dma_litepciemasterinternalport1_sink_payload_tag;
+assign litepcieendpoint_master_in_sink_payload_dat = pcie_dma_litepciemasterinternalport1_sink_payload_dat;
+assign litepcieendpoint_master_in_sink_payload_channel = pcie_dma_litepciemasterinternalport1_sink_payload_channel;
+assign litepcieendpoint_master_in_sink_payload_user_id = pcie_dma_litepciemasterinternalport1_sink_payload_user_id;
 always @(*) begin
-    litepciecore_litepcieendpoint_request <= 2'd0;
-    litepciecore_litepcieendpoint_request[0] <= litepciecore_litepcieendpoint_status0_ongoing0;
-    litepciecore_litepcieendpoint_request[1] <= litepciecore_litepcieendpoint_status1_ongoing0;
+    litepcieendpoint_dispatcher0_sel1 <= 1'd0;
+    if (litepcieendpoint_dispatcher0_first) begin
+        litepcieendpoint_dispatcher0_sel1 <= litepcieendpoint_dispatcher0_sel0;
+    end else begin
+        litepcieendpoint_dispatcher0_sel1 <= litepcieendpoint_dispatcher0_sel_ongoing;
+    end
 end
 always @(*) begin
-    master_sink_first <= 1'd0;
-    master_sink_last <= 1'd0;
-    master_sink_payload_req_id <= 16'd0;
-    master_sink_payload_we <= 1'd0;
-    master_sink_payload_adr <= 32'd0;
-    master_sink_payload_len <= 10'd0;
-    master_sink_payload_tag <= 8'd0;
-    master_sink_payload_dat <= 128'd0;
-    litepciecore_litepcieendpoint_sink_ready <= 1'd0;
-    master_sink_payload_channel <= 8'd0;
-    master_sink_payload_user_id <= 8'd0;
-    master_sink_valid <= 1'd0;
-    litepciecore_litepcieendpoint_master_out_sink_ready <= 1'd0;
-    case (litepciecore_litepcieendpoint_grant)
-        1'd0: begin
-            master_sink_valid <= litepciecore_litepcieendpoint_master_out_sink_valid;
-            litepciecore_litepcieendpoint_master_out_sink_ready <= master_sink_ready;
-            master_sink_first <= litepciecore_litepcieendpoint_master_out_sink_first;
-            master_sink_last <= litepciecore_litepcieendpoint_master_out_sink_last;
-            master_sink_payload_req_id <= litepciecore_litepcieendpoint_master_out_sink_payload_req_id;
-            master_sink_payload_we <= litepciecore_litepcieendpoint_master_out_sink_payload_we;
-            master_sink_payload_adr <= litepciecore_litepcieendpoint_master_out_sink_payload_adr;
-            master_sink_payload_len <= litepciecore_litepcieendpoint_master_out_sink_payload_len;
-            master_sink_payload_tag <= litepciecore_litepcieendpoint_master_out_sink_payload_tag;
-            master_sink_payload_dat <= litepciecore_litepcieendpoint_master_out_sink_payload_dat;
-            master_sink_payload_channel <= litepciecore_litepcieendpoint_master_out_sink_payload_channel;
-            master_sink_payload_user_id <= litepciecore_litepcieendpoint_master_out_sink_payload_user_id;
-        end
+    litepcieendpoint_master_in_source_ready <= 1'd0;
+    pcie_dma_litepciemasterinternalport1_source_first <= 1'd0;
+    pcie_dma_litepciemasterinternalport1_source_last <= 1'd0;
+    pcie_dma_litepciemasterinternalport1_source_payload_adr <= 32'd0;
+    pcie_dma_litepciemasterinternalport1_source_payload_channel <= 8'd0;
+    pcie_dma_litepciemasterinternalport1_source_payload_cmp_id <= 16'd0;
+    pcie_dma_litepciemasterinternalport1_source_payload_dat <= 128'd0;
+    pcie_dma_litepciemasterinternalport1_source_payload_end <= 1'd0;
+    pcie_dma_litepciemasterinternalport1_source_payload_err <= 1'd0;
+    pcie_dma_litepciemasterinternalport1_source_payload_len <= 10'd0;
+    pcie_dma_litepciemasterinternalport1_source_payload_req_id <= 16'd0;
+    pcie_dma_litepciemasterinternalport1_source_payload_tag <= 8'd0;
+    pcie_dma_litepciemasterinternalport1_source_payload_user_id <= 8'd0;
+    pcie_dma_litepciemasterinternalport1_source_valid <= 1'd0;
+    case (litepcieendpoint_dispatcher0_sel1)
         1'd1: begin
-            master_sink_valid <= litepciecore_litepcieendpoint_sink_valid;
-            litepciecore_litepcieendpoint_sink_ready <= master_sink_ready;
-            master_sink_first <= litepciecore_litepcieendpoint_sink_first;
-            master_sink_last <= litepciecore_litepcieendpoint_sink_last;
-            master_sink_payload_req_id <= litepciecore_litepcieendpoint_sink_payload_req_id;
-            master_sink_payload_we <= litepciecore_litepcieendpoint_sink_payload_we;
-            master_sink_payload_adr <= litepciecore_litepcieendpoint_sink_payload_adr;
-            master_sink_payload_len <= litepciecore_litepcieendpoint_sink_payload_len;
-            master_sink_payload_tag <= litepciecore_litepcieendpoint_sink_payload_tag;
-            master_sink_payload_dat <= litepciecore_litepcieendpoint_sink_payload_dat;
-            master_sink_payload_channel <= litepciecore_litepcieendpoint_sink_payload_channel;
-            master_sink_payload_user_id <= litepciecore_litepcieendpoint_sink_payload_user_id;
+            pcie_dma_litepciemasterinternalport1_source_valid <= litepcieendpoint_master_in_source_valid;
+            litepcieendpoint_master_in_source_ready <= pcie_dma_litepciemasterinternalport1_source_ready;
+            pcie_dma_litepciemasterinternalport1_source_first <= litepcieendpoint_master_in_source_first;
+            pcie_dma_litepciemasterinternalport1_source_last <= litepcieendpoint_master_in_source_last;
+            pcie_dma_litepciemasterinternalport1_source_payload_req_id <= litepcieendpoint_master_in_source_payload_req_id;
+            pcie_dma_litepciemasterinternalport1_source_payload_cmp_id <= litepcieendpoint_master_in_source_payload_cmp_id;
+            pcie_dma_litepciemasterinternalport1_source_payload_adr <= litepcieendpoint_master_in_source_payload_adr;
+            pcie_dma_litepciemasterinternalport1_source_payload_len <= litepcieendpoint_master_in_source_payload_len;
+            pcie_dma_litepciemasterinternalport1_source_payload_end <= litepcieendpoint_master_in_source_payload_end;
+            pcie_dma_litepciemasterinternalport1_source_payload_err <= litepcieendpoint_master_in_source_payload_err;
+            pcie_dma_litepciemasterinternalport1_source_payload_tag <= litepcieendpoint_master_in_source_payload_tag;
+            pcie_dma_litepciemasterinternalport1_source_payload_dat <= litepcieendpoint_master_in_source_payload_dat;
+            pcie_dma_litepciemasterinternalport1_source_payload_channel <= litepcieendpoint_master_in_source_payload_channel;
+            pcie_dma_litepciemasterinternalport1_source_payload_user_id <= litepcieendpoint_master_in_source_payload_user_id;
+        end
+        default: begin
+            litepcieendpoint_master_in_source_ready <= 1'd1;
         end
     endcase
 end
+assign litepcieendpoint_dispatcher0_last = ((litepcieendpoint_master_in_source_valid & litepcieendpoint_master_in_source_last) & litepcieendpoint_master_in_source_ready);
+assign litepcieendpoint_dispatcher0_ongoing0 = ((litepcieendpoint_master_in_source_valid | litepcieendpoint_dispatcher0_ongoing1) & (~litepcieendpoint_dispatcher0_last));
+assign litepcieendpoint_sink_valid = pcie_dma_litepciemasterinternalport0_sink_valid;
+assign pcie_dma_litepciemasterinternalport0_sink_ready = litepcieendpoint_sink_ready;
+assign litepcieendpoint_sink_first = pcie_dma_litepciemasterinternalport0_sink_first;
+assign litepcieendpoint_sink_last = pcie_dma_litepciemasterinternalport0_sink_last;
+assign litepcieendpoint_sink_payload_req_id = pcie_dma_litepciemasterinternalport0_sink_payload_req_id;
+assign litepcieendpoint_sink_payload_we = pcie_dma_litepciemasterinternalport0_sink_payload_we;
+assign litepcieendpoint_sink_payload_adr = pcie_dma_litepciemasterinternalport0_sink_payload_adr;
+assign litepcieendpoint_sink_payload_len = pcie_dma_litepciemasterinternalport0_sink_payload_len;
+assign litepcieendpoint_sink_payload_tag = pcie_dma_litepciemasterinternalport0_sink_payload_tag;
+assign litepcieendpoint_sink_payload_dat = pcie_dma_litepciemasterinternalport0_sink_payload_dat;
+assign litepcieendpoint_sink_payload_channel = pcie_dma_litepciemasterinternalport0_sink_payload_channel;
+assign litepcieendpoint_sink_payload_user_id = pcie_dma_litepciemasterinternalport0_sink_payload_user_id;
 always @(*) begin
-    litepciecore_litepcieendpoint_status0_last <= 1'd0;
-    if (litepciecore_litepcieendpoint_master_out_sink_valid) begin
-        litepciecore_litepcieendpoint_status0_last <= (litepciecore_litepcieendpoint_master_out_sink_last & litepciecore_litepcieendpoint_master_out_sink_ready);
+    litepcieendpoint_dispatcher1_sel1 <= 1'd0;
+    if (litepcieendpoint_dispatcher1_first) begin
+        litepcieendpoint_dispatcher1_sel1 <= litepcieendpoint_dispatcher1_sel0;
+    end else begin
+        litepcieendpoint_dispatcher1_sel1 <= litepcieendpoint_dispatcher1_sel_ongoing;
     end
 end
-assign litepciecore_litepcieendpoint_status0_ongoing0 = ((litepciecore_litepcieendpoint_master_out_sink_valid | litepciecore_litepcieendpoint_status0_ongoing1) & (~litepciecore_litepcieendpoint_status0_last));
 always @(*) begin
-    litepciecore_litepcieendpoint_status1_last <= 1'd0;
-    if (litepciecore_litepcieendpoint_sink_valid) begin
-        litepciecore_litepcieendpoint_status1_last <= (litepciecore_litepcieendpoint_sink_last & litepciecore_litepcieendpoint_sink_ready);
-    end
+    litepcieendpoint_source_ready <= 1'd0;
+    pcie_dma_litepciemasterinternalport0_source_first <= 1'd0;
+    pcie_dma_litepciemasterinternalport0_source_last <= 1'd0;
+    pcie_dma_litepciemasterinternalport0_source_payload_adr <= 32'd0;
+    pcie_dma_litepciemasterinternalport0_source_payload_channel <= 8'd0;
+    pcie_dma_litepciemasterinternalport0_source_payload_cmp_id <= 16'd0;
+    pcie_dma_litepciemasterinternalport0_source_payload_dat <= 128'd0;
+    pcie_dma_litepciemasterinternalport0_source_payload_end <= 1'd0;
+    pcie_dma_litepciemasterinternalport0_source_payload_err <= 1'd0;
+    pcie_dma_litepciemasterinternalport0_source_payload_len <= 10'd0;
+    pcie_dma_litepciemasterinternalport0_source_payload_req_id <= 16'd0;
+    pcie_dma_litepciemasterinternalport0_source_payload_tag <= 8'd0;
+    pcie_dma_litepciemasterinternalport0_source_payload_user_id <= 8'd0;
+    pcie_dma_litepciemasterinternalport0_source_valid <= 1'd0;
+    case (litepcieendpoint_dispatcher1_sel1)
+        1'd1: begin
+            pcie_dma_litepciemasterinternalport0_source_valid <= litepcieendpoint_source_valid;
+            litepcieendpoint_source_ready <= pcie_dma_litepciemasterinternalport0_source_ready;
+            pcie_dma_litepciemasterinternalport0_source_first <= litepcieendpoint_source_first;
+            pcie_dma_litepciemasterinternalport0_source_last <= litepcieendpoint_source_last;
+            pcie_dma_litepciemasterinternalport0_source_payload_req_id <= litepcieendpoint_source_payload_req_id;
+            pcie_dma_litepciemasterinternalport0_source_payload_cmp_id <= litepcieendpoint_source_payload_cmp_id;
+            pcie_dma_litepciemasterinternalport0_source_payload_adr <= litepcieendpoint_source_payload_adr;
+            pcie_dma_litepciemasterinternalport0_source_payload_len <= litepcieendpoint_source_payload_len;
+            pcie_dma_litepciemasterinternalport0_source_payload_end <= litepcieendpoint_source_payload_end;
+            pcie_dma_litepciemasterinternalport0_source_payload_err <= litepcieendpoint_source_payload_err;
+            pcie_dma_litepciemasterinternalport0_source_payload_tag <= litepcieendpoint_source_payload_tag;
+            pcie_dma_litepciemasterinternalport0_source_payload_dat <= litepcieendpoint_source_payload_dat;
+            pcie_dma_litepciemasterinternalport0_source_payload_channel <= litepcieendpoint_source_payload_channel;
+            pcie_dma_litepciemasterinternalport0_source_payload_user_id <= litepcieendpoint_source_payload_user_id;
+        end
+        default: begin
+            litepcieendpoint_source_ready <= 1'd1;
+        end
+    endcase
 end
-assign litepciecore_litepcieendpoint_status1_ongoing0 = ((litepciecore_litepcieendpoint_sink_valid | litepciecore_litepcieendpoint_status1_ongoing1) & (~litepciecore_litepcieendpoint_status1_last));
+assign litepcieendpoint_dispatcher1_last = ((litepcieendpoint_source_valid & litepcieendpoint_source_last) & litepcieendpoint_source_ready);
+assign litepcieendpoint_dispatcher1_ongoing0 = ((litepcieendpoint_source_valid | litepcieendpoint_dispatcher1_ongoing1) & (~litepcieendpoint_dispatcher1_last));
 always @(*) begin
-    pcie_wishbone_master_wishbone_we <= 1'd0;
-    pcie_wishbone_master_source_ready <= 1'd0;
+    litepcieendpoint_request <= 2'd0;
+    litepcieendpoint_request[0] <= litepcieendpoint_status0_ongoing0;
+    litepcieendpoint_request[1] <= litepcieendpoint_status1_ongoing0;
+end
+always @(*) begin
+    litepcieendpoint_master_out_sink_ready <= 1'd0;
+    litepcieendpoint_sink_ready <= 1'd0;
+    master_sink_first <= 1'd0;
+    master_sink_last <= 1'd0;
+    master_sink_payload_adr <= 64'd0;
+    master_sink_payload_channel <= 8'd0;
+    master_sink_payload_dat <= 128'd0;
+    master_sink_payload_len <= 10'd0;
+    master_sink_payload_req_id <= 16'd0;
+    master_sink_payload_tag <= 8'd0;
+    master_sink_payload_user_id <= 8'd0;
+    master_sink_payload_we <= 1'd0;
+    master_sink_valid <= 1'd0;
+    case (litepcieendpoint_grant)
+        1'd0: begin
+            master_sink_valid <= litepcieendpoint_master_out_sink_valid;
+            litepcieendpoint_master_out_sink_ready <= master_sink_ready;
+            master_sink_first <= litepcieendpoint_master_out_sink_first;
+            master_sink_last <= litepcieendpoint_master_out_sink_last;
+            master_sink_payload_req_id <= litepcieendpoint_master_out_sink_payload_req_id;
+            master_sink_payload_we <= litepcieendpoint_master_out_sink_payload_we;
+            master_sink_payload_adr <= litepcieendpoint_master_out_sink_payload_adr;
+            master_sink_payload_len <= litepcieendpoint_master_out_sink_payload_len;
+            master_sink_payload_tag <= litepcieendpoint_master_out_sink_payload_tag;
+            master_sink_payload_dat <= litepcieendpoint_master_out_sink_payload_dat;
+            master_sink_payload_channel <= litepcieendpoint_master_out_sink_payload_channel;
+            master_sink_payload_user_id <= litepcieendpoint_master_out_sink_payload_user_id;
+        end
+        1'd1: begin
+            master_sink_valid <= litepcieendpoint_sink_valid;
+            litepcieendpoint_sink_ready <= master_sink_ready;
+            master_sink_first <= litepcieendpoint_sink_first;
+            master_sink_last <= litepcieendpoint_sink_last;
+            master_sink_payload_req_id <= litepcieendpoint_sink_payload_req_id;
+            master_sink_payload_we <= litepcieendpoint_sink_payload_we;
+            master_sink_payload_adr <= litepcieendpoint_sink_payload_adr;
+            master_sink_payload_len <= litepcieendpoint_sink_payload_len;
+            master_sink_payload_tag <= litepcieendpoint_sink_payload_tag;
+            master_sink_payload_dat <= litepcieendpoint_sink_payload_dat;
+            master_sink_payload_channel <= litepcieendpoint_sink_payload_channel;
+            master_sink_payload_user_id <= litepcieendpoint_sink_payload_user_id;
+        end
+    endcase
+end
+assign litepcieendpoint_status0_last = ((litepcieendpoint_master_out_sink_valid & litepcieendpoint_master_out_sink_last) & litepcieendpoint_master_out_sink_ready);
+assign litepcieendpoint_status0_ongoing0 = ((litepcieendpoint_master_out_sink_valid | litepcieendpoint_status0_ongoing1) & (~litepcieendpoint_status0_last));
+assign litepcieendpoint_status1_last = ((litepcieendpoint_sink_valid & litepcieendpoint_sink_last) & litepcieendpoint_sink_ready);
+assign litepcieendpoint_status1_ongoing0 = ((litepcieendpoint_sink_valid | litepcieendpoint_status1_ongoing1) & (~litepcieendpoint_status1_last));
+always @(*) begin
+    litepciewishbonemaster_next_state <= 2'd0;
     pcie_wishbone_master_sink_valid <= 1'd0;
-    litepciecore_litepciewishbonemaster_next_state <= 2'd0;
-    pcie_wishbone_master_wishbone_cyc <= 1'd0;
+    pcie_wishbone_master_source_ready <= 1'd0;
     pcie_wishbone_master_update_dat <= 1'd0;
+    pcie_wishbone_master_wishbone_cyc <= 1'd0;
     pcie_wishbone_master_wishbone_stb <= 1'd0;
-    litepciecore_litepciewishbonemaster_next_state <= litepciecore_litepciewishbonemaster_state;
-    case (litepciecore_litepciewishbonemaster_state)
+    pcie_wishbone_master_wishbone_we <= 1'd0;
+    litepciewishbonemaster_next_state <= litepciewishbonemaster_state;
+    case (litepciewishbonemaster_state)
         1'd1: begin
             pcie_wishbone_master_wishbone_stb <= 1'd1;
             pcie_wishbone_master_wishbone_we <= 1'd1;
             pcie_wishbone_master_wishbone_cyc <= 1'd1;
             if (pcie_wishbone_master_wishbone_ack) begin
                 pcie_wishbone_master_source_ready <= 1'd1;
-                litepciecore_litepciewishbonemaster_next_state <= 1'd0;
+                litepciewishbonemaster_next_state <= 1'd0;
             end
         end
         2'd2: begin
@@ -4327,22 +4837,22 @@ always @(*) begin
             pcie_wishbone_master_wishbone_cyc <= 1'd1;
             if (pcie_wishbone_master_wishbone_ack) begin
                 pcie_wishbone_master_update_dat <= 1'd1;
-                litepciecore_litepciewishbonemaster_next_state <= 2'd3;
+                litepciewishbonemaster_next_state <= 2'd3;
             end
         end
         2'd3: begin
             pcie_wishbone_master_sink_valid <= 1'd1;
             if (pcie_wishbone_master_sink_ready) begin
                 pcie_wishbone_master_source_ready <= 1'd1;
-                litepciecore_litepciewishbonemaster_next_state <= 1'd0;
+                litepciewishbonemaster_next_state <= 1'd0;
             end
         end
         default: begin
             if ((pcie_wishbone_master_source_valid & pcie_wishbone_master_source_first)) begin
                 if (pcie_wishbone_master_source_payload_we) begin
-                    litepciecore_litepciewishbonemaster_next_state <= 1'd1;
+                    litepciewishbonemaster_next_state <= 1'd1;
                 end else begin
-                    litepciecore_litepciewishbonemaster_next_state <= 2'd2;
+                    litepciewishbonemaster_next_state <= 2'd2;
                 end
             end else begin
                 pcie_wishbone_master_source_ready <= 1'd1;
@@ -4350,621 +4860,651 @@ always @(*) begin
         end
     endcase
 end
-assign buffering_sink_sink_valid = reader_source_source_valid;
-assign reader_source_source_ready = buffering_sink_sink_ready;
-assign buffering_sink_sink_first = reader_source_source_first;
-assign buffering_sink_sink_last = reader_source_source_last;
-assign buffering_sink_sink_payload_data = reader_source_source_payload_data;
-assign writer_sink_sink_valid = buffering_source_source_valid;
-assign buffering_source_source_ready = writer_sink_sink_ready;
-assign writer_sink_sink_first = buffering_source_source_first;
-assign writer_sink_sink_last = buffering_source_source_last;
-assign writer_sink_sink_payload_data = buffering_source_source_payload_data;
-assign buffering_next_sink_valid = bufferizeendpoints0_source_source_valid;
-assign bufferizeendpoints0_source_source_ready = buffering_next_sink_ready;
-assign buffering_next_sink_first = bufferizeendpoints0_source_source_first;
-assign buffering_next_sink_last = bufferizeendpoints0_source_source_last;
-assign buffering_next_sink_payload_data = bufferizeendpoints0_source_source_payload_data;
-assign bufferizeendpoints1_sink_sink_valid = buffering_next_source_valid;
-assign buffering_next_source_ready = bufferizeendpoints1_sink_sink_ready;
-assign bufferizeendpoints1_sink_sink_first = buffering_next_source_first;
-assign bufferizeendpoints1_sink_sink_last = buffering_next_source_last;
-assign bufferizeendpoints1_sink_sink_payload_data = buffering_next_source_payload_data;
-assign writer_splitter_sink_valid = writer_table_source_source_valid;
-assign writer_table_source_source_ready = writer_splitter_sink_ready;
-assign writer_splitter_sink_first = writer_table_source_source_first;
-assign writer_splitter_sink_last = writer_table_source_source_last;
-assign writer_splitter_sink_payload_address = writer_table_source_source_payload_address;
-assign writer_splitter_sink_payload_length = writer_table_source_source_payload_length;
-assign writer_splitter_sink_payload_irq_disable = writer_table_source_source_payload_irq_disable;
-assign writer_splitter_sink_payload_last_disable = writer_table_source_source_payload_last_disable;
+assign pcie_dma_writer_sink_sink_valid = pcie_dma_sink_valid;
+assign pcie_dma_sink_ready = pcie_dma_writer_sink_sink_ready;
+assign pcie_dma_writer_sink_sink_first = pcie_dma_sink_first;
+assign pcie_dma_writer_sink_sink_last = pcie_dma_sink_last;
+assign pcie_dma_writer_sink_sink_payload_data = pcie_dma_sink_payload_data;
+assign pcie_dma_source_valid = pcie_dma_reader_source_source_valid;
+assign pcie_dma_reader_source_source_ready = pcie_dma_source_ready;
+assign pcie_dma_source_first = pcie_dma_reader_source_source_first;
+assign pcie_dma_source_last = pcie_dma_reader_source_source_last;
+assign pcie_dma_source_payload_data = pcie_dma_reader_source_source_payload_data;
+assign pcie_dma_buffering_sink_sink_valid = pcie_dma_source_valid;
+assign pcie_dma_source_ready = pcie_dma_buffering_sink_sink_ready;
+assign pcie_dma_buffering_sink_sink_first = pcie_dma_source_first;
+assign pcie_dma_buffering_sink_sink_last = pcie_dma_source_last;
+assign pcie_dma_buffering_sink_sink_payload_data = pcie_dma_source_payload_data;
+assign pcie_dma_sink_valid = pcie_dma_buffering_source_source_valid;
+assign pcie_dma_buffering_source_source_ready = pcie_dma_sink_ready;
+assign pcie_dma_sink_first = pcie_dma_buffering_source_source_first;
+assign pcie_dma_sink_last = pcie_dma_buffering_source_source_last;
+assign pcie_dma_sink_payload_data = pcie_dma_buffering_source_source_payload_data;
+assign pcie_dma_buffering_next_sink_valid = pcie_dma_bufferizeendpoints0_source_source_valid;
+assign pcie_dma_bufferizeendpoints0_source_source_ready = pcie_dma_buffering_next_sink_ready;
+assign pcie_dma_buffering_next_sink_first = pcie_dma_bufferizeendpoints0_source_source_first;
+assign pcie_dma_buffering_next_sink_last = pcie_dma_bufferizeendpoints0_source_source_last;
+assign pcie_dma_buffering_next_sink_payload_data = pcie_dma_bufferizeendpoints0_source_source_payload_data;
+assign pcie_dma_bufferizeendpoints1_sink_sink_valid = pcie_dma_buffering_next_source_valid;
+assign pcie_dma_buffering_next_source_ready = pcie_dma_bufferizeendpoints1_sink_sink_ready;
+assign pcie_dma_bufferizeendpoints1_sink_sink_first = pcie_dma_buffering_next_source_first;
+assign pcie_dma_bufferizeendpoints1_sink_sink_last = pcie_dma_buffering_next_source_last;
+assign pcie_dma_bufferizeendpoints1_sink_sink_payload_data = pcie_dma_buffering_next_source_payload_data;
+assign pcie_dma_writer_splitter_sink_valid = pcie_dma_writer_table_source_source_valid;
+assign pcie_dma_writer_table_source_source_ready = pcie_dma_writer_splitter_sink_ready;
+assign pcie_dma_writer_splitter_sink_first = pcie_dma_writer_table_source_source_first;
+assign pcie_dma_writer_splitter_sink_last = pcie_dma_writer_table_source_source_last;
+assign pcie_dma_writer_splitter_sink_payload_address = pcie_dma_writer_table_source_source_payload_address;
+assign pcie_dma_writer_splitter_sink_payload_length = pcie_dma_writer_table_source_source_payload_length;
+assign pcie_dma_writer_splitter_sink_payload_irq_disable = pcie_dma_writer_table_source_source_payload_irq_disable;
+assign pcie_dma_writer_splitter_sink_payload_last_disable = pcie_dma_writer_table_source_source_payload_last_disable;
+assign pcie_dma_writer_data_conv_converter_sink_valid = pcie_dma_writer_sink_sink_valid;
+assign pcie_dma_writer_sink_sink_ready = pcie_dma_writer_data_conv_converter_sink_ready;
+assign pcie_dma_writer_data_conv_converter_sink_first = pcie_dma_writer_sink_sink_first;
+assign pcie_dma_writer_data_conv_converter_sink_last = pcie_dma_writer_sink_sink_last;
+assign pcie_dma_writer_data_conv_converter_sink_payload_data = pcie_dma_writer_sink_sink_payload_data;
 always @(*) begin
-    writer_data_fifo_sink_valid <= 1'd0;
-    writer_sink_sink_ready <= 1'd0;
-    writer_data_fifo_sink_first <= 1'd0;
-    writer_data_fifo_sink_last <= 1'd0;
-    writer_data_fifo_sink_payload_data <= 128'd0;
-    writer_sink_sink_ready <= 1'd1;
-    if (writer_enable_storage) begin
-        writer_data_fifo_sink_valid <= writer_sink_sink_valid;
-        writer_sink_sink_ready <= writer_data_fifo_sink_ready;
-        writer_data_fifo_sink_first <= writer_sink_sink_first;
-        writer_data_fifo_sink_last <= writer_sink_sink_last;
-        writer_data_fifo_sink_payload_data <= writer_sink_sink_payload_data;
+    pcie_dma_writer_data_conv_source_source_ready <= 1'd0;
+    pcie_dma_writer_data_fifo_sink_first <= 1'd0;
+    pcie_dma_writer_data_fifo_sink_last <= 1'd0;
+    pcie_dma_writer_data_fifo_sink_payload_data <= 128'd0;
+    pcie_dma_writer_data_fifo_sink_valid <= 1'd0;
+    pcie_dma_writer_data_conv_source_source_ready <= 1'd1;
+    if (pcie_dma_writer_enable_storage[0]) begin
+        pcie_dma_writer_data_fifo_sink_valid <= pcie_dma_writer_data_conv_source_source_valid;
+        pcie_dma_writer_data_conv_source_source_ready <= pcie_dma_writer_data_fifo_sink_ready;
+        pcie_dma_writer_data_fifo_sink_first <= pcie_dma_writer_data_conv_source_source_first;
+        pcie_dma_writer_data_fifo_sink_last <= pcie_dma_writer_data_conv_source_source_last;
+        pcie_dma_writer_data_fifo_sink_payload_data <= pcie_dma_writer_data_conv_source_source_payload_data;
     end
 end
-assign litepciemasterinternalport0_sink_payload_channel = 1'd0;
-assign litepciemasterinternalport0_sink_payload_user_id = writer_splitter_source_source_payload_user_id;
-assign litepciemasterinternalport0_sink_first = (writer_req_count == 1'd0);
-assign litepciemasterinternalport0_sink_last = (writer_req_count == (writer_splitter_source_source_payload_length[23:4] - 1'd1));
-assign litepciemasterinternalport0_sink_payload_we = 1'd1;
-assign litepciemasterinternalport0_sink_payload_adr = writer_splitter_source_source_payload_address;
-assign litepciemasterinternalport0_sink_payload_req_id = s7pciephy_id;
-assign litepciemasterinternalport0_sink_payload_tag = 1'd0;
-assign litepciemasterinternalport0_sink_payload_len = writer_splitter_source_source_payload_length[23:2];
-assign litepciemasterinternalport0_sink_payload_dat = writer_data_fifo_source_payload_data;
-assign writer_splitter_terminate = (writer_data_fifo_source_last & (~writer_splitter_source_source_payload_last_disable));
+assign pcie_dma_litepciemasterinternalport0_sink_payload_channel = 1'd0;
+assign pcie_dma_litepciemasterinternalport0_sink_payload_user_id = pcie_dma_writer_splitter_source_payload_user_id;
+assign pcie_dma_litepciemasterinternalport0_sink_first = (pcie_dma_writer_req_count == 1'd0);
+assign pcie_dma_litepciemasterinternalport0_sink_last = (pcie_dma_writer_req_count == (pcie_dma_writer_splitter_source_payload_length[23:4] - 1'd1));
+assign pcie_dma_litepciemasterinternalport0_sink_payload_we = 1'd1;
+assign pcie_dma_litepciemasterinternalport0_sink_payload_adr = pcie_dma_writer_splitter_source_payload_address;
+assign pcie_dma_litepciemasterinternalport0_sink_payload_req_id = s7pciephy_id;
+assign pcie_dma_litepciemasterinternalport0_sink_payload_tag = 1'd0;
+assign pcie_dma_litepciemasterinternalport0_sink_payload_len = pcie_dma_writer_splitter_source_payload_length[23:2];
+assign pcie_dma_litepciemasterinternalport0_sink_payload_dat = pcie_dma_writer_data_fifo_source_payload_data;
+assign pcie_dma_writer_splitter_terminate = (pcie_dma_writer_data_fifo_source_last & (~pcie_dma_writer_splitter_source_payload_last_disable));
 always @(*) begin
-    writer_irq <= 1'd0;
-    if (((writer_splitter_source_source_valid & writer_splitter_source_source_ready) & writer_splitter_source_source_last)) begin
-        writer_irq <= (~writer_splitter_source_source_payload_irq_disable);
+    pcie_dma_writer_irq <= 1'd0;
+    if (((pcie_dma_writer_splitter_source_valid & pcie_dma_writer_splitter_source_ready) & pcie_dma_writer_splitter_source_last)) begin
+        pcie_dma_writer_irq <= (~pcie_dma_writer_splitter_source_payload_irq_disable);
     end
 end
-assign writer_table_table_reset = (writer_table_reset_storage & writer_table_reset_re);
-assign writer_table_level_status = writer_table_table_level;
-assign writer_table_source_source_valid = writer_table_table_source_valid;
-assign writer_table_table_source_ready = writer_table_source_source_ready;
-assign writer_table_source_source_first = writer_table_table_source_first;
-assign writer_table_source_source_last = writer_table_table_source_last;
-assign writer_table_source_source_payload_address = writer_table_table_source_payload_address;
-assign writer_table_source_source_payload_length = writer_table_table_source_payload_length;
-assign writer_table_source_source_payload_irq_disable = writer_table_table_source_payload_irq_disable;
-assign writer_table_source_source_payload_last_disable = writer_table_table_source_payload_last_disable;
-assign writer_table_table_syncfifo_din = {writer_table_table_fifo_in_last, writer_table_table_fifo_in_first, writer_table_table_fifo_in_payload_last_disable, writer_table_table_fifo_in_payload_irq_disable, writer_table_table_fifo_in_payload_length, writer_table_table_fifo_in_payload_address};
-assign {writer_table_table_fifo_out_last, writer_table_table_fifo_out_first, writer_table_table_fifo_out_payload_last_disable, writer_table_table_fifo_out_payload_irq_disable, writer_table_table_fifo_out_payload_length, writer_table_table_fifo_out_payload_address} = writer_table_table_syncfifo_dout;
-assign writer_table_table_sink_ready = writer_table_table_syncfifo_writable;
-assign writer_table_table_syncfifo_we = writer_table_table_sink_valid;
-assign writer_table_table_fifo_in_first = writer_table_table_sink_first;
-assign writer_table_table_fifo_in_last = writer_table_table_sink_last;
-assign writer_table_table_fifo_in_payload_address = writer_table_table_sink_payload_address;
-assign writer_table_table_fifo_in_payload_length = writer_table_table_sink_payload_length;
-assign writer_table_table_fifo_in_payload_irq_disable = writer_table_table_sink_payload_irq_disable;
-assign writer_table_table_fifo_in_payload_last_disable = writer_table_table_sink_payload_last_disable;
-assign writer_table_table_source_valid = writer_table_table_syncfifo_readable;
-assign writer_table_table_source_first = writer_table_table_fifo_out_first;
-assign writer_table_table_source_last = writer_table_table_fifo_out_last;
-assign writer_table_table_source_payload_address = writer_table_table_fifo_out_payload_address;
-assign writer_table_table_source_payload_length = writer_table_table_fifo_out_payload_length;
-assign writer_table_table_source_payload_irq_disable = writer_table_table_fifo_out_payload_irq_disable;
-assign writer_table_table_source_payload_last_disable = writer_table_table_fifo_out_payload_last_disable;
-assign writer_table_table_syncfifo_re = writer_table_table_source_ready;
+assign pcie_dma_writer_table_table_reset = (pcie_dma_writer_table_reset_storage & pcie_dma_writer_table_reset_re);
+assign pcie_dma_writer_table_level_status = pcie_dma_writer_table_table_level;
+assign pcie_dma_writer_table_source_source_valid = pcie_dma_writer_table_table_source_valid;
+assign pcie_dma_writer_table_table_source_ready = pcie_dma_writer_table_source_source_ready;
+assign pcie_dma_writer_table_source_source_first = pcie_dma_writer_table_table_source_first;
+assign pcie_dma_writer_table_source_source_last = pcie_dma_writer_table_table_source_last;
+assign pcie_dma_writer_table_source_source_payload_address = pcie_dma_writer_table_table_source_payload_address;
+assign pcie_dma_writer_table_source_source_payload_length = pcie_dma_writer_table_table_source_payload_length;
+assign pcie_dma_writer_table_source_source_payload_irq_disable = pcie_dma_writer_table_table_source_payload_irq_disable;
+assign pcie_dma_writer_table_source_source_payload_last_disable = pcie_dma_writer_table_table_source_payload_last_disable;
+assign pcie_dma_writer_table_table_syncfifo_din = {pcie_dma_writer_table_table_fifo_in_last, pcie_dma_writer_table_table_fifo_in_first, pcie_dma_writer_table_table_fifo_in_payload_last_disable, pcie_dma_writer_table_table_fifo_in_payload_irq_disable, pcie_dma_writer_table_table_fifo_in_payload_length, pcie_dma_writer_table_table_fifo_in_payload_address};
+assign {pcie_dma_writer_table_table_fifo_out_last, pcie_dma_writer_table_table_fifo_out_first, pcie_dma_writer_table_table_fifo_out_payload_last_disable, pcie_dma_writer_table_table_fifo_out_payload_irq_disable, pcie_dma_writer_table_table_fifo_out_payload_length, pcie_dma_writer_table_table_fifo_out_payload_address} = pcie_dma_writer_table_table_syncfifo_dout;
+assign pcie_dma_writer_table_table_sink_ready = pcie_dma_writer_table_table_syncfifo_writable;
+assign pcie_dma_writer_table_table_syncfifo_we = pcie_dma_writer_table_table_sink_valid;
+assign pcie_dma_writer_table_table_fifo_in_first = pcie_dma_writer_table_table_sink_first;
+assign pcie_dma_writer_table_table_fifo_in_last = pcie_dma_writer_table_table_sink_last;
+assign pcie_dma_writer_table_table_fifo_in_payload_address = pcie_dma_writer_table_table_sink_payload_address;
+assign pcie_dma_writer_table_table_fifo_in_payload_length = pcie_dma_writer_table_table_sink_payload_length;
+assign pcie_dma_writer_table_table_fifo_in_payload_irq_disable = pcie_dma_writer_table_table_sink_payload_irq_disable;
+assign pcie_dma_writer_table_table_fifo_in_payload_last_disable = pcie_dma_writer_table_table_sink_payload_last_disable;
+assign pcie_dma_writer_table_table_source_valid = pcie_dma_writer_table_table_syncfifo_readable;
+assign pcie_dma_writer_table_table_source_first = pcie_dma_writer_table_table_fifo_out_first;
+assign pcie_dma_writer_table_table_source_last = pcie_dma_writer_table_table_fifo_out_last;
+assign pcie_dma_writer_table_table_source_payload_address = pcie_dma_writer_table_table_fifo_out_payload_address;
+assign pcie_dma_writer_table_table_source_payload_length = pcie_dma_writer_table_table_fifo_out_payload_length;
+assign pcie_dma_writer_table_table_source_payload_irq_disable = pcie_dma_writer_table_table_fifo_out_payload_irq_disable;
+assign pcie_dma_writer_table_table_source_payload_last_disable = pcie_dma_writer_table_table_fifo_out_payload_last_disable;
+assign pcie_dma_writer_table_table_syncfifo_re = pcie_dma_writer_table_table_source_ready;
 always @(*) begin
-    writer_table_table_wrport_adr <= 8'd0;
-    if (writer_table_table_replace) begin
-        writer_table_table_wrport_adr <= (writer_table_table_produce - 1'd1);
+    pcie_dma_writer_table_table_wrport_adr <= 8'd0;
+    if (pcie_dma_writer_table_table_replace) begin
+        pcie_dma_writer_table_table_wrport_adr <= (pcie_dma_writer_table_table_produce - 1'd1);
     end else begin
-        writer_table_table_wrport_adr <= writer_table_table_produce;
+        pcie_dma_writer_table_table_wrport_adr <= pcie_dma_writer_table_table_produce;
     end
 end
-assign writer_table_table_wrport_dat_w = writer_table_table_syncfifo_din;
-assign writer_table_table_wrport_we = (writer_table_table_syncfifo_we & (writer_table_table_syncfifo_writable | writer_table_table_replace));
-assign writer_table_table_do_read = (writer_table_table_syncfifo_readable & writer_table_table_syncfifo_re);
-assign writer_table_table_rdport_adr = writer_table_table_consume;
-assign writer_table_table_syncfifo_dout = writer_table_table_rdport_dat_r;
-assign writer_table_table_syncfifo_writable = (writer_table_table_level != 9'd256);
-assign writer_table_table_syncfifo_readable = (writer_table_table_level != 1'd0);
-assign writer_splitter_source_payload_address = (writer_splitter_sink_payload_address + writer_splitter_desc_offset);
-assign writer_splitter_source_payload_irq_disable = writer_splitter_sink_payload_irq_disable;
-assign writer_splitter_source_payload_last_disable = writer_splitter_sink_payload_last_disable;
-assign writer_splitter_source_payload_user_id = writer_splitter_desc_id;
-assign writer_splitter_sink_sink_valid = writer_splitter_source_valid;
-assign writer_splitter_source_ready = writer_splitter_sink_sink_ready;
-assign writer_splitter_sink_sink_first = writer_splitter_source_first;
-assign writer_splitter_sink_sink_last = writer_splitter_source_last;
-assign writer_splitter_sink_sink_payload_address = writer_splitter_source_payload_address;
-assign writer_splitter_sink_sink_payload_length = writer_splitter_source_payload_length;
-assign writer_splitter_sink_sink_payload_irq_disable = writer_splitter_source_payload_irq_disable;
-assign writer_splitter_sink_sink_payload_last_disable = writer_splitter_source_payload_last_disable;
-assign writer_splitter_sink_sink_payload_user_id = writer_splitter_source_payload_user_id;
+assign pcie_dma_writer_table_table_wrport_dat_w = pcie_dma_writer_table_table_syncfifo_din;
+assign pcie_dma_writer_table_table_wrport_we = (pcie_dma_writer_table_table_syncfifo_we & (pcie_dma_writer_table_table_syncfifo_writable | pcie_dma_writer_table_table_replace));
+assign pcie_dma_writer_table_table_do_read = (pcie_dma_writer_table_table_syncfifo_readable & pcie_dma_writer_table_table_syncfifo_re);
+assign pcie_dma_writer_table_table_rdport_adr = pcie_dma_writer_table_table_consume;
+assign pcie_dma_writer_table_table_syncfifo_dout = pcie_dma_writer_table_table_rdport_dat_r;
+assign pcie_dma_writer_table_table_syncfifo_writable = (pcie_dma_writer_table_table_level != 9'd256);
+assign pcie_dma_writer_table_table_syncfifo_readable = (pcie_dma_writer_table_table_level != 1'd0);
+assign pcie_dma_writer_splitter_source_payload_irq_disable = pcie_dma_writer_splitter_sink_payload_irq_disable;
+assign pcie_dma_writer_splitter_source_payload_last_disable = pcie_dma_writer_splitter_sink_payload_last_disable;
 always @(*) begin
-    writer_splitter_desc_length_bufferizeendpoints_next_value1 <= 32'd0;
-    writer_splitter_source_valid <= 1'd0;
-    writer_splitter_desc_length_bufferizeendpoints_next_value_ce1 <= 1'd0;
-    writer_splitter_source_first <= 1'd0;
-    writer_splitter_source_last <= 1'd0;
-    writer_splitter_desc_id_bufferizeendpoints_next_value2 <= 32'd0;
-    writer_splitter_source_payload_length <= 24'd0;
-    writer_splitter_desc_id_bufferizeendpoints_next_value_ce2 <= 1'd0;
-    writer_splitter_sink_ready <= 1'd0;
-    litepciecore_litepciedmawriter_bufferizeendpoints_next_state <= 1'd0;
-    writer_splitter_desc_offset_bufferizeendpoints_next_value0 <= 32'd0;
-    writer_splitter_desc_offset_bufferizeendpoints_next_value_ce0 <= 1'd0;
-    litepciecore_litepciedmawriter_bufferizeendpoints_next_state <= litepciecore_litepciedmawriter_bufferizeendpoints_state;
-    case (litepciecore_litepciedmawriter_bufferizeendpoints_state)
+    litepciedmawriter_resetinserter_next_state <= 1'd0;
+    pcie_dma_writer_splitter_length_next <= 24'd0;
+    pcie_dma_writer_splitter_length_resetinserter_next_value3 <= 24'd0;
+    pcie_dma_writer_splitter_length_resetinserter_next_value_ce3 <= 1'd0;
+    pcie_dma_writer_splitter_sink_ready <= 1'd0;
+    pcie_dma_writer_splitter_source_first_resetinserter_next_value0 <= 1'd0;
+    pcie_dma_writer_splitter_source_first_resetinserter_next_value_ce0 <= 1'd0;
+    pcie_dma_writer_splitter_source_last_resetinserter_next_value1 <= 1'd0;
+    pcie_dma_writer_splitter_source_last_resetinserter_next_value_ce1 <= 1'd0;
+    pcie_dma_writer_splitter_source_payload_address_resetinserter_next_value2 <= 64'd0;
+    pcie_dma_writer_splitter_source_payload_address_resetinserter_next_value_ce2 <= 1'd0;
+    pcie_dma_writer_splitter_source_payload_length_resetinserter_next_value4 <= 24'd0;
+    pcie_dma_writer_splitter_source_payload_length_resetinserter_next_value_ce4 <= 1'd0;
+    pcie_dma_writer_splitter_source_payload_user_id_resetinserter_next_value5 <= 8'd0;
+    pcie_dma_writer_splitter_source_payload_user_id_resetinserter_next_value_ce5 <= 1'd0;
+    pcie_dma_writer_splitter_source_valid <= 1'd0;
+    litepciedmawriter_resetinserter_next_state <= litepciedmawriter_resetinserter_state;
+    case (litepciedmawriter_resetinserter_state)
         1'd1: begin
-            writer_splitter_source_valid <= 1'd1;
-            writer_splitter_source_first <= (writer_splitter_desc_offset == 1'd0);
-            if ((writer_splitter_desc_length > s7pciephy_max_payload_size)) begin
-                writer_splitter_source_last <= writer_splitter_terminate;
-                writer_splitter_source_payload_length <= s7pciephy_max_payload_size;
+            pcie_dma_writer_splitter_source_valid <= 1'd1;
+            if (pcie_dma_writer_splitter_source_ready) begin
+                pcie_dma_writer_splitter_source_first_resetinserter_next_value0 <= 1'd0;
+                pcie_dma_writer_splitter_source_first_resetinserter_next_value_ce0 <= 1'd1;
+                pcie_dma_writer_splitter_source_payload_address_resetinserter_next_value2 <= (pcie_dma_writer_splitter_source_payload_address + s7pciephy_max_payload_size);
+                pcie_dma_writer_splitter_source_payload_address_resetinserter_next_value_ce2 <= 1'd1;
+                pcie_dma_writer_splitter_length_next <= (pcie_dma_writer_splitter_length - s7pciephy_max_payload_size);
+                pcie_dma_writer_splitter_length_resetinserter_next_value3 <= pcie_dma_writer_splitter_length_next;
+                pcie_dma_writer_splitter_length_resetinserter_next_value_ce3 <= 1'd1;
+                if ((pcie_dma_writer_splitter_length_next > s7pciephy_max_payload_size)) begin
+                    pcie_dma_writer_splitter_source_payload_length_resetinserter_next_value4 <= s7pciephy_max_payload_size;
+                    pcie_dma_writer_splitter_source_payload_length_resetinserter_next_value_ce4 <= 1'd1;
+                end else begin
+                    pcie_dma_writer_splitter_source_last_resetinserter_next_value1 <= 1'd1;
+                    pcie_dma_writer_splitter_source_last_resetinserter_next_value_ce1 <= 1'd1;
+                    pcie_dma_writer_splitter_source_payload_length_resetinserter_next_value4 <= pcie_dma_writer_splitter_length_next;
+                    pcie_dma_writer_splitter_source_payload_length_resetinserter_next_value_ce4 <= 1'd1;
+                end
+                if ((pcie_dma_writer_splitter_source_last | pcie_dma_writer_splitter_terminate)) begin
+                    pcie_dma_writer_splitter_sink_ready <= 1'd1;
+                    pcie_dma_writer_splitter_source_payload_user_id_resetinserter_next_value5 <= (pcie_dma_writer_splitter_source_payload_user_id + 1'd1);
+                    pcie_dma_writer_splitter_source_payload_user_id_resetinserter_next_value_ce5 <= 1'd1;
+                    litepciedmawriter_resetinserter_next_state <= 1'd0;
+                end
+            end
+        end
+        default: begin
+            pcie_dma_writer_splitter_source_first_resetinserter_next_value0 <= 1'd1;
+            pcie_dma_writer_splitter_source_first_resetinserter_next_value_ce0 <= 1'd1;
+            pcie_dma_writer_splitter_source_last_resetinserter_next_value1 <= 1'd0;
+            pcie_dma_writer_splitter_source_last_resetinserter_next_value_ce1 <= 1'd1;
+            pcie_dma_writer_splitter_source_payload_address_resetinserter_next_value2 <= pcie_dma_writer_splitter_sink_payload_address;
+            pcie_dma_writer_splitter_source_payload_address_resetinserter_next_value_ce2 <= 1'd1;
+            pcie_dma_writer_splitter_length_resetinserter_next_value3 <= pcie_dma_writer_splitter_sink_payload_length;
+            pcie_dma_writer_splitter_length_resetinserter_next_value_ce3 <= 1'd1;
+            if ((pcie_dma_writer_splitter_sink_payload_length > s7pciephy_max_payload_size)) begin
+                pcie_dma_writer_splitter_source_payload_length_resetinserter_next_value4 <= s7pciephy_max_payload_size;
+                pcie_dma_writer_splitter_source_payload_length_resetinserter_next_value_ce4 <= 1'd1;
             end else begin
-                writer_splitter_source_last <= 1'd1;
-                writer_splitter_source_payload_length <= writer_splitter_desc_length;
+                pcie_dma_writer_splitter_source_last_resetinserter_next_value1 <= 1'd1;
+                pcie_dma_writer_splitter_source_last_resetinserter_next_value_ce1 <= 1'd1;
+                pcie_dma_writer_splitter_source_payload_length_resetinserter_next_value4 <= pcie_dma_writer_splitter_sink_payload_length;
+                pcie_dma_writer_splitter_source_payload_length_resetinserter_next_value_ce4 <= 1'd1;
             end
-            if (writer_splitter_source_ready) begin
-                writer_splitter_desc_offset_bufferizeendpoints_next_value0 <= (writer_splitter_desc_offset + s7pciephy_max_payload_size);
-                writer_splitter_desc_offset_bufferizeendpoints_next_value_ce0 <= 1'd1;
-                writer_splitter_desc_length_bufferizeendpoints_next_value1 <= (writer_splitter_desc_length - s7pciephy_max_payload_size);
-                writer_splitter_desc_length_bufferizeendpoints_next_value_ce1 <= 1'd1;
-                if (writer_splitter_source_last) begin
-                    writer_splitter_sink_ready <= 1'd1;
-                    writer_splitter_desc_id_bufferizeendpoints_next_value2 <= (writer_splitter_desc_id + 1'd1);
-                    writer_splitter_desc_id_bufferizeendpoints_next_value_ce2 <= 1'd1;
-                    litepciecore_litepciedmawriter_bufferizeendpoints_next_state <= 1'd0;
-                end
-            end
-        end
-        default: begin
-            writer_splitter_desc_offset_bufferizeendpoints_next_value0 <= 1'd0;
-            writer_splitter_desc_offset_bufferizeendpoints_next_value_ce0 <= 1'd1;
-            writer_splitter_desc_length_bufferizeendpoints_next_value1 <= writer_splitter_sink_payload_length;
-            writer_splitter_desc_length_bufferizeendpoints_next_value_ce1 <= 1'd1;
-            if (writer_splitter_sink_valid) begin
-                litepciecore_litepciedmawriter_bufferizeendpoints_next_state <= 1'd1;
+            if (pcie_dma_writer_splitter_sink_valid) begin
+                litepciedmawriter_resetinserter_next_state <= 1'd1;
             end
         end
     endcase
 end
-assign writer_splitter_pipe_valid_sink_ready = ((~writer_splitter_pipe_valid_source_valid) | writer_splitter_pipe_valid_source_ready);
-assign writer_splitter_pipe_valid_sink_valid = writer_splitter_sink_sink_valid;
-assign writer_splitter_sink_sink_ready = writer_splitter_pipe_valid_sink_ready;
-assign writer_splitter_pipe_valid_sink_first = writer_splitter_sink_sink_first;
-assign writer_splitter_pipe_valid_sink_last = writer_splitter_sink_sink_last;
-assign writer_splitter_pipe_valid_sink_payload_address = writer_splitter_sink_sink_payload_address;
-assign writer_splitter_pipe_valid_sink_payload_length = writer_splitter_sink_sink_payload_length;
-assign writer_splitter_pipe_valid_sink_payload_irq_disable = writer_splitter_sink_sink_payload_irq_disable;
-assign writer_splitter_pipe_valid_sink_payload_last_disable = writer_splitter_sink_sink_payload_last_disable;
-assign writer_splitter_pipe_valid_sink_payload_user_id = writer_splitter_sink_sink_payload_user_id;
-assign writer_splitter_source_source_valid = writer_splitter_pipe_valid_source_valid;
-assign writer_splitter_pipe_valid_source_ready = writer_splitter_source_source_ready;
-assign writer_splitter_source_source_first = writer_splitter_pipe_valid_source_first;
-assign writer_splitter_source_source_last = writer_splitter_pipe_valid_source_last;
-assign writer_splitter_source_source_payload_address = writer_splitter_pipe_valid_source_payload_address;
-assign writer_splitter_source_source_payload_length = writer_splitter_pipe_valid_source_payload_length;
-assign writer_splitter_source_source_payload_irq_disable = writer_splitter_pipe_valid_source_payload_irq_disable;
-assign writer_splitter_source_source_payload_last_disable = writer_splitter_pipe_valid_source_payload_last_disable;
-assign writer_splitter_source_source_payload_user_id = writer_splitter_pipe_valid_source_payload_user_id;
-assign writer_data_fifo_syncfifo_din = {writer_data_fifo_fifo_in_last, writer_data_fifo_fifo_in_first, writer_data_fifo_fifo_in_payload_data};
-assign {writer_data_fifo_fifo_out_last, writer_data_fifo_fifo_out_first, writer_data_fifo_fifo_out_payload_data} = writer_data_fifo_syncfifo_dout;
-assign writer_data_fifo_sink_ready = writer_data_fifo_syncfifo_writable;
-assign writer_data_fifo_syncfifo_we = writer_data_fifo_sink_valid;
-assign writer_data_fifo_fifo_in_first = writer_data_fifo_sink_first;
-assign writer_data_fifo_fifo_in_last = writer_data_fifo_sink_last;
-assign writer_data_fifo_fifo_in_payload_data = writer_data_fifo_sink_payload_data;
-assign writer_data_fifo_source_valid = writer_data_fifo_readable;
-assign writer_data_fifo_source_first = writer_data_fifo_fifo_out_first;
-assign writer_data_fifo_source_last = writer_data_fifo_fifo_out_last;
-assign writer_data_fifo_source_payload_data = writer_data_fifo_fifo_out_payload_data;
-assign writer_data_fifo_re = writer_data_fifo_source_ready;
-assign writer_data_fifo_syncfifo_re = (writer_data_fifo_syncfifo_readable & ((~writer_data_fifo_readable) | writer_data_fifo_re));
-assign writer_data_fifo_level1 = (writer_data_fifo_level0 + writer_data_fifo_readable);
+assign pcie_dma_writer_data_conv_source_source_valid = pcie_dma_writer_data_conv_converter_source_valid;
+assign pcie_dma_writer_data_conv_converter_source_ready = pcie_dma_writer_data_conv_source_source_ready;
+assign pcie_dma_writer_data_conv_source_source_first = pcie_dma_writer_data_conv_converter_source_first;
+assign pcie_dma_writer_data_conv_source_source_last = pcie_dma_writer_data_conv_converter_source_last;
+assign pcie_dma_writer_data_conv_source_source_payload_data = pcie_dma_writer_data_conv_converter_source_payload_data;
+assign pcie_dma_writer_data_conv_converter_source_valid = pcie_dma_writer_data_conv_converter_sink_valid;
+assign pcie_dma_writer_data_conv_converter_sink_ready = pcie_dma_writer_data_conv_converter_source_ready;
+assign pcie_dma_writer_data_conv_converter_source_first = pcie_dma_writer_data_conv_converter_sink_first;
+assign pcie_dma_writer_data_conv_converter_source_last = pcie_dma_writer_data_conv_converter_sink_last;
+assign pcie_dma_writer_data_conv_converter_source_payload_data = pcie_dma_writer_data_conv_converter_sink_payload_data;
+assign pcie_dma_writer_data_conv_converter_source_payload_valid_token_count = 1'd1;
+assign pcie_dma_writer_data_fifo_syncfifo_din = {pcie_dma_writer_data_fifo_fifo_in_last, pcie_dma_writer_data_fifo_fifo_in_first, pcie_dma_writer_data_fifo_fifo_in_payload_data};
+assign {pcie_dma_writer_data_fifo_fifo_out_last, pcie_dma_writer_data_fifo_fifo_out_first, pcie_dma_writer_data_fifo_fifo_out_payload_data} = pcie_dma_writer_data_fifo_syncfifo_dout;
+assign pcie_dma_writer_data_fifo_sink_ready = pcie_dma_writer_data_fifo_syncfifo_writable;
+assign pcie_dma_writer_data_fifo_syncfifo_we = pcie_dma_writer_data_fifo_sink_valid;
+assign pcie_dma_writer_data_fifo_fifo_in_first = pcie_dma_writer_data_fifo_sink_first;
+assign pcie_dma_writer_data_fifo_fifo_in_last = pcie_dma_writer_data_fifo_sink_last;
+assign pcie_dma_writer_data_fifo_fifo_in_payload_data = pcie_dma_writer_data_fifo_sink_payload_data;
+assign pcie_dma_writer_data_fifo_source_valid = pcie_dma_writer_data_fifo_readable;
+assign pcie_dma_writer_data_fifo_source_first = pcie_dma_writer_data_fifo_fifo_out_first;
+assign pcie_dma_writer_data_fifo_source_last = pcie_dma_writer_data_fifo_fifo_out_last;
+assign pcie_dma_writer_data_fifo_source_payload_data = pcie_dma_writer_data_fifo_fifo_out_payload_data;
+assign pcie_dma_writer_data_fifo_re = pcie_dma_writer_data_fifo_source_ready;
+assign pcie_dma_writer_data_fifo_syncfifo_re = (pcie_dma_writer_data_fifo_syncfifo_readable & ((~pcie_dma_writer_data_fifo_readable) | pcie_dma_writer_data_fifo_re));
+assign pcie_dma_writer_data_fifo_level1 = (pcie_dma_writer_data_fifo_level0 + pcie_dma_writer_data_fifo_readable);
 always @(*) begin
-    writer_data_fifo_wrport_adr <= 7'd0;
-    if (writer_data_fifo_replace) begin
-        writer_data_fifo_wrport_adr <= (writer_data_fifo_produce - 1'd1);
+    pcie_dma_writer_data_fifo_wrport_adr <= 7'd0;
+    if (pcie_dma_writer_data_fifo_replace) begin
+        pcie_dma_writer_data_fifo_wrport_adr <= (pcie_dma_writer_data_fifo_produce - 1'd1);
     end else begin
-        writer_data_fifo_wrport_adr <= writer_data_fifo_produce;
+        pcie_dma_writer_data_fifo_wrport_adr <= pcie_dma_writer_data_fifo_produce;
     end
 end
-assign writer_data_fifo_wrport_dat_w = writer_data_fifo_syncfifo_din;
-assign writer_data_fifo_wrport_we = (writer_data_fifo_syncfifo_we & (writer_data_fifo_syncfifo_writable | writer_data_fifo_replace));
-assign writer_data_fifo_do_read = (writer_data_fifo_syncfifo_readable & writer_data_fifo_syncfifo_re);
-assign writer_data_fifo_rdport_adr = writer_data_fifo_consume;
-assign writer_data_fifo_syncfifo_dout = writer_data_fifo_rdport_dat_r;
-assign writer_data_fifo_rdport_re = writer_data_fifo_do_read;
-assign writer_data_fifo_syncfifo_writable = (writer_data_fifo_level0 != 8'd128);
-assign writer_data_fifo_syncfifo_readable = (writer_data_fifo_level0 != 1'd0);
+assign pcie_dma_writer_data_fifo_wrport_dat_w = pcie_dma_writer_data_fifo_syncfifo_din;
+assign pcie_dma_writer_data_fifo_wrport_we = (pcie_dma_writer_data_fifo_syncfifo_we & (pcie_dma_writer_data_fifo_syncfifo_writable | pcie_dma_writer_data_fifo_replace));
+assign pcie_dma_writer_data_fifo_do_read = (pcie_dma_writer_data_fifo_syncfifo_readable & pcie_dma_writer_data_fifo_syncfifo_re);
+assign pcie_dma_writer_data_fifo_rdport_adr = pcie_dma_writer_data_fifo_consume;
+assign pcie_dma_writer_data_fifo_syncfifo_dout = pcie_dma_writer_data_fifo_rdport_dat_r;
+assign pcie_dma_writer_data_fifo_rdport_re = pcie_dma_writer_data_fifo_do_read;
+assign pcie_dma_writer_data_fifo_syncfifo_writable = (pcie_dma_writer_data_fifo_level0 != 8'd128);
+assign pcie_dma_writer_data_fifo_syncfifo_readable = (pcie_dma_writer_data_fifo_level0 != 1'd0);
 always @(*) begin
-    writer_data_fifo_source_ready <= 1'd0;
-    writer_splitter_reset <= 1'd0;
-    writer_data_fifo_reset <= 1'd0;
-    litepciemasterinternalport0_sink_valid <= 1'd0;
-    writer_splitter_source_source_ready <= 1'd0;
-    litepciecore_litepciedmawriter_fsm_next_state <= 1'd0;
-    writer_req_count_fsm_next_value <= 24'd0;
-    writer_req_count_fsm_next_value_ce <= 1'd0;
-    litepciecore_litepciedmawriter_fsm_next_state <= litepciecore_litepciedmawriter_fsm_state;
-    case (litepciecore_litepciedmawriter_fsm_state)
+    litepciedmawriter_fsm_next_state <= 1'd0;
+    pcie_dma_litepciemasterinternalport0_sink_valid <= 1'd0;
+    pcie_dma_writer_data_fifo_reset <= 1'd0;
+    pcie_dma_writer_data_fifo_source_ready <= 1'd0;
+    pcie_dma_writer_is_ongoing <= 1'd0;
+    pcie_dma_writer_req_count_fsm_next_value <= 24'd0;
+    pcie_dma_writer_req_count_fsm_next_value_ce <= 1'd0;
+    pcie_dma_writer_splitter_reset <= 1'd0;
+    pcie_dma_writer_splitter_source_ready <= 1'd0;
+    litepciedmawriter_fsm_next_state <= litepciedmawriter_fsm_state;
+    case (litepciedmawriter_fsm_state)
         1'd1: begin
-            litepciemasterinternalport0_sink_valid <= 1'd1;
-            if (litepciemasterinternalport0_sink_ready) begin
-                writer_req_count_fsm_next_value <= (writer_req_count + 1'd1);
-                writer_req_count_fsm_next_value_ce <= 1'd1;
-                writer_data_fifo_source_ready <= (~writer_splitter_terminate);
-                if (litepciemasterinternalport0_sink_last) begin
-                    writer_splitter_source_source_ready <= 1'd1;
-                    writer_data_fifo_source_ready <= 1'd1;
-                    litepciecore_litepciedmawriter_fsm_next_state <= 1'd0;
+            pcie_dma_litepciemasterinternalport0_sink_valid <= 1'd1;
+            if (pcie_dma_litepciemasterinternalport0_sink_ready) begin
+                pcie_dma_writer_req_count_fsm_next_value <= (pcie_dma_writer_req_count + 1'd1);
+                pcie_dma_writer_req_count_fsm_next_value_ce <= 1'd1;
+                pcie_dma_writer_data_fifo_source_ready <= (~pcie_dma_writer_splitter_terminate);
+                if (pcie_dma_litepciemasterinternalport0_sink_last) begin
+                    pcie_dma_writer_splitter_source_ready <= 1'd1;
+                    pcie_dma_writer_data_fifo_source_ready <= 1'd1;
+                    litepciedmawriter_fsm_next_state <= 1'd0;
                 end
             end
         end
         default: begin
-            if ((~writer_enable_storage)) begin
-                writer_splitter_reset <= 1'd1;
-                writer_data_fifo_reset <= 1'd1;
-            end
-            writer_req_count_fsm_next_value <= 1'd0;
-            writer_req_count_fsm_next_value_ce <= 1'd1;
-            if ((writer_splitter_source_source_valid & (writer_data_fifo_level1 >= writer_splitter_source_source_payload_length[23:4]))) begin
-                litepciecore_litepciedmawriter_fsm_next_state <= 1'd1;
-            end
-        end
-    endcase
-end
-assign reader_splitter_sink_valid = reader_table_source_source_valid;
-assign reader_table_source_source_ready = reader_splitter_sink_ready;
-assign reader_splitter_sink_first = reader_table_source_source_first;
-assign reader_splitter_sink_last = reader_table_source_source_last;
-assign reader_splitter_sink_payload_address = reader_table_source_source_payload_address;
-assign reader_splitter_sink_payload_length = reader_table_source_source_payload_length;
-assign reader_splitter_sink_payload_irq_disable = reader_table_source_source_payload_irq_disable;
-assign reader_splitter_sink_payload_last_disable = reader_table_source_source_payload_last_disable;
-assign reader_source_source_valid = reader_data_fifo_source_valid;
-assign reader_data_fifo_source_ready = reader_source_source_ready;
-assign reader_source_source_first = reader_data_fifo_source_first;
-assign reader_source_source_last = reader_data_fifo_source_last;
-assign reader_source_source_payload_data = reader_data_fifo_source_payload_data;
-always @(*) begin
-    litepciemasterinternalport1_source_ready <= 1'd0;
-    reader_data_fifo_sink_payload_data <= 128'd0;
-    reader_data_fifo_sink_first <= 1'd0;
-    reader_data_fifo_sink_valid <= 1'd0;
-    if (reader_enable_storage) begin
-        reader_data_fifo_sink_valid <= litepciemasterinternalport1_source_valid;
-        litepciemasterinternalport1_source_ready <= reader_data_fifo_sink_ready;
-        reader_data_fifo_sink_payload_data <= litepciemasterinternalport1_source_payload_dat;
-        reader_data_fifo_sink_first <= (litepciemasterinternalport1_source_first & (litepciemasterinternalport1_source_payload_user_id != reader_last_user_id));
-    end else begin
-        litepciemasterinternalport1_source_ready <= 1'd1;
-    end
-end
-always @(*) begin
-    reader_pending_words_queue <= 10'd0;
-    if ((reader_splitter_source_source_valid & reader_splitter_source_source_ready)) begin
-        reader_pending_words_queue <= reader_splitter_source_source_payload_length[23:4];
-    end
-end
-always @(*) begin
-    reader_pending_words_dequeue <= 10'd0;
-    if ((reader_data_fifo_source_valid & reader_data_fifo_source_ready)) begin
-        reader_pending_words_dequeue <= 1'd1;
-    end
-end
-assign litepciemasterinternalport1_sink_payload_channel = 1'd1;
-assign litepciemasterinternalport1_sink_payload_user_id = reader_splitter_source_source_payload_user_id;
-assign litepciemasterinternalport1_sink_first = 1'd1;
-assign litepciemasterinternalport1_sink_last = 1'd1;
-assign litepciemasterinternalport1_sink_payload_we = 1'd0;
-assign litepciemasterinternalport1_sink_payload_adr = reader_splitter_source_source_payload_address;
-assign litepciemasterinternalport1_sink_payload_len = reader_splitter_source_source_payload_length[23:2];
-assign litepciemasterinternalport1_sink_payload_req_id = s7pciephy_id;
-assign litepciemasterinternalport1_sink_payload_dat = 1'd0;
-always @(*) begin
-    reader_irq <= 1'd0;
-    if (((reader_splitter_source_source_valid & reader_splitter_source_source_ready) & reader_splitter_source_source_last)) begin
-        reader_irq <= (~reader_splitter_source_source_payload_irq_disable);
-    end
-end
-assign reader_table_table_reset = (reader_table_reset_storage & reader_table_reset_re);
-assign reader_table_level_status = reader_table_table_level;
-assign reader_table_source_source_valid = reader_table_table_source_valid;
-assign reader_table_table_source_ready = reader_table_source_source_ready;
-assign reader_table_source_source_first = reader_table_table_source_first;
-assign reader_table_source_source_last = reader_table_table_source_last;
-assign reader_table_source_source_payload_address = reader_table_table_source_payload_address;
-assign reader_table_source_source_payload_length = reader_table_table_source_payload_length;
-assign reader_table_source_source_payload_irq_disable = reader_table_table_source_payload_irq_disable;
-assign reader_table_source_source_payload_last_disable = reader_table_table_source_payload_last_disable;
-assign reader_table_table_syncfifo_din = {reader_table_table_fifo_in_last, reader_table_table_fifo_in_first, reader_table_table_fifo_in_payload_last_disable, reader_table_table_fifo_in_payload_irq_disable, reader_table_table_fifo_in_payload_length, reader_table_table_fifo_in_payload_address};
-assign {reader_table_table_fifo_out_last, reader_table_table_fifo_out_first, reader_table_table_fifo_out_payload_last_disable, reader_table_table_fifo_out_payload_irq_disable, reader_table_table_fifo_out_payload_length, reader_table_table_fifo_out_payload_address} = reader_table_table_syncfifo_dout;
-assign reader_table_table_sink_ready = reader_table_table_syncfifo_writable;
-assign reader_table_table_syncfifo_we = reader_table_table_sink_valid;
-assign reader_table_table_fifo_in_first = reader_table_table_sink_first;
-assign reader_table_table_fifo_in_last = reader_table_table_sink_last;
-assign reader_table_table_fifo_in_payload_address = reader_table_table_sink_payload_address;
-assign reader_table_table_fifo_in_payload_length = reader_table_table_sink_payload_length;
-assign reader_table_table_fifo_in_payload_irq_disable = reader_table_table_sink_payload_irq_disable;
-assign reader_table_table_fifo_in_payload_last_disable = reader_table_table_sink_payload_last_disable;
-assign reader_table_table_source_valid = reader_table_table_syncfifo_readable;
-assign reader_table_table_source_first = reader_table_table_fifo_out_first;
-assign reader_table_table_source_last = reader_table_table_fifo_out_last;
-assign reader_table_table_source_payload_address = reader_table_table_fifo_out_payload_address;
-assign reader_table_table_source_payload_length = reader_table_table_fifo_out_payload_length;
-assign reader_table_table_source_payload_irq_disable = reader_table_table_fifo_out_payload_irq_disable;
-assign reader_table_table_source_payload_last_disable = reader_table_table_fifo_out_payload_last_disable;
-assign reader_table_table_syncfifo_re = reader_table_table_source_ready;
-always @(*) begin
-    reader_table_table_wrport_adr <= 8'd0;
-    if (reader_table_table_replace) begin
-        reader_table_table_wrport_adr <= (reader_table_table_produce - 1'd1);
-    end else begin
-        reader_table_table_wrport_adr <= reader_table_table_produce;
-    end
-end
-assign reader_table_table_wrport_dat_w = reader_table_table_syncfifo_din;
-assign reader_table_table_wrport_we = (reader_table_table_syncfifo_we & (reader_table_table_syncfifo_writable | reader_table_table_replace));
-assign reader_table_table_do_read = (reader_table_table_syncfifo_readable & reader_table_table_syncfifo_re);
-assign reader_table_table_rdport_adr = reader_table_table_consume;
-assign reader_table_table_syncfifo_dout = reader_table_table_rdport_dat_r;
-assign reader_table_table_syncfifo_writable = (reader_table_table_level != 9'd256);
-assign reader_table_table_syncfifo_readable = (reader_table_table_level != 1'd0);
-assign reader_splitter_source_payload_address = (reader_splitter_sink_payload_address + reader_splitter_desc_offset);
-assign reader_splitter_source_payload_irq_disable = reader_splitter_sink_payload_irq_disable;
-assign reader_splitter_source_payload_last_disable = reader_splitter_sink_payload_last_disable;
-assign reader_splitter_source_payload_user_id = reader_splitter_desc_id;
-assign reader_splitter_sink_sink_valid = reader_splitter_source_valid;
-assign reader_splitter_source_ready = reader_splitter_sink_sink_ready;
-assign reader_splitter_sink_sink_first = reader_splitter_source_first;
-assign reader_splitter_sink_sink_last = reader_splitter_source_last;
-assign reader_splitter_sink_sink_payload_address = reader_splitter_source_payload_address;
-assign reader_splitter_sink_sink_payload_length = reader_splitter_source_payload_length;
-assign reader_splitter_sink_sink_payload_irq_disable = reader_splitter_source_payload_irq_disable;
-assign reader_splitter_sink_sink_payload_last_disable = reader_splitter_source_payload_last_disable;
-assign reader_splitter_sink_sink_payload_user_id = reader_splitter_source_payload_user_id;
-always @(*) begin
-    reader_splitter_source_valid <= 1'd0;
-    reader_splitter_desc_id_next_value2 <= 32'd0;
-    reader_splitter_source_first <= 1'd0;
-    reader_splitter_desc_id_next_value_ce2 <= 1'd0;
-    reader_splitter_source_last <= 1'd0;
-    reader_splitter_source_payload_length <= 24'd0;
-    litepciecore_litepciedmareader_bufferizeendpoints_next_state <= 1'd0;
-    reader_splitter_sink_ready <= 1'd0;
-    reader_splitter_desc_offset_next_value0 <= 32'd0;
-    reader_splitter_desc_offset_next_value_ce0 <= 1'd0;
-    reader_splitter_desc_length_next_value1 <= 32'd0;
-    reader_splitter_desc_length_next_value_ce1 <= 1'd0;
-    litepciecore_litepciedmareader_bufferizeendpoints_next_state <= litepciecore_litepciedmareader_bufferizeendpoints_state;
-    case (litepciecore_litepciedmareader_bufferizeendpoints_state)
-        1'd1: begin
-            reader_splitter_source_valid <= 1'd1;
-            reader_splitter_source_first <= (reader_splitter_desc_offset == 1'd0);
-            if ((reader_splitter_desc_length > s7pciephy_max_request_size)) begin
-                reader_splitter_source_last <= reader_splitter_terminate;
-                reader_splitter_source_payload_length <= s7pciephy_max_request_size;
+            pcie_dma_writer_req_count_fsm_next_value <= 1'd0;
+            pcie_dma_writer_req_count_fsm_next_value_ce <= 1'd1;
+            if ((~pcie_dma_writer_enable_storage[0])) begin
+                pcie_dma_writer_splitter_reset <= 1'd1;
+                pcie_dma_writer_data_fifo_reset <= 1'd1;
             end else begin
-                reader_splitter_source_last <= 1'd1;
-                reader_splitter_source_payload_length <= reader_splitter_desc_length;
+                if ((pcie_dma_writer_splitter_source_valid & (pcie_dma_writer_data_fifo_level1 >= pcie_dma_writer_splitter_source_payload_length[23:4]))) begin
+                    litepciedmawriter_fsm_next_state <= 1'd1;
+                end
             end
-            if (reader_splitter_source_ready) begin
-                reader_splitter_desc_offset_next_value0 <= (reader_splitter_desc_offset + s7pciephy_max_request_size);
-                reader_splitter_desc_offset_next_value_ce0 <= 1'd1;
-                reader_splitter_desc_length_next_value1 <= (reader_splitter_desc_length - s7pciephy_max_request_size);
-                reader_splitter_desc_length_next_value_ce1 <= 1'd1;
-                if (reader_splitter_source_last) begin
-                    reader_splitter_sink_ready <= 1'd1;
-                    reader_splitter_desc_id_next_value2 <= (reader_splitter_desc_id + 1'd1);
-                    reader_splitter_desc_id_next_value_ce2 <= 1'd1;
-                    litepciecore_litepciedmareader_bufferizeendpoints_next_state <= 1'd0;
+            pcie_dma_writer_is_ongoing <= 1'd1;
+        end
+    endcase
+end
+assign pcie_dma_reader_splitter_sink_valid = pcie_dma_reader_table_source_source_valid;
+assign pcie_dma_reader_table_source_source_ready = pcie_dma_reader_splitter_sink_ready;
+assign pcie_dma_reader_splitter_sink_first = pcie_dma_reader_table_source_source_first;
+assign pcie_dma_reader_splitter_sink_last = pcie_dma_reader_table_source_source_last;
+assign pcie_dma_reader_splitter_sink_payload_address = pcie_dma_reader_table_source_source_payload_address;
+assign pcie_dma_reader_splitter_sink_payload_length = pcie_dma_reader_table_source_source_payload_length;
+assign pcie_dma_reader_splitter_sink_payload_irq_disable = pcie_dma_reader_table_source_source_payload_irq_disable;
+assign pcie_dma_reader_splitter_sink_payload_last_disable = pcie_dma_reader_table_source_source_payload_last_disable;
+assign pcie_dma_reader_source_source_valid = pcie_dma_reader_data_conv_source_source_valid;
+assign pcie_dma_reader_data_conv_source_source_ready = pcie_dma_reader_source_source_ready;
+assign pcie_dma_reader_source_source_first = pcie_dma_reader_data_conv_source_source_first;
+assign pcie_dma_reader_source_source_last = pcie_dma_reader_data_conv_source_source_last;
+assign pcie_dma_reader_source_source_payload_data = pcie_dma_reader_data_conv_source_source_payload_data;
+assign pcie_dma_reader_data_conv_converter_sink_valid = pcie_dma_reader_data_fifo_source_valid;
+assign pcie_dma_reader_data_fifo_source_ready = pcie_dma_reader_data_conv_converter_sink_ready;
+assign pcie_dma_reader_data_conv_converter_sink_first = pcie_dma_reader_data_fifo_source_first;
+assign pcie_dma_reader_data_conv_converter_sink_last = pcie_dma_reader_data_fifo_source_last;
+assign pcie_dma_reader_data_conv_converter_sink_payload_data = pcie_dma_reader_data_fifo_source_payload_data;
+always @(*) begin
+    pcie_dma_litepciemasterinternalport1_source_ready <= 1'd0;
+    pcie_dma_reader_data_fifo_sink_first <= 1'd0;
+    pcie_dma_reader_data_fifo_sink_payload_data <= 128'd0;
+    pcie_dma_reader_data_fifo_sink_valid <= 1'd0;
+    if (pcie_dma_reader_enable_storage[0]) begin
+        pcie_dma_reader_data_fifo_sink_valid <= pcie_dma_litepciemasterinternalport1_source_valid;
+        pcie_dma_litepciemasterinternalport1_source_ready <= pcie_dma_reader_data_fifo_sink_ready;
+        pcie_dma_reader_data_fifo_sink_payload_data <= pcie_dma_litepciemasterinternalport1_source_payload_dat;
+        pcie_dma_reader_data_fifo_sink_first <= (pcie_dma_litepciemasterinternalport1_source_first & (pcie_dma_litepciemasterinternalport1_source_payload_user_id != pcie_dma_reader_last_user_id));
+    end else begin
+        pcie_dma_litepciemasterinternalport1_source_ready <= 1'd1;
+    end
+end
+always @(*) begin
+    pcie_dma_reader_pending_words_queue <= 10'd0;
+    if ((pcie_dma_reader_splitter_source_valid & pcie_dma_reader_splitter_source_ready)) begin
+        pcie_dma_reader_pending_words_queue <= pcie_dma_reader_splitter_source_payload_length[23:4];
+    end
+end
+always @(*) begin
+    pcie_dma_reader_pending_words_dequeue <= 10'd0;
+    if ((pcie_dma_reader_data_fifo_source_valid & pcie_dma_reader_data_fifo_source_ready)) begin
+        pcie_dma_reader_pending_words_dequeue <= 1'd1;
+    end
+end
+assign pcie_dma_litepciemasterinternalport1_sink_payload_channel = 1'd1;
+assign pcie_dma_litepciemasterinternalport1_sink_payload_user_id = pcie_dma_reader_splitter_source_payload_user_id;
+assign pcie_dma_litepciemasterinternalport1_sink_first = 1'd1;
+assign pcie_dma_litepciemasterinternalport1_sink_last = 1'd1;
+assign pcie_dma_litepciemasterinternalport1_sink_payload_we = 1'd0;
+assign pcie_dma_litepciemasterinternalport1_sink_payload_adr = pcie_dma_reader_splitter_source_payload_address;
+assign pcie_dma_litepciemasterinternalport1_sink_payload_len = pcie_dma_reader_splitter_source_payload_length[23:2];
+assign pcie_dma_litepciemasterinternalport1_sink_payload_req_id = s7pciephy_id;
+assign pcie_dma_litepciemasterinternalport1_sink_payload_dat = 1'd0;
+always @(*) begin
+    pcie_dma_reader_irq <= 1'd0;
+    if (((pcie_dma_reader_splitter_source_valid & pcie_dma_reader_splitter_source_ready) & pcie_dma_reader_splitter_source_last)) begin
+        pcie_dma_reader_irq <= (~pcie_dma_reader_splitter_source_payload_irq_disable);
+    end
+end
+assign pcie_dma_reader_table_table_reset = (pcie_dma_reader_table_reset_storage & pcie_dma_reader_table_reset_re);
+assign pcie_dma_reader_table_level_status = pcie_dma_reader_table_table_level;
+assign pcie_dma_reader_table_source_source_valid = pcie_dma_reader_table_table_source_valid;
+assign pcie_dma_reader_table_table_source_ready = pcie_dma_reader_table_source_source_ready;
+assign pcie_dma_reader_table_source_source_first = pcie_dma_reader_table_table_source_first;
+assign pcie_dma_reader_table_source_source_last = pcie_dma_reader_table_table_source_last;
+assign pcie_dma_reader_table_source_source_payload_address = pcie_dma_reader_table_table_source_payload_address;
+assign pcie_dma_reader_table_source_source_payload_length = pcie_dma_reader_table_table_source_payload_length;
+assign pcie_dma_reader_table_source_source_payload_irq_disable = pcie_dma_reader_table_table_source_payload_irq_disable;
+assign pcie_dma_reader_table_source_source_payload_last_disable = pcie_dma_reader_table_table_source_payload_last_disable;
+assign pcie_dma_reader_table_table_syncfifo_din = {pcie_dma_reader_table_table_fifo_in_last, pcie_dma_reader_table_table_fifo_in_first, pcie_dma_reader_table_table_fifo_in_payload_last_disable, pcie_dma_reader_table_table_fifo_in_payload_irq_disable, pcie_dma_reader_table_table_fifo_in_payload_length, pcie_dma_reader_table_table_fifo_in_payload_address};
+assign {pcie_dma_reader_table_table_fifo_out_last, pcie_dma_reader_table_table_fifo_out_first, pcie_dma_reader_table_table_fifo_out_payload_last_disable, pcie_dma_reader_table_table_fifo_out_payload_irq_disable, pcie_dma_reader_table_table_fifo_out_payload_length, pcie_dma_reader_table_table_fifo_out_payload_address} = pcie_dma_reader_table_table_syncfifo_dout;
+assign pcie_dma_reader_table_table_sink_ready = pcie_dma_reader_table_table_syncfifo_writable;
+assign pcie_dma_reader_table_table_syncfifo_we = pcie_dma_reader_table_table_sink_valid;
+assign pcie_dma_reader_table_table_fifo_in_first = pcie_dma_reader_table_table_sink_first;
+assign pcie_dma_reader_table_table_fifo_in_last = pcie_dma_reader_table_table_sink_last;
+assign pcie_dma_reader_table_table_fifo_in_payload_address = pcie_dma_reader_table_table_sink_payload_address;
+assign pcie_dma_reader_table_table_fifo_in_payload_length = pcie_dma_reader_table_table_sink_payload_length;
+assign pcie_dma_reader_table_table_fifo_in_payload_irq_disable = pcie_dma_reader_table_table_sink_payload_irq_disable;
+assign pcie_dma_reader_table_table_fifo_in_payload_last_disable = pcie_dma_reader_table_table_sink_payload_last_disable;
+assign pcie_dma_reader_table_table_source_valid = pcie_dma_reader_table_table_syncfifo_readable;
+assign pcie_dma_reader_table_table_source_first = pcie_dma_reader_table_table_fifo_out_first;
+assign pcie_dma_reader_table_table_source_last = pcie_dma_reader_table_table_fifo_out_last;
+assign pcie_dma_reader_table_table_source_payload_address = pcie_dma_reader_table_table_fifo_out_payload_address;
+assign pcie_dma_reader_table_table_source_payload_length = pcie_dma_reader_table_table_fifo_out_payload_length;
+assign pcie_dma_reader_table_table_source_payload_irq_disable = pcie_dma_reader_table_table_fifo_out_payload_irq_disable;
+assign pcie_dma_reader_table_table_source_payload_last_disable = pcie_dma_reader_table_table_fifo_out_payload_last_disable;
+assign pcie_dma_reader_table_table_syncfifo_re = pcie_dma_reader_table_table_source_ready;
+always @(*) begin
+    pcie_dma_reader_table_table_wrport_adr <= 8'd0;
+    if (pcie_dma_reader_table_table_replace) begin
+        pcie_dma_reader_table_table_wrport_adr <= (pcie_dma_reader_table_table_produce - 1'd1);
+    end else begin
+        pcie_dma_reader_table_table_wrport_adr <= pcie_dma_reader_table_table_produce;
+    end
+end
+assign pcie_dma_reader_table_table_wrport_dat_w = pcie_dma_reader_table_table_syncfifo_din;
+assign pcie_dma_reader_table_table_wrport_we = (pcie_dma_reader_table_table_syncfifo_we & (pcie_dma_reader_table_table_syncfifo_writable | pcie_dma_reader_table_table_replace));
+assign pcie_dma_reader_table_table_do_read = (pcie_dma_reader_table_table_syncfifo_readable & pcie_dma_reader_table_table_syncfifo_re);
+assign pcie_dma_reader_table_table_rdport_adr = pcie_dma_reader_table_table_consume;
+assign pcie_dma_reader_table_table_syncfifo_dout = pcie_dma_reader_table_table_rdport_dat_r;
+assign pcie_dma_reader_table_table_syncfifo_writable = (pcie_dma_reader_table_table_level != 9'd256);
+assign pcie_dma_reader_table_table_syncfifo_readable = (pcie_dma_reader_table_table_level != 1'd0);
+assign pcie_dma_reader_splitter_source_payload_irq_disable = pcie_dma_reader_splitter_sink_payload_irq_disable;
+assign pcie_dma_reader_splitter_source_payload_last_disable = pcie_dma_reader_splitter_sink_payload_last_disable;
+always @(*) begin
+    litepciedmareader_resetinserter_next_state <= 1'd0;
+    pcie_dma_reader_splitter_length_next <= 24'd0;
+    pcie_dma_reader_splitter_length_next_value3 <= 24'd0;
+    pcie_dma_reader_splitter_length_next_value_ce3 <= 1'd0;
+    pcie_dma_reader_splitter_sink_ready <= 1'd0;
+    pcie_dma_reader_splitter_source_first_next_value0 <= 1'd0;
+    pcie_dma_reader_splitter_source_first_next_value_ce0 <= 1'd0;
+    pcie_dma_reader_splitter_source_last_next_value1 <= 1'd0;
+    pcie_dma_reader_splitter_source_last_next_value_ce1 <= 1'd0;
+    pcie_dma_reader_splitter_source_payload_address_next_value2 <= 64'd0;
+    pcie_dma_reader_splitter_source_payload_address_next_value_ce2 <= 1'd0;
+    pcie_dma_reader_splitter_source_payload_length_next_value4 <= 24'd0;
+    pcie_dma_reader_splitter_source_payload_length_next_value_ce4 <= 1'd0;
+    pcie_dma_reader_splitter_source_payload_user_id_next_value5 <= 8'd0;
+    pcie_dma_reader_splitter_source_payload_user_id_next_value_ce5 <= 1'd0;
+    pcie_dma_reader_splitter_source_valid <= 1'd0;
+    litepciedmareader_resetinserter_next_state <= litepciedmareader_resetinserter_state;
+    case (litepciedmareader_resetinserter_state)
+        1'd1: begin
+            pcie_dma_reader_splitter_source_valid <= 1'd1;
+            if (pcie_dma_reader_splitter_source_ready) begin
+                pcie_dma_reader_splitter_source_first_next_value0 <= 1'd0;
+                pcie_dma_reader_splitter_source_first_next_value_ce0 <= 1'd1;
+                pcie_dma_reader_splitter_source_payload_address_next_value2 <= (pcie_dma_reader_splitter_source_payload_address + s7pciephy_max_request_size);
+                pcie_dma_reader_splitter_source_payload_address_next_value_ce2 <= 1'd1;
+                pcie_dma_reader_splitter_length_next <= (pcie_dma_reader_splitter_length - s7pciephy_max_request_size);
+                pcie_dma_reader_splitter_length_next_value3 <= pcie_dma_reader_splitter_length_next;
+                pcie_dma_reader_splitter_length_next_value_ce3 <= 1'd1;
+                if ((pcie_dma_reader_splitter_length_next > s7pciephy_max_request_size)) begin
+                    pcie_dma_reader_splitter_source_payload_length_next_value4 <= s7pciephy_max_request_size;
+                    pcie_dma_reader_splitter_source_payload_length_next_value_ce4 <= 1'd1;
+                end else begin
+                    pcie_dma_reader_splitter_source_last_next_value1 <= 1'd1;
+                    pcie_dma_reader_splitter_source_last_next_value_ce1 <= 1'd1;
+                    pcie_dma_reader_splitter_source_payload_length_next_value4 <= pcie_dma_reader_splitter_length_next;
+                    pcie_dma_reader_splitter_source_payload_length_next_value_ce4 <= 1'd1;
+                end
+                if ((pcie_dma_reader_splitter_source_last | pcie_dma_reader_splitter_terminate)) begin
+                    pcie_dma_reader_splitter_sink_ready <= 1'd1;
+                    pcie_dma_reader_splitter_source_payload_user_id_next_value5 <= (pcie_dma_reader_splitter_source_payload_user_id + 1'd1);
+                    pcie_dma_reader_splitter_source_payload_user_id_next_value_ce5 <= 1'd1;
+                    litepciedmareader_resetinserter_next_state <= 1'd0;
                 end
             end
         end
         default: begin
-            reader_splitter_desc_offset_next_value0 <= 1'd0;
-            reader_splitter_desc_offset_next_value_ce0 <= 1'd1;
-            reader_splitter_desc_length_next_value1 <= reader_splitter_sink_payload_length;
-            reader_splitter_desc_length_next_value_ce1 <= 1'd1;
-            if (reader_splitter_sink_valid) begin
-                litepciecore_litepciedmareader_bufferizeendpoints_next_state <= 1'd1;
+            pcie_dma_reader_splitter_source_first_next_value0 <= 1'd1;
+            pcie_dma_reader_splitter_source_first_next_value_ce0 <= 1'd1;
+            pcie_dma_reader_splitter_source_last_next_value1 <= 1'd0;
+            pcie_dma_reader_splitter_source_last_next_value_ce1 <= 1'd1;
+            pcie_dma_reader_splitter_source_payload_address_next_value2 <= pcie_dma_reader_splitter_sink_payload_address;
+            pcie_dma_reader_splitter_source_payload_address_next_value_ce2 <= 1'd1;
+            pcie_dma_reader_splitter_length_next_value3 <= pcie_dma_reader_splitter_sink_payload_length;
+            pcie_dma_reader_splitter_length_next_value_ce3 <= 1'd1;
+            if ((pcie_dma_reader_splitter_sink_payload_length > s7pciephy_max_request_size)) begin
+                pcie_dma_reader_splitter_source_payload_length_next_value4 <= s7pciephy_max_request_size;
+                pcie_dma_reader_splitter_source_payload_length_next_value_ce4 <= 1'd1;
+            end else begin
+                pcie_dma_reader_splitter_source_last_next_value1 <= 1'd1;
+                pcie_dma_reader_splitter_source_last_next_value_ce1 <= 1'd1;
+                pcie_dma_reader_splitter_source_payload_length_next_value4 <= pcie_dma_reader_splitter_sink_payload_length;
+                pcie_dma_reader_splitter_source_payload_length_next_value_ce4 <= 1'd1;
+            end
+            if (pcie_dma_reader_splitter_sink_valid) begin
+                litepciedmareader_resetinserter_next_state <= 1'd1;
             end
         end
     endcase
 end
-assign reader_splitter_pipe_valid_sink_ready = ((~reader_splitter_pipe_valid_source_valid) | reader_splitter_pipe_valid_source_ready);
-assign reader_splitter_pipe_valid_sink_valid = reader_splitter_sink_sink_valid;
-assign reader_splitter_sink_sink_ready = reader_splitter_pipe_valid_sink_ready;
-assign reader_splitter_pipe_valid_sink_first = reader_splitter_sink_sink_first;
-assign reader_splitter_pipe_valid_sink_last = reader_splitter_sink_sink_last;
-assign reader_splitter_pipe_valid_sink_payload_address = reader_splitter_sink_sink_payload_address;
-assign reader_splitter_pipe_valid_sink_payload_length = reader_splitter_sink_sink_payload_length;
-assign reader_splitter_pipe_valid_sink_payload_irq_disable = reader_splitter_sink_sink_payload_irq_disable;
-assign reader_splitter_pipe_valid_sink_payload_last_disable = reader_splitter_sink_sink_payload_last_disable;
-assign reader_splitter_pipe_valid_sink_payload_user_id = reader_splitter_sink_sink_payload_user_id;
-assign reader_splitter_source_source_valid = reader_splitter_pipe_valid_source_valid;
-assign reader_splitter_pipe_valid_source_ready = reader_splitter_source_source_ready;
-assign reader_splitter_source_source_first = reader_splitter_pipe_valid_source_first;
-assign reader_splitter_source_source_last = reader_splitter_pipe_valid_source_last;
-assign reader_splitter_source_source_payload_address = reader_splitter_pipe_valid_source_payload_address;
-assign reader_splitter_source_source_payload_length = reader_splitter_pipe_valid_source_payload_length;
-assign reader_splitter_source_source_payload_irq_disable = reader_splitter_pipe_valid_source_payload_irq_disable;
-assign reader_splitter_source_source_payload_last_disable = reader_splitter_pipe_valid_source_payload_last_disable;
-assign reader_splitter_source_source_payload_user_id = reader_splitter_pipe_valid_source_payload_user_id;
-assign reader_data_fifo_syncfifo_din = {reader_data_fifo_fifo_in_last, reader_data_fifo_fifo_in_first, reader_data_fifo_fifo_in_payload_data};
-assign {reader_data_fifo_fifo_out_last, reader_data_fifo_fifo_out_first, reader_data_fifo_fifo_out_payload_data} = reader_data_fifo_syncfifo_dout;
-assign reader_data_fifo_sink_ready = reader_data_fifo_syncfifo_writable;
-assign reader_data_fifo_syncfifo_we = reader_data_fifo_sink_valid;
-assign reader_data_fifo_fifo_in_first = reader_data_fifo_sink_first;
-assign reader_data_fifo_fifo_in_last = reader_data_fifo_sink_last;
-assign reader_data_fifo_fifo_in_payload_data = reader_data_fifo_sink_payload_data;
-assign reader_data_fifo_source_valid = reader_data_fifo_readable;
-assign reader_data_fifo_source_first = reader_data_fifo_fifo_out_first;
-assign reader_data_fifo_source_last = reader_data_fifo_fifo_out_last;
-assign reader_data_fifo_source_payload_data = reader_data_fifo_fifo_out_payload_data;
-assign reader_data_fifo_re = reader_data_fifo_source_ready;
-assign reader_data_fifo_syncfifo_re = (reader_data_fifo_syncfifo_readable & ((~reader_data_fifo_readable) | reader_data_fifo_re));
-assign reader_data_fifo_level1 = (reader_data_fifo_level0 + reader_data_fifo_readable);
+assign pcie_dma_reader_data_conv_source_source_valid = pcie_dma_reader_data_conv_converter_source_valid;
+assign pcie_dma_reader_data_conv_converter_source_ready = pcie_dma_reader_data_conv_source_source_ready;
+assign pcie_dma_reader_data_conv_source_source_first = pcie_dma_reader_data_conv_converter_source_first;
+assign pcie_dma_reader_data_conv_source_source_last = pcie_dma_reader_data_conv_converter_source_last;
+assign pcie_dma_reader_data_conv_source_source_payload_data = pcie_dma_reader_data_conv_converter_source_payload_data;
+assign pcie_dma_reader_data_conv_converter_source_valid = pcie_dma_reader_data_conv_converter_sink_valid;
+assign pcie_dma_reader_data_conv_converter_sink_ready = pcie_dma_reader_data_conv_converter_source_ready;
+assign pcie_dma_reader_data_conv_converter_source_first = pcie_dma_reader_data_conv_converter_sink_first;
+assign pcie_dma_reader_data_conv_converter_source_last = pcie_dma_reader_data_conv_converter_sink_last;
+assign pcie_dma_reader_data_conv_converter_source_payload_data = pcie_dma_reader_data_conv_converter_sink_payload_data;
+assign pcie_dma_reader_data_conv_converter_source_payload_valid_token_count = 1'd1;
+assign pcie_dma_reader_data_fifo_syncfifo_din = {pcie_dma_reader_data_fifo_fifo_in_last, pcie_dma_reader_data_fifo_fifo_in_first, pcie_dma_reader_data_fifo_fifo_in_payload_data};
+assign {pcie_dma_reader_data_fifo_fifo_out_last, pcie_dma_reader_data_fifo_fifo_out_first, pcie_dma_reader_data_fifo_fifo_out_payload_data} = pcie_dma_reader_data_fifo_syncfifo_dout;
+assign pcie_dma_reader_data_fifo_sink_ready = pcie_dma_reader_data_fifo_syncfifo_writable;
+assign pcie_dma_reader_data_fifo_syncfifo_we = pcie_dma_reader_data_fifo_sink_valid;
+assign pcie_dma_reader_data_fifo_fifo_in_first = pcie_dma_reader_data_fifo_sink_first;
+assign pcie_dma_reader_data_fifo_fifo_in_last = pcie_dma_reader_data_fifo_sink_last;
+assign pcie_dma_reader_data_fifo_fifo_in_payload_data = pcie_dma_reader_data_fifo_sink_payload_data;
+assign pcie_dma_reader_data_fifo_source_valid = pcie_dma_reader_data_fifo_readable;
+assign pcie_dma_reader_data_fifo_source_first = pcie_dma_reader_data_fifo_fifo_out_first;
+assign pcie_dma_reader_data_fifo_source_last = pcie_dma_reader_data_fifo_fifo_out_last;
+assign pcie_dma_reader_data_fifo_source_payload_data = pcie_dma_reader_data_fifo_fifo_out_payload_data;
+assign pcie_dma_reader_data_fifo_re = pcie_dma_reader_data_fifo_source_ready;
+assign pcie_dma_reader_data_fifo_syncfifo_re = (pcie_dma_reader_data_fifo_syncfifo_readable & ((~pcie_dma_reader_data_fifo_readable) | pcie_dma_reader_data_fifo_re));
+assign pcie_dma_reader_data_fifo_level1 = (pcie_dma_reader_data_fifo_level0 + pcie_dma_reader_data_fifo_readable);
 always @(*) begin
-    reader_data_fifo_wrport_adr <= 9'd0;
-    if (reader_data_fifo_replace) begin
-        reader_data_fifo_wrport_adr <= (reader_data_fifo_produce - 1'd1);
+    pcie_dma_reader_data_fifo_wrport_adr <= 9'd0;
+    if (pcie_dma_reader_data_fifo_replace) begin
+        pcie_dma_reader_data_fifo_wrport_adr <= (pcie_dma_reader_data_fifo_produce - 1'd1);
     end else begin
-        reader_data_fifo_wrport_adr <= reader_data_fifo_produce;
+        pcie_dma_reader_data_fifo_wrport_adr <= pcie_dma_reader_data_fifo_produce;
     end
 end
-assign reader_data_fifo_wrport_dat_w = reader_data_fifo_syncfifo_din;
-assign reader_data_fifo_wrport_we = (reader_data_fifo_syncfifo_we & (reader_data_fifo_syncfifo_writable | reader_data_fifo_replace));
-assign reader_data_fifo_do_read = (reader_data_fifo_syncfifo_readable & reader_data_fifo_syncfifo_re);
-assign reader_data_fifo_rdport_adr = reader_data_fifo_consume;
-assign reader_data_fifo_syncfifo_dout = reader_data_fifo_rdport_dat_r;
-assign reader_data_fifo_rdport_re = reader_data_fifo_do_read;
-assign reader_data_fifo_syncfifo_writable = (reader_data_fifo_level0 != 10'd512);
-assign reader_data_fifo_syncfifo_readable = (reader_data_fifo_level0 != 1'd0);
+assign pcie_dma_reader_data_fifo_wrport_dat_w = pcie_dma_reader_data_fifo_syncfifo_din;
+assign pcie_dma_reader_data_fifo_wrport_we = (pcie_dma_reader_data_fifo_syncfifo_we & (pcie_dma_reader_data_fifo_syncfifo_writable | pcie_dma_reader_data_fifo_replace));
+assign pcie_dma_reader_data_fifo_do_read = (pcie_dma_reader_data_fifo_syncfifo_readable & pcie_dma_reader_data_fifo_syncfifo_re);
+assign pcie_dma_reader_data_fifo_rdport_adr = pcie_dma_reader_data_fifo_consume;
+assign pcie_dma_reader_data_fifo_syncfifo_dout = pcie_dma_reader_data_fifo_rdport_dat_r;
+assign pcie_dma_reader_data_fifo_rdport_re = pcie_dma_reader_data_fifo_do_read;
+assign pcie_dma_reader_data_fifo_syncfifo_writable = (pcie_dma_reader_data_fifo_level0 != 10'd512);
+assign pcie_dma_reader_data_fifo_syncfifo_readable = (pcie_dma_reader_data_fifo_level0 != 1'd0);
 always @(*) begin
-    litepciecore_litepciedmareader_fsm_next_state <= 1'd0;
-    reader_splitter_reset <= 1'd0;
-    reader_data_fifo_reset <= 1'd0;
-    reader_splitter_source_source_ready <= 1'd0;
-    litepciemasterinternalport1_sink_valid <= 1'd0;
-    litepciecore_litepciedmareader_fsm_next_state <= litepciecore_litepciedmareader_fsm_state;
-    case (litepciecore_litepciedmareader_fsm_state)
+    litepciedmareader_fsm_next_state <= 1'd0;
+    pcie_dma_litepciemasterinternalport1_sink_valid <= 1'd0;
+    pcie_dma_reader_data_fifo_reset <= 1'd0;
+    pcie_dma_reader_is_ongoing <= 1'd0;
+    pcie_dma_reader_splitter_reset <= 1'd0;
+    pcie_dma_reader_splitter_source_ready <= 1'd0;
+    litepciedmareader_fsm_next_state <= litepciedmareader_fsm_state;
+    case (litepciedmareader_fsm_state)
         1'd1: begin
-            litepciemasterinternalport1_sink_valid <= 1'd1;
-            if (litepciemasterinternalport1_sink_ready) begin
-                reader_splitter_source_source_ready <= 1'd1;
-                litepciecore_litepciedmareader_fsm_next_state <= 1'd0;
+            pcie_dma_litepciemasterinternalport1_sink_valid <= 1'd1;
+            if (pcie_dma_litepciemasterinternalport1_sink_ready) begin
+                pcie_dma_reader_splitter_source_ready <= 1'd1;
+                litepciedmareader_fsm_next_state <= 1'd0;
             end
         end
         default: begin
-            if ((~reader_enable_storage)) begin
-                reader_splitter_reset <= 1'd1;
-                reader_data_fifo_reset <= 1'd1;
+            if ((~pcie_dma_reader_enable_storage[0])) begin
+                pcie_dma_reader_splitter_reset <= 1'd1;
+                pcie_dma_reader_data_fifo_reset <= 1'd1;
+            end else begin
+                if ((pcie_dma_reader_splitter_source_valid & (pcie_dma_reader_pending_words < 9'd480))) begin
+                    litepciedmareader_fsm_next_state <= 1'd1;
+                end
             end
-            if ((reader_splitter_source_source_valid & (reader_pending_words < 9'd480))) begin
-                litepciecore_litepciedmareader_fsm_next_state <= 1'd1;
-            end
+            pcie_dma_reader_is_ongoing <= 1'd1;
         end
     endcase
 end
-assign buffering_reader_fifo_sink_first = buffering_sink_sink_first;
-assign buffering_reader_fifo_sink_last = buffering_sink_sink_last;
-assign buffering_reader_fifo_sink_payload_data = buffering_sink_sink_payload_data;
+assign pcie_dma_buffering_reader_fifo_sink_first = pcie_dma_buffering_sink_sink_first;
+assign pcie_dma_buffering_reader_fifo_sink_last = pcie_dma_buffering_sink_sink_last;
+assign pcie_dma_buffering_reader_fifo_sink_payload_data = pcie_dma_buffering_sink_sink_payload_data;
 always @(*) begin
-    buffering_reader_fifo_sink_valid <= 1'd0;
-    buffering_sink_sink_ready <= 1'd0;
-    if (((buffering_reader_fifo_level1 < buffering_csrfield_depth0[23:4]) | 1'd0)) begin
-        buffering_reader_fifo_sink_valid <= buffering_sink_sink_valid;
-        buffering_sink_sink_ready <= buffering_reader_fifo_sink_ready;
+    pcie_dma_buffering_reader_fifo_sink_valid <= 1'd0;
+    pcie_dma_buffering_sink_sink_ready <= 1'd0;
+    if (((pcie_dma_buffering_reader_fifo_level1 < pcie_dma_buffering_csrfield_depth0[23:4]) | 1'd0)) begin
+        pcie_dma_buffering_reader_fifo_sink_valid <= pcie_dma_buffering_sink_sink_valid;
+        pcie_dma_buffering_sink_sink_ready <= pcie_dma_buffering_reader_fifo_sink_ready;
     end
 end
-assign buffering_next_source_valid = buffering_reader_fifo_source_valid;
-assign buffering_reader_fifo_source_ready = buffering_next_source_ready;
-assign buffering_next_source_first = buffering_reader_fifo_source_first;
-assign buffering_next_source_last = buffering_reader_fifo_source_last;
-assign buffering_next_source_payload_data = buffering_reader_fifo_source_payload_data;
+assign pcie_dma_buffering_next_source_valid = pcie_dma_buffering_reader_fifo_source_valid;
+assign pcie_dma_buffering_reader_fifo_source_ready = pcie_dma_buffering_next_source_ready;
+assign pcie_dma_buffering_next_source_first = pcie_dma_buffering_reader_fifo_source_first;
+assign pcie_dma_buffering_next_source_last = pcie_dma_buffering_reader_fifo_source_last;
+assign pcie_dma_buffering_next_source_payload_data = pcie_dma_buffering_reader_fifo_source_payload_data;
 always @(*) begin
-    buffering_csrfield_level0 <= 24'd0;
-    if ((buffering_csrfield_level_mode0 == 1'd0)) begin
-        buffering_csrfield_level0[23:4] <= buffering_reader_fifo_level1;
+    pcie_dma_buffering_csrfield_level0 <= 24'd0;
+    if ((pcie_dma_buffering_csrfield_level_mode0 == 1'd0)) begin
+        pcie_dma_buffering_csrfield_level0[23:4] <= pcie_dma_buffering_reader_fifo_level1;
     end else begin
-        buffering_csrfield_level0[23:4] <= buffering_reader_fifo_level_min;
+        pcie_dma_buffering_csrfield_level0[23:4] <= pcie_dma_buffering_reader_fifo_level_min;
     end
 end
-assign buffering_writer_fifo_sink_first = buffering_next_sink_first;
-assign buffering_writer_fifo_sink_last = buffering_next_sink_last;
-assign buffering_writer_fifo_sink_payload_data = buffering_next_sink_payload_data;
+assign pcie_dma_buffering_writer_fifo_sink_first = pcie_dma_buffering_next_sink_first;
+assign pcie_dma_buffering_writer_fifo_sink_last = pcie_dma_buffering_next_sink_last;
+assign pcie_dma_buffering_writer_fifo_sink_payload_data = pcie_dma_buffering_next_sink_payload_data;
 always @(*) begin
-    buffering_writer_fifo_sink_valid <= 1'd0;
-    buffering_next_sink_ready <= 1'd0;
-    if (((buffering_writer_fifo_level1 < buffering_csrfield_depth1[23:4]) | 1'd0)) begin
-        buffering_writer_fifo_sink_valid <= buffering_next_sink_valid;
-        buffering_next_sink_ready <= buffering_writer_fifo_sink_ready;
+    pcie_dma_buffering_next_sink_ready <= 1'd0;
+    pcie_dma_buffering_writer_fifo_sink_valid <= 1'd0;
+    if (((pcie_dma_buffering_writer_fifo_level1 < pcie_dma_buffering_csrfield_depth1[23:4]) | 1'd0)) begin
+        pcie_dma_buffering_writer_fifo_sink_valid <= pcie_dma_buffering_next_sink_valid;
+        pcie_dma_buffering_next_sink_ready <= pcie_dma_buffering_writer_fifo_sink_ready;
     end
 end
-assign buffering_source_source_valid = buffering_writer_fifo_source_valid;
-assign buffering_writer_fifo_source_ready = buffering_source_source_ready;
-assign buffering_source_source_first = buffering_writer_fifo_source_first;
-assign buffering_source_source_last = buffering_writer_fifo_source_last;
-assign buffering_source_source_payload_data = buffering_writer_fifo_source_payload_data;
+assign pcie_dma_buffering_source_source_valid = pcie_dma_buffering_writer_fifo_source_valid;
+assign pcie_dma_buffering_writer_fifo_source_ready = pcie_dma_buffering_source_source_ready;
+assign pcie_dma_buffering_source_source_first = pcie_dma_buffering_writer_fifo_source_first;
+assign pcie_dma_buffering_source_source_last = pcie_dma_buffering_writer_fifo_source_last;
+assign pcie_dma_buffering_source_source_payload_data = pcie_dma_buffering_writer_fifo_source_payload_data;
 always @(*) begin
-    buffering_csrfield_level1 <= 24'd0;
-    if ((buffering_csrfield_level_mode1 == 1'd0)) begin
-        buffering_csrfield_level1[23:4] <= buffering_writer_fifo_level1;
+    pcie_dma_buffering_csrfield_level1 <= 24'd0;
+    if ((pcie_dma_buffering_csrfield_level_mode1 == 1'd0)) begin
+        pcie_dma_buffering_csrfield_level1[23:4] <= pcie_dma_buffering_writer_fifo_level1;
     end else begin
-        buffering_csrfield_level1[23:4] <= buffering_writer_fifo_level_max;
+        pcie_dma_buffering_csrfield_level1[23:4] <= pcie_dma_buffering_writer_fifo_level_max;
     end
 end
-assign buffering_reader_fifo_syncfifo_din = {buffering_reader_fifo_fifo_in_last, buffering_reader_fifo_fifo_in_first, buffering_reader_fifo_fifo_in_payload_data};
-assign {buffering_reader_fifo_fifo_out_last, buffering_reader_fifo_fifo_out_first, buffering_reader_fifo_fifo_out_payload_data} = buffering_reader_fifo_syncfifo_dout;
-assign buffering_reader_fifo_sink_ready = buffering_reader_fifo_syncfifo_writable;
-assign buffering_reader_fifo_syncfifo_we = buffering_reader_fifo_sink_valid;
-assign buffering_reader_fifo_fifo_in_first = buffering_reader_fifo_sink_first;
-assign buffering_reader_fifo_fifo_in_last = buffering_reader_fifo_sink_last;
-assign buffering_reader_fifo_fifo_in_payload_data = buffering_reader_fifo_sink_payload_data;
-assign buffering_reader_fifo_source_valid = buffering_reader_fifo_readable;
-assign buffering_reader_fifo_source_first = buffering_reader_fifo_fifo_out_first;
-assign buffering_reader_fifo_source_last = buffering_reader_fifo_fifo_out_last;
-assign buffering_reader_fifo_source_payload_data = buffering_reader_fifo_fifo_out_payload_data;
-assign buffering_reader_fifo_re = buffering_reader_fifo_source_ready;
-assign buffering_reader_fifo_syncfifo_re = (buffering_reader_fifo_syncfifo_readable & ((~buffering_reader_fifo_readable) | buffering_reader_fifo_re));
-assign buffering_reader_fifo_level1 = (buffering_reader_fifo_level0 + buffering_reader_fifo_readable);
+assign pcie_dma_buffering_reader_fifo_syncfifo_din = {pcie_dma_buffering_reader_fifo_fifo_in_last, pcie_dma_buffering_reader_fifo_fifo_in_first, pcie_dma_buffering_reader_fifo_fifo_in_payload_data};
+assign {pcie_dma_buffering_reader_fifo_fifo_out_last, pcie_dma_buffering_reader_fifo_fifo_out_first, pcie_dma_buffering_reader_fifo_fifo_out_payload_data} = pcie_dma_buffering_reader_fifo_syncfifo_dout;
+assign pcie_dma_buffering_reader_fifo_sink_ready = pcie_dma_buffering_reader_fifo_syncfifo_writable;
+assign pcie_dma_buffering_reader_fifo_syncfifo_we = pcie_dma_buffering_reader_fifo_sink_valid;
+assign pcie_dma_buffering_reader_fifo_fifo_in_first = pcie_dma_buffering_reader_fifo_sink_first;
+assign pcie_dma_buffering_reader_fifo_fifo_in_last = pcie_dma_buffering_reader_fifo_sink_last;
+assign pcie_dma_buffering_reader_fifo_fifo_in_payload_data = pcie_dma_buffering_reader_fifo_sink_payload_data;
+assign pcie_dma_buffering_reader_fifo_source_valid = pcie_dma_buffering_reader_fifo_readable;
+assign pcie_dma_buffering_reader_fifo_source_first = pcie_dma_buffering_reader_fifo_fifo_out_first;
+assign pcie_dma_buffering_reader_fifo_source_last = pcie_dma_buffering_reader_fifo_fifo_out_last;
+assign pcie_dma_buffering_reader_fifo_source_payload_data = pcie_dma_buffering_reader_fifo_fifo_out_payload_data;
+assign pcie_dma_buffering_reader_fifo_re = pcie_dma_buffering_reader_fifo_source_ready;
+assign pcie_dma_buffering_reader_fifo_syncfifo_re = (pcie_dma_buffering_reader_fifo_syncfifo_readable & ((~pcie_dma_buffering_reader_fifo_readable) | pcie_dma_buffering_reader_fifo_re));
+assign pcie_dma_buffering_reader_fifo_level1 = (pcie_dma_buffering_reader_fifo_level0 + pcie_dma_buffering_reader_fifo_readable);
 always @(*) begin
-    buffering_reader_fifo_wrport_adr <= 9'd0;
-    if (buffering_reader_fifo_replace) begin
-        buffering_reader_fifo_wrport_adr <= (buffering_reader_fifo_produce - 1'd1);
+    pcie_dma_buffering_reader_fifo_wrport_adr <= 9'd0;
+    if (pcie_dma_buffering_reader_fifo_replace) begin
+        pcie_dma_buffering_reader_fifo_wrport_adr <= (pcie_dma_buffering_reader_fifo_produce - 1'd1);
     end else begin
-        buffering_reader_fifo_wrport_adr <= buffering_reader_fifo_produce;
+        pcie_dma_buffering_reader_fifo_wrport_adr <= pcie_dma_buffering_reader_fifo_produce;
     end
 end
-assign buffering_reader_fifo_wrport_dat_w = buffering_reader_fifo_syncfifo_din;
-assign buffering_reader_fifo_wrport_we = (buffering_reader_fifo_syncfifo_we & (buffering_reader_fifo_syncfifo_writable | buffering_reader_fifo_replace));
-assign buffering_reader_fifo_do_read = (buffering_reader_fifo_syncfifo_readable & buffering_reader_fifo_syncfifo_re);
-assign buffering_reader_fifo_rdport_adr = buffering_reader_fifo_consume;
-assign buffering_reader_fifo_syncfifo_dout = buffering_reader_fifo_rdport_dat_r;
-assign buffering_reader_fifo_rdport_re = buffering_reader_fifo_do_read;
-assign buffering_reader_fifo_syncfifo_writable = (buffering_reader_fifo_level0 != 10'd512);
-assign buffering_reader_fifo_syncfifo_readable = (buffering_reader_fifo_level0 != 1'd0);
-assign buffering_writer_fifo_syncfifo_din = {buffering_writer_fifo_fifo_in_last, buffering_writer_fifo_fifo_in_first, buffering_writer_fifo_fifo_in_payload_data};
-assign {buffering_writer_fifo_fifo_out_last, buffering_writer_fifo_fifo_out_first, buffering_writer_fifo_fifo_out_payload_data} = buffering_writer_fifo_syncfifo_dout;
-assign buffering_writer_fifo_sink_ready = buffering_writer_fifo_syncfifo_writable;
-assign buffering_writer_fifo_syncfifo_we = buffering_writer_fifo_sink_valid;
-assign buffering_writer_fifo_fifo_in_first = buffering_writer_fifo_sink_first;
-assign buffering_writer_fifo_fifo_in_last = buffering_writer_fifo_sink_last;
-assign buffering_writer_fifo_fifo_in_payload_data = buffering_writer_fifo_sink_payload_data;
-assign buffering_writer_fifo_source_valid = buffering_writer_fifo_readable;
-assign buffering_writer_fifo_source_first = buffering_writer_fifo_fifo_out_first;
-assign buffering_writer_fifo_source_last = buffering_writer_fifo_fifo_out_last;
-assign buffering_writer_fifo_source_payload_data = buffering_writer_fifo_fifo_out_payload_data;
-assign buffering_writer_fifo_re = buffering_writer_fifo_source_ready;
-assign buffering_writer_fifo_syncfifo_re = (buffering_writer_fifo_syncfifo_readable & ((~buffering_writer_fifo_readable) | buffering_writer_fifo_re));
-assign buffering_writer_fifo_level1 = (buffering_writer_fifo_level0 + buffering_writer_fifo_readable);
+assign pcie_dma_buffering_reader_fifo_wrport_dat_w = pcie_dma_buffering_reader_fifo_syncfifo_din;
+assign pcie_dma_buffering_reader_fifo_wrport_we = (pcie_dma_buffering_reader_fifo_syncfifo_we & (pcie_dma_buffering_reader_fifo_syncfifo_writable | pcie_dma_buffering_reader_fifo_replace));
+assign pcie_dma_buffering_reader_fifo_do_read = (pcie_dma_buffering_reader_fifo_syncfifo_readable & pcie_dma_buffering_reader_fifo_syncfifo_re);
+assign pcie_dma_buffering_reader_fifo_rdport_adr = pcie_dma_buffering_reader_fifo_consume;
+assign pcie_dma_buffering_reader_fifo_syncfifo_dout = pcie_dma_buffering_reader_fifo_rdport_dat_r;
+assign pcie_dma_buffering_reader_fifo_rdport_re = pcie_dma_buffering_reader_fifo_do_read;
+assign pcie_dma_buffering_reader_fifo_syncfifo_writable = (pcie_dma_buffering_reader_fifo_level0 != 10'd512);
+assign pcie_dma_buffering_reader_fifo_syncfifo_readable = (pcie_dma_buffering_reader_fifo_level0 != 1'd0);
+assign pcie_dma_buffering_writer_fifo_syncfifo_din = {pcie_dma_buffering_writer_fifo_fifo_in_last, pcie_dma_buffering_writer_fifo_fifo_in_first, pcie_dma_buffering_writer_fifo_fifo_in_payload_data};
+assign {pcie_dma_buffering_writer_fifo_fifo_out_last, pcie_dma_buffering_writer_fifo_fifo_out_first, pcie_dma_buffering_writer_fifo_fifo_out_payload_data} = pcie_dma_buffering_writer_fifo_syncfifo_dout;
+assign pcie_dma_buffering_writer_fifo_sink_ready = pcie_dma_buffering_writer_fifo_syncfifo_writable;
+assign pcie_dma_buffering_writer_fifo_syncfifo_we = pcie_dma_buffering_writer_fifo_sink_valid;
+assign pcie_dma_buffering_writer_fifo_fifo_in_first = pcie_dma_buffering_writer_fifo_sink_first;
+assign pcie_dma_buffering_writer_fifo_fifo_in_last = pcie_dma_buffering_writer_fifo_sink_last;
+assign pcie_dma_buffering_writer_fifo_fifo_in_payload_data = pcie_dma_buffering_writer_fifo_sink_payload_data;
+assign pcie_dma_buffering_writer_fifo_source_valid = pcie_dma_buffering_writer_fifo_readable;
+assign pcie_dma_buffering_writer_fifo_source_first = pcie_dma_buffering_writer_fifo_fifo_out_first;
+assign pcie_dma_buffering_writer_fifo_source_last = pcie_dma_buffering_writer_fifo_fifo_out_last;
+assign pcie_dma_buffering_writer_fifo_source_payload_data = pcie_dma_buffering_writer_fifo_fifo_out_payload_data;
+assign pcie_dma_buffering_writer_fifo_re = pcie_dma_buffering_writer_fifo_source_ready;
+assign pcie_dma_buffering_writer_fifo_syncfifo_re = (pcie_dma_buffering_writer_fifo_syncfifo_readable & ((~pcie_dma_buffering_writer_fifo_readable) | pcie_dma_buffering_writer_fifo_re));
+assign pcie_dma_buffering_writer_fifo_level1 = (pcie_dma_buffering_writer_fifo_level0 + pcie_dma_buffering_writer_fifo_readable);
 always @(*) begin
-    buffering_writer_fifo_wrport_adr <= 9'd0;
-    if (buffering_writer_fifo_replace) begin
-        buffering_writer_fifo_wrport_adr <= (buffering_writer_fifo_produce - 1'd1);
+    pcie_dma_buffering_writer_fifo_wrport_adr <= 9'd0;
+    if (pcie_dma_buffering_writer_fifo_replace) begin
+        pcie_dma_buffering_writer_fifo_wrport_adr <= (pcie_dma_buffering_writer_fifo_produce - 1'd1);
     end else begin
-        buffering_writer_fifo_wrport_adr <= buffering_writer_fifo_produce;
+        pcie_dma_buffering_writer_fifo_wrport_adr <= pcie_dma_buffering_writer_fifo_produce;
     end
 end
-assign buffering_writer_fifo_wrport_dat_w = buffering_writer_fifo_syncfifo_din;
-assign buffering_writer_fifo_wrport_we = (buffering_writer_fifo_syncfifo_we & (buffering_writer_fifo_syncfifo_writable | buffering_writer_fifo_replace));
-assign buffering_writer_fifo_do_read = (buffering_writer_fifo_syncfifo_readable & buffering_writer_fifo_syncfifo_re);
-assign buffering_writer_fifo_rdport_adr = buffering_writer_fifo_consume;
-assign buffering_writer_fifo_syncfifo_dout = buffering_writer_fifo_rdport_dat_r;
-assign buffering_writer_fifo_rdport_re = buffering_writer_fifo_do_read;
-assign buffering_writer_fifo_syncfifo_writable = (buffering_writer_fifo_level0 != 10'd512);
-assign buffering_writer_fifo_syncfifo_readable = (buffering_writer_fifo_level0 != 1'd0);
-assign bufferizeendpoints0_pipe_valid_sink_ready = ((~bufferizeendpoints0_pipe_valid_source_valid) | bufferizeendpoints0_pipe_valid_source_ready);
-assign bufferizeendpoints0_pipe_valid_sink_valid = bufferizeendpoints0_sink_sink_valid;
-assign bufferizeendpoints0_sink_sink_ready = bufferizeendpoints0_pipe_valid_sink_ready;
-assign bufferizeendpoints0_pipe_valid_sink_first = bufferizeendpoints0_sink_sink_first;
-assign bufferizeendpoints0_pipe_valid_sink_last = bufferizeendpoints0_sink_sink_last;
-assign bufferizeendpoints0_pipe_valid_sink_payload_data = bufferizeendpoints0_sink_sink_payload_data;
-assign bufferizeendpoints0_source_source_valid = bufferizeendpoints0_pipe_valid_source_valid;
-assign bufferizeendpoints0_pipe_valid_source_ready = bufferizeendpoints0_source_source_ready;
-assign bufferizeendpoints0_source_source_first = bufferizeendpoints0_pipe_valid_source_first;
-assign bufferizeendpoints0_source_source_last = bufferizeendpoints0_pipe_valid_source_last;
-assign bufferizeendpoints0_source_source_payload_data = bufferizeendpoints0_pipe_valid_source_payload_data;
-assign bufferizeendpoints1_pipe_valid_sink_ready = ((~bufferizeendpoints1_pipe_valid_source_valid) | bufferizeendpoints1_pipe_valid_source_ready);
-assign bufferizeendpoints1_pipe_valid_sink_valid = bufferizeendpoints1_sink_sink_valid;
-assign bufferizeendpoints1_sink_sink_ready = bufferizeendpoints1_pipe_valid_sink_ready;
-assign bufferizeendpoints1_pipe_valid_sink_first = bufferizeendpoints1_sink_sink_first;
-assign bufferizeendpoints1_pipe_valid_sink_last = bufferizeendpoints1_sink_sink_last;
-assign bufferizeendpoints1_pipe_valid_sink_payload_data = bufferizeendpoints1_sink_sink_payload_data;
-assign bufferizeendpoints1_source_source_valid = bufferizeendpoints1_pipe_valid_source_valid;
-assign bufferizeendpoints1_pipe_valid_source_ready = bufferizeendpoints1_source_source_ready;
-assign bufferizeendpoints1_source_source_first = bufferizeendpoints1_pipe_valid_source_first;
-assign bufferizeendpoints1_source_source_last = bufferizeendpoints1_pipe_valid_source_last;
-assign bufferizeendpoints1_source_source_payload_data = bufferizeendpoints1_pipe_valid_source_payload_data;
+assign pcie_dma_buffering_writer_fifo_wrport_dat_w = pcie_dma_buffering_writer_fifo_syncfifo_din;
+assign pcie_dma_buffering_writer_fifo_wrport_we = (pcie_dma_buffering_writer_fifo_syncfifo_we & (pcie_dma_buffering_writer_fifo_syncfifo_writable | pcie_dma_buffering_writer_fifo_replace));
+assign pcie_dma_buffering_writer_fifo_do_read = (pcie_dma_buffering_writer_fifo_syncfifo_readable & pcie_dma_buffering_writer_fifo_syncfifo_re);
+assign pcie_dma_buffering_writer_fifo_rdport_adr = pcie_dma_buffering_writer_fifo_consume;
+assign pcie_dma_buffering_writer_fifo_syncfifo_dout = pcie_dma_buffering_writer_fifo_rdport_dat_r;
+assign pcie_dma_buffering_writer_fifo_rdport_re = pcie_dma_buffering_writer_fifo_do_read;
+assign pcie_dma_buffering_writer_fifo_syncfifo_writable = (pcie_dma_buffering_writer_fifo_level0 != 10'd512);
+assign pcie_dma_buffering_writer_fifo_syncfifo_readable = (pcie_dma_buffering_writer_fifo_level0 != 1'd0);
+assign pcie_dma_bufferizeendpoints0_pipe_valid_sink_ready = ((~pcie_dma_bufferizeendpoints0_pipe_valid_source_valid) | pcie_dma_bufferizeendpoints0_pipe_valid_source_ready);
+assign pcie_dma_bufferizeendpoints0_pipe_valid_sink_valid = pcie_dma_bufferizeendpoints0_sink_sink_valid;
+assign pcie_dma_bufferizeendpoints0_sink_sink_ready = pcie_dma_bufferizeendpoints0_pipe_valid_sink_ready;
+assign pcie_dma_bufferizeendpoints0_pipe_valid_sink_first = pcie_dma_bufferizeendpoints0_sink_sink_first;
+assign pcie_dma_bufferizeendpoints0_pipe_valid_sink_last = pcie_dma_bufferizeendpoints0_sink_sink_last;
+assign pcie_dma_bufferizeendpoints0_pipe_valid_sink_payload_data = pcie_dma_bufferizeendpoints0_sink_sink_payload_data;
+assign pcie_dma_bufferizeendpoints0_source_source_valid = pcie_dma_bufferizeendpoints0_pipe_valid_source_valid;
+assign pcie_dma_bufferizeendpoints0_pipe_valid_source_ready = pcie_dma_bufferizeendpoints0_source_source_ready;
+assign pcie_dma_bufferizeendpoints0_source_source_first = pcie_dma_bufferizeendpoints0_pipe_valid_source_first;
+assign pcie_dma_bufferizeendpoints0_source_source_last = pcie_dma_bufferizeendpoints0_pipe_valid_source_last;
+assign pcie_dma_bufferizeendpoints0_source_source_payload_data = pcie_dma_bufferizeendpoints0_pipe_valid_source_payload_data;
+assign pcie_dma_bufferizeendpoints1_pipe_valid_sink_ready = ((~pcie_dma_bufferizeendpoints1_pipe_valid_source_valid) | pcie_dma_bufferizeendpoints1_pipe_valid_source_ready);
+assign pcie_dma_bufferizeendpoints1_pipe_valid_sink_valid = pcie_dma_bufferizeendpoints1_sink_sink_valid;
+assign pcie_dma_bufferizeendpoints1_sink_sink_ready = pcie_dma_bufferizeendpoints1_pipe_valid_sink_ready;
+assign pcie_dma_bufferizeendpoints1_pipe_valid_sink_first = pcie_dma_bufferizeendpoints1_sink_sink_first;
+assign pcie_dma_bufferizeendpoints1_pipe_valid_sink_last = pcie_dma_bufferizeendpoints1_sink_sink_last;
+assign pcie_dma_bufferizeendpoints1_pipe_valid_sink_payload_data = pcie_dma_bufferizeendpoints1_sink_sink_payload_data;
+assign pcie_dma_bufferizeendpoints1_source_source_valid = pcie_dma_bufferizeendpoints1_pipe_valid_source_valid;
+assign pcie_dma_bufferizeendpoints1_pipe_valid_source_ready = pcie_dma_bufferizeendpoints1_source_source_ready;
+assign pcie_dma_bufferizeendpoints1_source_source_first = pcie_dma_bufferizeendpoints1_pipe_valid_source_first;
+assign pcie_dma_bufferizeendpoints1_source_source_last = pcie_dma_bufferizeendpoints1_pipe_valid_source_last;
+assign pcie_dma_bufferizeendpoints1_source_source_payload_data = pcie_dma_bufferizeendpoints1_pipe_valid_source_payload_data;
 always @(*) begin
     pcie_msi_clear <= 32'd0;
     if (pcie_msi_clear_re) begin
@@ -4975,589 +5515,522 @@ assign pcie_msi_enable = pcie_msi_enable_storage;
 assign pcie_msi_vector_status = pcie_msi_vector;
 assign pcie_msi_source_valid = (pcie_msi_msi != 1'd0);
 always @(*) begin
-    litepciecore_wishbone_dat_r <= 32'd0;
-    litepciecore_dat_w <= 32'd0;
-    litepciecore_adr <= 14'd0;
-    litepciecore_we <= 1'd0;
-    litepciecore_wishbone_ack <= 1'd0;
-    litepciecore_wishbone2csr_next_state <= 1'd0;
-    litepciecore_wishbone2csr_next_state <= litepciecore_wishbone2csr_state;
-    case (litepciecore_wishbone2csr_state)
+    interface0_ack <= 1'd0;
+    interface0_dat_r <= 32'd0;
+    interface1_adr <= 14'd0;
+    interface1_dat_w <= 32'd0;
+    interface1_re <= 1'd0;
+    interface1_we <= 1'd0;
+    wishbone2csr_next_state <= 1'd0;
+    wishbone2csr_next_state <= wishbone2csr_state;
+    case (wishbone2csr_state)
         1'd1: begin
-            litepciecore_wishbone_ack <= 1'd1;
-            litepciecore_wishbone_dat_r <= litepciecore_dat_r;
-            litepciecore_wishbone2csr_next_state <= 1'd0;
+            interface0_ack <= 1'd1;
+            interface0_dat_r <= interface1_dat_r;
+            wishbone2csr_next_state <= 1'd0;
         end
         default: begin
-            litepciecore_dat_w <= litepciecore_wishbone_dat_w;
-            if ((litepciecore_wishbone_cyc & litepciecore_wishbone_stb)) begin
-                litepciecore_adr <= litepciecore_wishbone_adr;
-                litepciecore_we <= (litepciecore_wishbone_we & (litepciecore_wishbone_sel != 1'd0));
-                litepciecore_wishbone2csr_next_state <= 1'd1;
+            interface1_dat_w <= interface0_dat_w;
+            if ((interface0_cyc & interface0_stb)) begin
+                interface1_adr <= interface0_adr[29:0];
+                interface1_re <= ((~interface0_we) & (interface0_sel != 1'd0));
+                interface1_we <= (interface0_we & (interface0_sel != 1'd0));
+                wishbone2csr_next_state <= 1'd1;
             end
         end
     endcase
 end
-assign csrbank0_sel = (interface0_adr[13:9] == 5'd26);
-assign csrbank0_cntrl15_r = interface0_dat_w[31:0];
+assign csr_bankarray_csrbank0_sel = (csr_bankarray_interface0_bank_bus_adr[13:9] == 5'd26);
+assign csr_bankarray_csrbank0_cntrl15_r = csr_bankarray_interface0_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank0_cntrl15_re <= 1'd0;
-    csrbank0_cntrl15_we <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 1'd0))) begin
-        csrbank0_cntrl15_re <= interface0_we;
-        csrbank0_cntrl15_we <= (~interface0_we);
+    csr_bankarray_csrbank0_cntrl15_re <= 1'd0;
+    csr_bankarray_csrbank0_cntrl15_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 1'd0))) begin
+        csr_bankarray_csrbank0_cntrl15_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_cntrl15_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_cntrl14_r = interface0_dat_w[31:0];
+assign csr_bankarray_csrbank0_cntrl14_r = csr_bankarray_interface0_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank0_cntrl14_we <= 1'd0;
-    csrbank0_cntrl14_re <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 1'd1))) begin
-        csrbank0_cntrl14_re <= interface0_we;
-        csrbank0_cntrl14_we <= (~interface0_we);
+    csr_bankarray_csrbank0_cntrl14_re <= 1'd0;
+    csr_bankarray_csrbank0_cntrl14_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 1'd1))) begin
+        csr_bankarray_csrbank0_cntrl14_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_cntrl14_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_cntrl13_r = interface0_dat_w[31:0];
+assign csr_bankarray_csrbank0_cntrl13_r = csr_bankarray_interface0_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank0_cntrl13_we <= 1'd0;
-    csrbank0_cntrl13_re <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 2'd2))) begin
-        csrbank0_cntrl13_re <= interface0_we;
-        csrbank0_cntrl13_we <= (~interface0_we);
+    csr_bankarray_csrbank0_cntrl13_re <= 1'd0;
+    csr_bankarray_csrbank0_cntrl13_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 2'd2))) begin
+        csr_bankarray_csrbank0_cntrl13_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_cntrl13_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_cntrl12_r = interface0_dat_w[31:0];
+assign csr_bankarray_csrbank0_cntrl12_r = csr_bankarray_interface0_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank0_cntrl12_re <= 1'd0;
-    csrbank0_cntrl12_we <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 2'd3))) begin
-        csrbank0_cntrl12_re <= interface0_we;
-        csrbank0_cntrl12_we <= (~interface0_we);
+    csr_bankarray_csrbank0_cntrl12_re <= 1'd0;
+    csr_bankarray_csrbank0_cntrl12_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 2'd3))) begin
+        csr_bankarray_csrbank0_cntrl12_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_cntrl12_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_cntrl11_r = interface0_dat_w[31:0];
+assign csr_bankarray_csrbank0_cntrl11_r = csr_bankarray_interface0_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank0_cntrl11_we <= 1'd0;
-    csrbank0_cntrl11_re <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 3'd4))) begin
-        csrbank0_cntrl11_re <= interface0_we;
-        csrbank0_cntrl11_we <= (~interface0_we);
+    csr_bankarray_csrbank0_cntrl11_re <= 1'd0;
+    csr_bankarray_csrbank0_cntrl11_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 3'd4))) begin
+        csr_bankarray_csrbank0_cntrl11_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_cntrl11_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_cntrl10_r = interface0_dat_w[31:0];
+assign csr_bankarray_csrbank0_cntrl10_r = csr_bankarray_interface0_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank0_cntrl10_re <= 1'd0;
-    csrbank0_cntrl10_we <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 3'd5))) begin
-        csrbank0_cntrl10_re <= interface0_we;
-        csrbank0_cntrl10_we <= (~interface0_we);
+    csr_bankarray_csrbank0_cntrl10_re <= 1'd0;
+    csr_bankarray_csrbank0_cntrl10_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 3'd5))) begin
+        csr_bankarray_csrbank0_cntrl10_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_cntrl10_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_cntrl9_r = interface0_dat_w[31:0];
+assign csr_bankarray_csrbank0_cntrl9_r = csr_bankarray_interface0_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank0_cntrl9_re <= 1'd0;
-    csrbank0_cntrl9_we <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 3'd6))) begin
-        csrbank0_cntrl9_re <= interface0_we;
-        csrbank0_cntrl9_we <= (~interface0_we);
+    csr_bankarray_csrbank0_cntrl9_re <= 1'd0;
+    csr_bankarray_csrbank0_cntrl9_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 3'd6))) begin
+        csr_bankarray_csrbank0_cntrl9_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_cntrl9_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_cntrl8_r = interface0_dat_w[31:0];
+assign csr_bankarray_csrbank0_cntrl8_r = csr_bankarray_interface0_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank0_cntrl8_we <= 1'd0;
-    csrbank0_cntrl8_re <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 3'd7))) begin
-        csrbank0_cntrl8_re <= interface0_we;
-        csrbank0_cntrl8_we <= (~interface0_we);
+    csr_bankarray_csrbank0_cntrl8_re <= 1'd0;
+    csr_bankarray_csrbank0_cntrl8_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 3'd7))) begin
+        csr_bankarray_csrbank0_cntrl8_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_cntrl8_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_cntrl7_r = interface0_dat_w[31:0];
+assign csr_bankarray_csrbank0_cntrl7_r = csr_bankarray_interface0_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank0_cntrl7_re <= 1'd0;
-    csrbank0_cntrl7_we <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 4'd8))) begin
-        csrbank0_cntrl7_re <= interface0_we;
-        csrbank0_cntrl7_we <= (~interface0_we);
+    csr_bankarray_csrbank0_cntrl7_re <= 1'd0;
+    csr_bankarray_csrbank0_cntrl7_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 4'd8))) begin
+        csr_bankarray_csrbank0_cntrl7_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_cntrl7_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_cntrl6_r = interface0_dat_w[31:0];
+assign csr_bankarray_csrbank0_cntrl6_r = csr_bankarray_interface0_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank0_cntrl6_we <= 1'd0;
-    csrbank0_cntrl6_re <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 4'd9))) begin
-        csrbank0_cntrl6_re <= interface0_we;
-        csrbank0_cntrl6_we <= (~interface0_we);
+    csr_bankarray_csrbank0_cntrl6_re <= 1'd0;
+    csr_bankarray_csrbank0_cntrl6_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 4'd9))) begin
+        csr_bankarray_csrbank0_cntrl6_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_cntrl6_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_cntrl5_r = interface0_dat_w[31:0];
+assign csr_bankarray_csrbank0_cntrl5_r = csr_bankarray_interface0_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank0_cntrl5_we <= 1'd0;
-    csrbank0_cntrl5_re <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 4'd10))) begin
-        csrbank0_cntrl5_re <= interface0_we;
-        csrbank0_cntrl5_we <= (~interface0_we);
+    csr_bankarray_csrbank0_cntrl5_re <= 1'd0;
+    csr_bankarray_csrbank0_cntrl5_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 4'd10))) begin
+        csr_bankarray_csrbank0_cntrl5_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_cntrl5_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_cntrl4_r = interface0_dat_w[31:0];
+assign csr_bankarray_csrbank0_cntrl4_r = csr_bankarray_interface0_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank0_cntrl4_re <= 1'd0;
-    csrbank0_cntrl4_we <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 4'd11))) begin
-        csrbank0_cntrl4_re <= interface0_we;
-        csrbank0_cntrl4_we <= (~interface0_we);
+    csr_bankarray_csrbank0_cntrl4_re <= 1'd0;
+    csr_bankarray_csrbank0_cntrl4_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 4'd11))) begin
+        csr_bankarray_csrbank0_cntrl4_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_cntrl4_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_cntrl3_r = interface0_dat_w[31:0];
+assign csr_bankarray_csrbank0_cntrl3_r = csr_bankarray_interface0_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank0_cntrl3_we <= 1'd0;
-    csrbank0_cntrl3_re <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 4'd12))) begin
-        csrbank0_cntrl3_re <= interface0_we;
-        csrbank0_cntrl3_we <= (~interface0_we);
+    csr_bankarray_csrbank0_cntrl3_re <= 1'd0;
+    csr_bankarray_csrbank0_cntrl3_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 4'd12))) begin
+        csr_bankarray_csrbank0_cntrl3_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_cntrl3_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_cntrl2_r = interface0_dat_w[31:0];
+assign csr_bankarray_csrbank0_cntrl2_r = csr_bankarray_interface0_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank0_cntrl2_re <= 1'd0;
-    csrbank0_cntrl2_we <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 4'd13))) begin
-        csrbank0_cntrl2_re <= interface0_we;
-        csrbank0_cntrl2_we <= (~interface0_we);
+    csr_bankarray_csrbank0_cntrl2_re <= 1'd0;
+    csr_bankarray_csrbank0_cntrl2_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 4'd13))) begin
+        csr_bankarray_csrbank0_cntrl2_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_cntrl2_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_cntrl1_r = interface0_dat_w[31:0];
+assign csr_bankarray_csrbank0_cntrl1_r = csr_bankarray_interface0_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank0_cntrl1_re <= 1'd0;
-    csrbank0_cntrl1_we <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 4'd14))) begin
-        csrbank0_cntrl1_re <= interface0_we;
-        csrbank0_cntrl1_we <= (~interface0_we);
+    csr_bankarray_csrbank0_cntrl1_re <= 1'd0;
+    csr_bankarray_csrbank0_cntrl1_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 4'd14))) begin
+        csr_bankarray_csrbank0_cntrl1_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_cntrl1_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_cntrl0_r = interface0_dat_w[31:0];
+assign csr_bankarray_csrbank0_cntrl0_r = csr_bankarray_interface0_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank0_cntrl0_we <= 1'd0;
-    csrbank0_cntrl0_re <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 4'd15))) begin
-        csrbank0_cntrl0_re <= interface0_we;
-        csrbank0_cntrl0_we <= (~interface0_we);
+    csr_bankarray_csrbank0_cntrl0_re <= 1'd0;
+    csr_bankarray_csrbank0_cntrl0_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 4'd15))) begin
+        csr_bankarray_csrbank0_cntrl0_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_cntrl0_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_enable0_r = interface0_dat_w[0];
+assign csr_bankarray_csrbank0_enable0_r = csr_bankarray_interface0_bank_bus_dat_w[0];
 always @(*) begin
-    csrbank0_enable0_re <= 1'd0;
-    csrbank0_enable0_we <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 5'd16))) begin
-        csrbank0_enable0_re <= interface0_we;
-        csrbank0_enable0_we <= (~interface0_we);
+    csr_bankarray_csrbank0_enable0_re <= 1'd0;
+    csr_bankarray_csrbank0_enable0_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 5'd16))) begin
+        csr_bankarray_csrbank0_enable0_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_enable0_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_test0_r = interface0_dat_w[31:0];
+assign csr_bankarray_csrbank0_test0_r = csr_bankarray_interface0_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank0_test0_we <= 1'd0;
-    csrbank0_test0_re <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 5'd17))) begin
-        csrbank0_test0_re <= interface0_we;
-        csrbank0_test0_we <= (~interface0_we);
+    csr_bankarray_csrbank0_test0_re <= 1'd0;
+    csr_bankarray_csrbank0_test0_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 5'd17))) begin
+        csr_bankarray_csrbank0_test0_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_test0_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_ndma_r = interface0_dat_w[3:0];
+assign csr_bankarray_csrbank0_ndma_r = csr_bankarray_interface0_bank_bus_dat_w[3:0];
 always @(*) begin
-    csrbank0_ndma_we <= 1'd0;
-    csrbank0_ndma_re <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 5'd18))) begin
-        csrbank0_ndma_re <= interface0_we;
-        csrbank0_ndma_we <= (~interface0_we);
+    csr_bankarray_csrbank0_ndma_re <= 1'd0;
+    csr_bankarray_csrbank0_ndma_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 5'd18))) begin
+        csr_bankarray_csrbank0_ndma_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_ndma_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_enable_both0_r = interface0_dat_w[0];
+assign csr_bankarray_csrbank0_enable_both0_r = csr_bankarray_interface0_bank_bus_dat_w[0];
 always @(*) begin
-    csrbank0_enable_both0_re <= 1'd0;
-    csrbank0_enable_both0_we <= 1'd0;
-    if ((csrbank0_sel & (interface0_adr[8:0] == 5'd19))) begin
-        csrbank0_enable_both0_re <= interface0_we;
-        csrbank0_enable_both0_we <= (~interface0_we);
+    csr_bankarray_csrbank0_enable_both0_re <= 1'd0;
+    csr_bankarray_csrbank0_enable_both0_we <= 1'd0;
+    if ((csr_bankarray_csrbank0_sel & (csr_bankarray_interface0_bank_bus_adr[8:0] == 5'd19))) begin
+        csr_bankarray_csrbank0_enable_both0_re <= csr_bankarray_interface0_bank_bus_we;
+        csr_bankarray_csrbank0_enable_both0_we <= csr_bankarray_interface0_bank_bus_re;
     end
 end
-assign csrbank0_cntrl15_w = CNTRL_cntrl_storage[511:480];
-assign csrbank0_cntrl14_w = CNTRL_cntrl_storage[479:448];
-assign csrbank0_cntrl13_w = CNTRL_cntrl_storage[447:416];
-assign csrbank0_cntrl12_w = CNTRL_cntrl_storage[415:384];
-assign csrbank0_cntrl11_w = CNTRL_cntrl_storage[383:352];
-assign csrbank0_cntrl10_w = CNTRL_cntrl_storage[351:320];
-assign csrbank0_cntrl9_w = CNTRL_cntrl_storage[319:288];
-assign csrbank0_cntrl8_w = CNTRL_cntrl_storage[287:256];
-assign csrbank0_cntrl7_w = CNTRL_cntrl_storage[255:224];
-assign csrbank0_cntrl6_w = CNTRL_cntrl_storage[223:192];
-assign csrbank0_cntrl5_w = CNTRL_cntrl_storage[191:160];
-assign csrbank0_cntrl4_w = CNTRL_cntrl_storage[159:128];
-assign csrbank0_cntrl3_w = CNTRL_cntrl_storage[127:96];
-assign csrbank0_cntrl2_w = CNTRL_cntrl_storage[95:64];
-assign csrbank0_cntrl1_w = CNTRL_cntrl_storage[63:32];
-assign csrbank0_cntrl0_w = CNTRL_cntrl_storage[31:0];
-assign csrbank0_enable0_w = CNTRL_enable_storage;
-assign csrbank0_test0_w = CNTRL_test_storage[31:0];
-assign csrbank0_ndma_w = CNTRL_ndma_status[3:0];
-assign CNTRL_ndma_we = csrbank0_ndma_we;
-assign csrbank0_enable_both0_w = CNTRL_enable_both_storage;
-assign csrbank1_sel = (interface1_adr[13:9] == 1'd0);
-assign csrbank1_reset0_r = interface1_dat_w[1:0];
+assign csr_bankarray_csrbank0_cntrl15_w = CNTRL_cntrl_storage[511:480];
+assign csr_bankarray_csrbank0_cntrl14_w = CNTRL_cntrl_storage[479:448];
+assign csr_bankarray_csrbank0_cntrl13_w = CNTRL_cntrl_storage[447:416];
+assign csr_bankarray_csrbank0_cntrl12_w = CNTRL_cntrl_storage[415:384];
+assign csr_bankarray_csrbank0_cntrl11_w = CNTRL_cntrl_storage[383:352];
+assign csr_bankarray_csrbank0_cntrl10_w = CNTRL_cntrl_storage[351:320];
+assign csr_bankarray_csrbank0_cntrl9_w = CNTRL_cntrl_storage[319:288];
+assign csr_bankarray_csrbank0_cntrl8_w = CNTRL_cntrl_storage[287:256];
+assign csr_bankarray_csrbank0_cntrl7_w = CNTRL_cntrl_storage[255:224];
+assign csr_bankarray_csrbank0_cntrl6_w = CNTRL_cntrl_storage[223:192];
+assign csr_bankarray_csrbank0_cntrl5_w = CNTRL_cntrl_storage[191:160];
+assign csr_bankarray_csrbank0_cntrl4_w = CNTRL_cntrl_storage[159:128];
+assign csr_bankarray_csrbank0_cntrl3_w = CNTRL_cntrl_storage[127:96];
+assign csr_bankarray_csrbank0_cntrl2_w = CNTRL_cntrl_storage[95:64];
+assign csr_bankarray_csrbank0_cntrl1_w = CNTRL_cntrl_storage[63:32];
+assign csr_bankarray_csrbank0_cntrl0_w = CNTRL_cntrl_storage[31:0];
+assign csr_bankarray_csrbank0_enable0_w = CNTRL_enable_storage;
+assign csr_bankarray_csrbank0_test0_w = CNTRL_test_storage[31:0];
+assign csr_bankarray_csrbank0_ndma_w = CNTRL_ndma_status[3:0];
+assign CNTRL_ndma_we = csr_bankarray_csrbank0_ndma_we;
+assign csr_bankarray_csrbank0_enable_both0_w = CNTRL_enable_both_storage;
+assign csr_bankarray_csrbank1_sel = (csr_bankarray_interface1_bank_bus_adr[13:9] == 1'd0);
+assign csr_bankarray_csrbank1_reset0_r = csr_bankarray_interface1_bank_bus_dat_w[1:0];
 always @(*) begin
-    csrbank1_reset0_we <= 1'd0;
-    csrbank1_reset0_re <= 1'd0;
-    if ((csrbank1_sel & (interface1_adr[8:0] == 1'd0))) begin
-        csrbank1_reset0_re <= interface1_we;
-        csrbank1_reset0_we <= (~interface1_we);
+    csr_bankarray_csrbank1_reset0_re <= 1'd0;
+    csr_bankarray_csrbank1_reset0_we <= 1'd0;
+    if ((csr_bankarray_csrbank1_sel & (csr_bankarray_interface1_bank_bus_adr[8:0] == 1'd0))) begin
+        csr_bankarray_csrbank1_reset0_re <= csr_bankarray_interface1_bank_bus_we;
+        csr_bankarray_csrbank1_reset0_we <= csr_bankarray_interface1_bank_bus_re;
     end
 end
-assign csrbank1_scratch0_r = interface1_dat_w[31:0];
+assign csr_bankarray_csrbank1_scratch0_r = csr_bankarray_interface1_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank1_scratch0_re <= 1'd0;
-    csrbank1_scratch0_we <= 1'd0;
-    if ((csrbank1_sel & (interface1_adr[8:0] == 1'd1))) begin
-        csrbank1_scratch0_re <= interface1_we;
-        csrbank1_scratch0_we <= (~interface1_we);
+    csr_bankarray_csrbank1_scratch0_re <= 1'd0;
+    csr_bankarray_csrbank1_scratch0_we <= 1'd0;
+    if ((csr_bankarray_csrbank1_sel & (csr_bankarray_interface1_bank_bus_adr[8:0] == 1'd1))) begin
+        csr_bankarray_csrbank1_scratch0_re <= csr_bankarray_interface1_bank_bus_we;
+        csr_bankarray_csrbank1_scratch0_we <= csr_bankarray_interface1_bank_bus_re;
     end
 end
-assign csrbank1_bus_errors_r = interface1_dat_w[31:0];
+assign csr_bankarray_csrbank1_bus_errors_r = csr_bankarray_interface1_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank1_bus_errors_we <= 1'd0;
-    csrbank1_bus_errors_re <= 1'd0;
-    if ((csrbank1_sel & (interface1_adr[8:0] == 2'd2))) begin
-        csrbank1_bus_errors_re <= interface1_we;
-        csrbank1_bus_errors_we <= (~interface1_we);
+    csr_bankarray_csrbank1_bus_errors_re <= 1'd0;
+    csr_bankarray_csrbank1_bus_errors_we <= 1'd0;
+    if ((csr_bankarray_csrbank1_sel & (csr_bankarray_interface1_bank_bus_adr[8:0] == 2'd2))) begin
+        csr_bankarray_csrbank1_bus_errors_re <= csr_bankarray_interface1_bank_bus_we;
+        csr_bankarray_csrbank1_bus_errors_we <= csr_bankarray_interface1_bank_bus_re;
     end
 end
-assign mmap_sel = (interface2_adr[13:9] == 3'd6);
 always @(*) begin
-    interface2_dat_r <= 32'd0;
-    if (mmap_sel_r) begin
-        interface2_dat_r <= mmap_dat_r;
+    soc_rst <= 1'd0;
+    if (reset_re) begin
+        soc_rst <= reset_storage[0];
     end
 end
-assign mmap_adr = interface2_adr[5:0];
-assign csrbank2_sel = (interface3_adr[13:9] == 3'd5);
-assign csrbank2_writer_enable0_r = interface3_dat_w[0];
+assign cpu_rst = reset_storage[1];
+assign csr_bankarray_csrbank1_reset0_w = reset_storage[1:0];
+assign csr_bankarray_csrbank1_scratch0_w = scratch_storage[31:0];
+assign csr_bankarray_csrbank1_bus_errors_w = bus_errors_status[31:0];
+assign bus_errors_we = csr_bankarray_csrbank1_bus_errors_we;
+assign csr_bankarray_sel = (csr_bankarray_sram_bus_adr[13:9] == 3'd6);
 always @(*) begin
-    csrbank2_writer_enable0_re <= 1'd0;
-    csrbank2_writer_enable0_we <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 1'd0))) begin
-        csrbank2_writer_enable0_re <= interface3_we;
-        csrbank2_writer_enable0_we <= (~interface3_we);
+    csr_bankarray_sram_bus_dat_r <= 32'd0;
+    if (csr_bankarray_sel_r) begin
+        csr_bankarray_sram_bus_dat_r <= csr_bankarray_dat_r;
     end
 end
-assign csrbank2_writer_table_value1_r = interface3_dat_w[25:0];
+assign csr_bankarray_adr = csr_bankarray_sram_bus_adr[5:0];
+assign csr_bankarray_csrbank2_sel = (csr_bankarray_interface2_bank_bus_adr[13:9] == 3'd5);
+assign csr_bankarray_csrbank2_writer_enable0_r = csr_bankarray_interface2_bank_bus_dat_w[1:0];
 always @(*) begin
-    csrbank2_writer_table_value1_we <= 1'd0;
-    csrbank2_writer_table_value1_re <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 1'd1))) begin
-        csrbank2_writer_table_value1_re <= interface3_we;
-        csrbank2_writer_table_value1_we <= (~interface3_we);
+    csr_bankarray_csrbank2_writer_enable0_re <= 1'd0;
+    csr_bankarray_csrbank2_writer_enable0_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 1'd0))) begin
+        csr_bankarray_csrbank2_writer_enable0_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_writer_enable0_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_writer_table_value0_r = interface3_dat_w[31:0];
+assign csr_bankarray_csrbank2_writer_table_value1_r = csr_bankarray_interface2_bank_bus_dat_w[25:0];
 always @(*) begin
-    csrbank2_writer_table_value0_we <= 1'd0;
-    csrbank2_writer_table_value0_re <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 2'd2))) begin
-        csrbank2_writer_table_value0_re <= interface3_we;
-        csrbank2_writer_table_value0_we <= (~interface3_we);
+    csr_bankarray_csrbank2_writer_table_value1_re <= 1'd0;
+    csr_bankarray_csrbank2_writer_table_value1_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 1'd1))) begin
+        csr_bankarray_csrbank2_writer_table_value1_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_writer_table_value1_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_writer_table_we0_r = interface3_dat_w[31:0];
+assign csr_bankarray_csrbank2_writer_table_value0_r = csr_bankarray_interface2_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank2_writer_table_we0_re <= 1'd0;
-    csrbank2_writer_table_we0_we <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 2'd3))) begin
-        csrbank2_writer_table_we0_re <= interface3_we;
-        csrbank2_writer_table_we0_we <= (~interface3_we);
+    csr_bankarray_csrbank2_writer_table_value0_re <= 1'd0;
+    csr_bankarray_csrbank2_writer_table_value0_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 2'd2))) begin
+        csr_bankarray_csrbank2_writer_table_value0_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_writer_table_value0_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_writer_table_loop_prog_n0_r = interface3_dat_w[0];
+assign csr_bankarray_csrbank2_writer_table_we0_r = csr_bankarray_interface2_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank2_writer_table_loop_prog_n0_we <= 1'd0;
-    csrbank2_writer_table_loop_prog_n0_re <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 3'd4))) begin
-        csrbank2_writer_table_loop_prog_n0_re <= interface3_we;
-        csrbank2_writer_table_loop_prog_n0_we <= (~interface3_we);
+    csr_bankarray_csrbank2_writer_table_we0_re <= 1'd0;
+    csr_bankarray_csrbank2_writer_table_we0_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 2'd3))) begin
+        csr_bankarray_csrbank2_writer_table_we0_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_writer_table_we0_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_writer_table_loop_status_r = interface3_dat_w[31:0];
+assign csr_bankarray_csrbank2_writer_table_loop_prog_n0_r = csr_bankarray_interface2_bank_bus_dat_w[0];
 always @(*) begin
-    csrbank2_writer_table_loop_status_re <= 1'd0;
-    csrbank2_writer_table_loop_status_we <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 3'd5))) begin
-        csrbank2_writer_table_loop_status_re <= interface3_we;
-        csrbank2_writer_table_loop_status_we <= (~interface3_we);
+    csr_bankarray_csrbank2_writer_table_loop_prog_n0_re <= 1'd0;
+    csr_bankarray_csrbank2_writer_table_loop_prog_n0_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 3'd4))) begin
+        csr_bankarray_csrbank2_writer_table_loop_prog_n0_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_writer_table_loop_prog_n0_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_writer_table_level_r = interface3_dat_w[8:0];
+assign csr_bankarray_csrbank2_writer_table_loop_status_r = csr_bankarray_interface2_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank2_writer_table_level_re <= 1'd0;
-    csrbank2_writer_table_level_we <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 3'd6))) begin
-        csrbank2_writer_table_level_re <= interface3_we;
-        csrbank2_writer_table_level_we <= (~interface3_we);
+    csr_bankarray_csrbank2_writer_table_loop_status_re <= 1'd0;
+    csr_bankarray_csrbank2_writer_table_loop_status_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 3'd5))) begin
+        csr_bankarray_csrbank2_writer_table_loop_status_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_writer_table_loop_status_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_writer_table_reset0_r = interface3_dat_w[0];
+assign csr_bankarray_csrbank2_writer_table_level_r = csr_bankarray_interface2_bank_bus_dat_w[8:0];
 always @(*) begin
-    csrbank2_writer_table_reset0_we <= 1'd0;
-    csrbank2_writer_table_reset0_re <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 3'd7))) begin
-        csrbank2_writer_table_reset0_re <= interface3_we;
-        csrbank2_writer_table_reset0_we <= (~interface3_we);
+    csr_bankarray_csrbank2_writer_table_level_re <= 1'd0;
+    csr_bankarray_csrbank2_writer_table_level_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 3'd6))) begin
+        csr_bankarray_csrbank2_writer_table_level_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_writer_table_level_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_reader_enable0_r = interface3_dat_w[0];
+assign csr_bankarray_csrbank2_writer_table_reset0_r = csr_bankarray_interface2_bank_bus_dat_w[0];
 always @(*) begin
-    csrbank2_reader_enable0_we <= 1'd0;
-    csrbank2_reader_enable0_re <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 4'd8))) begin
-        csrbank2_reader_enable0_re <= interface3_we;
-        csrbank2_reader_enable0_we <= (~interface3_we);
+    csr_bankarray_csrbank2_writer_table_reset0_re <= 1'd0;
+    csr_bankarray_csrbank2_writer_table_reset0_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 3'd7))) begin
+        csr_bankarray_csrbank2_writer_table_reset0_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_writer_table_reset0_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_reader_table_value1_r = interface3_dat_w[25:0];
+assign csr_bankarray_csrbank2_reader_enable0_r = csr_bankarray_interface2_bank_bus_dat_w[1:0];
 always @(*) begin
-    csrbank2_reader_table_value1_re <= 1'd0;
-    csrbank2_reader_table_value1_we <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 4'd9))) begin
-        csrbank2_reader_table_value1_re <= interface3_we;
-        csrbank2_reader_table_value1_we <= (~interface3_we);
+    csr_bankarray_csrbank2_reader_enable0_re <= 1'd0;
+    csr_bankarray_csrbank2_reader_enable0_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 4'd8))) begin
+        csr_bankarray_csrbank2_reader_enable0_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_reader_enable0_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_reader_table_value0_r = interface3_dat_w[31:0];
+assign csr_bankarray_csrbank2_reader_table_value1_r = csr_bankarray_interface2_bank_bus_dat_w[25:0];
 always @(*) begin
-    csrbank2_reader_table_value0_we <= 1'd0;
-    csrbank2_reader_table_value0_re <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 4'd10))) begin
-        csrbank2_reader_table_value0_re <= interface3_we;
-        csrbank2_reader_table_value0_we <= (~interface3_we);
+    csr_bankarray_csrbank2_reader_table_value1_re <= 1'd0;
+    csr_bankarray_csrbank2_reader_table_value1_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 4'd9))) begin
+        csr_bankarray_csrbank2_reader_table_value1_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_reader_table_value1_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_reader_table_we0_r = interface3_dat_w[31:0];
+assign csr_bankarray_csrbank2_reader_table_value0_r = csr_bankarray_interface2_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank2_reader_table_we0_re <= 1'd0;
-    csrbank2_reader_table_we0_we <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 4'd11))) begin
-        csrbank2_reader_table_we0_re <= interface3_we;
-        csrbank2_reader_table_we0_we <= (~interface3_we);
+    csr_bankarray_csrbank2_reader_table_value0_re <= 1'd0;
+    csr_bankarray_csrbank2_reader_table_value0_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 4'd10))) begin
+        csr_bankarray_csrbank2_reader_table_value0_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_reader_table_value0_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_reader_table_loop_prog_n0_r = interface3_dat_w[0];
+assign csr_bankarray_csrbank2_reader_table_we0_r = csr_bankarray_interface2_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank2_reader_table_loop_prog_n0_re <= 1'd0;
-    csrbank2_reader_table_loop_prog_n0_we <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 4'd12))) begin
-        csrbank2_reader_table_loop_prog_n0_re <= interface3_we;
-        csrbank2_reader_table_loop_prog_n0_we <= (~interface3_we);
+    csr_bankarray_csrbank2_reader_table_we0_re <= 1'd0;
+    csr_bankarray_csrbank2_reader_table_we0_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 4'd11))) begin
+        csr_bankarray_csrbank2_reader_table_we0_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_reader_table_we0_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_reader_table_loop_status_r = interface3_dat_w[31:0];
+assign csr_bankarray_csrbank2_reader_table_loop_prog_n0_r = csr_bankarray_interface2_bank_bus_dat_w[0];
 always @(*) begin
-    csrbank2_reader_table_loop_status_we <= 1'd0;
-    csrbank2_reader_table_loop_status_re <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 4'd13))) begin
-        csrbank2_reader_table_loop_status_re <= interface3_we;
-        csrbank2_reader_table_loop_status_we <= (~interface3_we);
+    csr_bankarray_csrbank2_reader_table_loop_prog_n0_re <= 1'd0;
+    csr_bankarray_csrbank2_reader_table_loop_prog_n0_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 4'd12))) begin
+        csr_bankarray_csrbank2_reader_table_loop_prog_n0_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_reader_table_loop_prog_n0_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_reader_table_level_r = interface3_dat_w[8:0];
+assign csr_bankarray_csrbank2_reader_table_loop_status_r = csr_bankarray_interface2_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank2_reader_table_level_re <= 1'd0;
-    csrbank2_reader_table_level_we <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 4'd14))) begin
-        csrbank2_reader_table_level_re <= interface3_we;
-        csrbank2_reader_table_level_we <= (~interface3_we);
+    csr_bankarray_csrbank2_reader_table_loop_status_re <= 1'd0;
+    csr_bankarray_csrbank2_reader_table_loop_status_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 4'd13))) begin
+        csr_bankarray_csrbank2_reader_table_loop_status_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_reader_table_loop_status_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_reader_table_reset0_r = interface3_dat_w[0];
+assign csr_bankarray_csrbank2_reader_table_level_r = csr_bankarray_interface2_bank_bus_dat_w[8:0];
 always @(*) begin
-    csrbank2_reader_table_reset0_re <= 1'd0;
-    csrbank2_reader_table_reset0_we <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 4'd15))) begin
-        csrbank2_reader_table_reset0_re <= interface3_we;
-        csrbank2_reader_table_reset0_we <= (~interface3_we);
+    csr_bankarray_csrbank2_reader_table_level_re <= 1'd0;
+    csr_bankarray_csrbank2_reader_table_level_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 4'd14))) begin
+        csr_bankarray_csrbank2_reader_table_level_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_reader_table_level_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_buffering_reader_fifo_control0_r = interface3_dat_w[31:0];
+assign csr_bankarray_csrbank2_reader_table_reset0_r = csr_bankarray_interface2_bank_bus_dat_w[0];
 always @(*) begin
-    csrbank2_buffering_reader_fifo_control0_we <= 1'd0;
-    csrbank2_buffering_reader_fifo_control0_re <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 5'd16))) begin
-        csrbank2_buffering_reader_fifo_control0_re <= interface3_we;
-        csrbank2_buffering_reader_fifo_control0_we <= (~interface3_we);
+    csr_bankarray_csrbank2_reader_table_reset0_re <= 1'd0;
+    csr_bankarray_csrbank2_reader_table_reset0_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 4'd15))) begin
+        csr_bankarray_csrbank2_reader_table_reset0_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_reader_table_reset0_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_buffering_reader_fifo_status_r = interface3_dat_w[23:0];
+assign csr_bankarray_csrbank2_buffering_reader_fifo_control0_r = csr_bankarray_interface2_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank2_buffering_reader_fifo_status_re <= 1'd0;
-    csrbank2_buffering_reader_fifo_status_we <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 5'd17))) begin
-        csrbank2_buffering_reader_fifo_status_re <= interface3_we;
-        csrbank2_buffering_reader_fifo_status_we <= (~interface3_we);
+    csr_bankarray_csrbank2_buffering_reader_fifo_control0_re <= 1'd0;
+    csr_bankarray_csrbank2_buffering_reader_fifo_control0_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 5'd16))) begin
+        csr_bankarray_csrbank2_buffering_reader_fifo_control0_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_buffering_reader_fifo_control0_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_buffering_writer_fifo_control0_r = interface3_dat_w[31:0];
+assign csr_bankarray_csrbank2_buffering_reader_fifo_status_r = csr_bankarray_interface2_bank_bus_dat_w[23:0];
 always @(*) begin
-    csrbank2_buffering_writer_fifo_control0_re <= 1'd0;
-    csrbank2_buffering_writer_fifo_control0_we <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 5'd18))) begin
-        csrbank2_buffering_writer_fifo_control0_re <= interface3_we;
-        csrbank2_buffering_writer_fifo_control0_we <= (~interface3_we);
+    csr_bankarray_csrbank2_buffering_reader_fifo_status_re <= 1'd0;
+    csr_bankarray_csrbank2_buffering_reader_fifo_status_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 5'd17))) begin
+        csr_bankarray_csrbank2_buffering_reader_fifo_status_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_buffering_reader_fifo_status_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_buffering_writer_fifo_status_r = interface3_dat_w[23:0];
+assign csr_bankarray_csrbank2_buffering_writer_fifo_control0_r = csr_bankarray_interface2_bank_bus_dat_w[31:0];
 always @(*) begin
-    csrbank2_buffering_writer_fifo_status_we <= 1'd0;
-    csrbank2_buffering_writer_fifo_status_re <= 1'd0;
-    if ((csrbank2_sel & (interface3_adr[8:0] == 5'd19))) begin
-        csrbank2_buffering_writer_fifo_status_re <= interface3_we;
-        csrbank2_buffering_writer_fifo_status_we <= (~interface3_we);
+    csr_bankarray_csrbank2_buffering_writer_fifo_control0_re <= 1'd0;
+    csr_bankarray_csrbank2_buffering_writer_fifo_control0_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 5'd18))) begin
+        csr_bankarray_csrbank2_buffering_writer_fifo_control0_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_buffering_writer_fifo_control0_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank2_writer_enable0_w = writer_enable_storage;
-assign writer_table_address_lsb = writer_table_value_storage[31:0];
-assign writer_table_length = writer_table_value_storage[55:32];
-assign writer_table_irq_disable = writer_table_value_storage[56];
-assign writer_table_last_disable = writer_table_value_storage[57];
-assign csrbank2_writer_table_value1_w = writer_table_value_storage[57:32];
-assign csrbank2_writer_table_value0_w = writer_table_value_storage[31:0];
-assign writer_table_address_msb = writer_table_we_storage[31:0];
-assign csrbank2_writer_table_we0_w = writer_table_we_storage[31:0];
-assign csrbank2_writer_table_loop_prog_n0_w = writer_table_loop_prog_n_storage;
+assign csr_bankarray_csrbank2_buffering_writer_fifo_status_r = csr_bankarray_interface2_bank_bus_dat_w[23:0];
 always @(*) begin
-    writer_table_loop_status_status <= 32'd0;
-    writer_table_loop_status_status[15:0] <= writer_table_index;
-    writer_table_loop_status_status[31:16] <= writer_table_count;
-end
-assign csrbank2_writer_table_loop_status_w = writer_table_loop_status_status[31:0];
-assign writer_table_loop_status_we = csrbank2_writer_table_loop_status_we;
-assign csrbank2_writer_table_level_w = writer_table_level_status[8:0];
-assign writer_table_level_we = csrbank2_writer_table_level_we;
-assign csrbank2_writer_table_reset0_w = writer_table_reset_storage;
-assign csrbank2_reader_enable0_w = reader_enable_storage;
-assign reader_table_address_lsb = reader_table_value_storage[31:0];
-assign reader_table_length = reader_table_value_storage[55:32];
-assign reader_table_irq_disable = reader_table_value_storage[56];
-assign reader_table_last_disable = reader_table_value_storage[57];
-assign csrbank2_reader_table_value1_w = reader_table_value_storage[57:32];
-assign csrbank2_reader_table_value0_w = reader_table_value_storage[31:0];
-assign reader_table_address_msb = reader_table_we_storage[31:0];
-assign csrbank2_reader_table_we0_w = reader_table_we_storage[31:0];
-assign csrbank2_reader_table_loop_prog_n0_w = reader_table_loop_prog_n_storage;
-always @(*) begin
-    reader_table_loop_status_status <= 32'd0;
-    reader_table_loop_status_status[15:0] <= reader_table_index;
-    reader_table_loop_status_status[31:16] <= reader_table_count;
-end
-assign csrbank2_reader_table_loop_status_w = reader_table_loop_status_status[31:0];
-assign reader_table_loop_status_we = csrbank2_reader_table_loop_status_we;
-assign csrbank2_reader_table_level_w = reader_table_level_status[8:0];
-assign reader_table_level_we = csrbank2_reader_table_level_we;
-assign csrbank2_reader_table_reset0_w = reader_table_reset_storage;
-assign buffering_csrfield_depth0 = buffering_reader_fifo_control_storage[23:0];
-assign buffering_csrfield_scratch0 = buffering_reader_fifo_control_storage[27:24];
-assign buffering_csrfield_level_mode0 = buffering_reader_fifo_control_storage[31];
-assign csrbank2_buffering_reader_fifo_control0_w = buffering_reader_fifo_control_storage[31:0];
-assign buffering_reader_fifo_status_status[23:0] = buffering_csrfield_level0;
-assign csrbank2_buffering_reader_fifo_status_w = buffering_reader_fifo_status_status[23:0];
-assign buffering_reader_fifo_status_we = csrbank2_buffering_reader_fifo_status_we;
-assign buffering_csrfield_depth1 = buffering_writer_fifo_control_storage[23:0];
-assign buffering_csrfield_scratch1 = buffering_writer_fifo_control_storage[27:24];
-assign buffering_csrfield_level_mode1 = buffering_writer_fifo_control_storage[31];
-assign csrbank2_buffering_writer_fifo_control0_w = buffering_writer_fifo_control_storage[31:0];
-assign buffering_writer_fifo_status_status[23:0] = buffering_csrfield_level1;
-assign csrbank2_buffering_writer_fifo_status_w = buffering_writer_fifo_status_status[23:0];
-assign buffering_writer_fifo_status_we = csrbank2_buffering_writer_fifo_status_we;
-assign csrbank3_sel = (interface4_adr[13:9] == 2'd3);
-assign csrbank3_enable0_r = interface4_dat_w[31:0];
-always @(*) begin
-    csrbank3_enable0_re <= 1'd0;
-    csrbank3_enable0_we <= 1'd0;
-    if ((csrbank3_sel & (interface4_adr[8:0] == 1'd0))) begin
-        csrbank3_enable0_re <= interface4_we;
-        csrbank3_enable0_we <= (~interface4_we);
+    csr_bankarray_csrbank2_buffering_writer_fifo_status_re <= 1'd0;
+    csr_bankarray_csrbank2_buffering_writer_fifo_status_we <= 1'd0;
+    if ((csr_bankarray_csrbank2_sel & (csr_bankarray_interface2_bank_bus_adr[8:0] == 5'd19))) begin
+        csr_bankarray_csrbank2_buffering_writer_fifo_status_re <= csr_bankarray_interface2_bank_bus_we;
+        csr_bankarray_csrbank2_buffering_writer_fifo_status_we <= csr_bankarray_interface2_bank_bus_re;
     end
 end
-assign csrbank3_clear0_r = interface4_dat_w[31:0];
+assign csr_bankarray_csrbank2_writer_enable0_w = pcie_dma_writer_enable_storage[1:0];
+assign pcie_dma_writer_table_address_lsb = pcie_dma_writer_table_value_storage[31:0];
+assign pcie_dma_writer_table_length = pcie_dma_writer_table_value_storage[55:32];
+assign pcie_dma_writer_table_irq_disable = pcie_dma_writer_table_value_storage[56];
+assign pcie_dma_writer_table_last_disable = pcie_dma_writer_table_value_storage[57];
+assign csr_bankarray_csrbank2_writer_table_value1_w = pcie_dma_writer_table_value_storage[57:32];
+assign csr_bankarray_csrbank2_writer_table_value0_w = pcie_dma_writer_table_value_storage[31:0];
+assign pcie_dma_writer_table_address_msb = pcie_dma_writer_table_we_storage[31:0];
+assign csr_bankarray_csrbank2_writer_table_we0_w = pcie_dma_writer_table_we_storage[31:0];
+assign csr_bankarray_csrbank2_writer_table_loop_prog_n0_w = pcie_dma_writer_table_loop_prog_n_storage;
 always @(*) begin
-    csrbank3_clear0_we <= 1'd0;
-    csrbank3_clear0_re <= 1'd0;
-    if ((csrbank3_sel & (interface4_adr[8:0] == 1'd1))) begin
-        csrbank3_clear0_re <= interface4_we;
-        csrbank3_clear0_we <= (~interface4_we);
-    end
+    pcie_dma_writer_table_loop_status_status <= 32'd0;
+    pcie_dma_writer_table_loop_status_status[15:0] <= pcie_dma_writer_table_index;
+    pcie_dma_writer_table_loop_status_status[31:16] <= pcie_dma_writer_table_count;
 end
-assign csrbank3_vector_r = interface4_dat_w[31:0];
+assign csr_bankarray_csrbank2_writer_table_loop_status_w = pcie_dma_writer_table_loop_status_status[31:0];
+assign pcie_dma_writer_table_loop_status_we = csr_bankarray_csrbank2_writer_table_loop_status_we;
+assign csr_bankarray_csrbank2_writer_table_level_w = pcie_dma_writer_table_level_status[8:0];
+assign pcie_dma_writer_table_level_we = csr_bankarray_csrbank2_writer_table_level_we;
+assign csr_bankarray_csrbank2_writer_table_reset0_w = pcie_dma_writer_table_reset_storage;
+assign csr_bankarray_csrbank2_reader_enable0_w = pcie_dma_reader_enable_storage[1:0];
+assign pcie_dma_reader_table_address_lsb = pcie_dma_reader_table_value_storage[31:0];
+assign pcie_dma_reader_table_length = pcie_dma_reader_table_value_storage[55:32];
+assign pcie_dma_reader_table_irq_disable = pcie_dma_reader_table_value_storage[56];
+assign pcie_dma_reader_table_last_disable = pcie_dma_reader_table_value_storage[57];
+assign csr_bankarray_csrbank2_reader_table_value1_w = pcie_dma_reader_table_value_storage[57:32];
+assign csr_bankarray_csrbank2_reader_table_value0_w = pcie_dma_reader_table_value_storage[31:0];
+assign pcie_dma_reader_table_address_msb = pcie_dma_reader_table_we_storage[31:0];
+assign csr_bankarray_csrbank2_reader_table_we0_w = pcie_dma_reader_table_we_storage[31:0];
+assign csr_bankarray_csrbank2_reader_table_loop_prog_n0_w = pcie_dma_reader_table_loop_prog_n_storage;
 always @(*) begin
-    csrbank3_vector_re <= 1'd0;
-    csrbank3_vector_we <= 1'd0;
-    if ((csrbank3_sel & (interface4_adr[8:0] == 2'd2))) begin
-        csrbank3_vector_re <= interface4_we;
-        csrbank3_vector_we <= (~interface4_we);
-    end
+    pcie_dma_reader_table_loop_status_status <= 32'd0;
+    pcie_dma_reader_table_loop_status_status[15:0] <= pcie_dma_reader_table_index;
+    pcie_dma_reader_table_loop_status_status[31:16] <= pcie_dma_reader_table_count;
 end
-assign csrbank3_enable0_w = pcie_msi_enable_storage[31:0];
-assign csrbank3_clear0_w = pcie_msi_clear_storage[31:0];
-assign csrbank3_vector_w = pcie_msi_vector_status[31:0];
-assign pcie_msi_vector_we = csrbank3_vector_we;
-assign csrbank4_sel = (interface5_adr[13:9] == 2'd2);
-assign csrbank4_link_status_r = interface5_dat_w[9:0];
+assign csr_bankarray_csrbank2_reader_table_loop_status_w = pcie_dma_reader_table_loop_status_status[31:0];
+assign pcie_dma_reader_table_loop_status_we = csr_bankarray_csrbank2_reader_table_loop_status_we;
+assign csr_bankarray_csrbank2_reader_table_level_w = pcie_dma_reader_table_level_status[8:0];
+assign pcie_dma_reader_table_level_we = csr_bankarray_csrbank2_reader_table_level_we;
+assign csr_bankarray_csrbank2_reader_table_reset0_w = pcie_dma_reader_table_reset_storage;
+assign pcie_dma_buffering_csrfield_depth0 = pcie_dma_buffering_reader_fifo_control_storage[23:0];
+assign pcie_dma_buffering_csrfield_scratch0 = pcie_dma_buffering_reader_fifo_control_storage[27:24];
+assign pcie_dma_buffering_csrfield_level_mode0 = pcie_dma_buffering_reader_fifo_control_storage[31];
+assign csr_bankarray_csrbank2_buffering_reader_fifo_control0_w = pcie_dma_buffering_reader_fifo_control_storage[31:0];
 always @(*) begin
-    csrbank4_link_status_we <= 1'd0;
-    csrbank4_link_status_re <= 1'd0;
-    if ((csrbank4_sel & (interface5_adr[8:0] == 1'd0))) begin
-        csrbank4_link_status_re <= interface5_we;
-        csrbank4_link_status_we <= (~interface5_we);
-    end
+    pcie_dma_buffering_reader_fifo_status_status <= 24'd0;
+    pcie_dma_buffering_reader_fifo_status_status[23:0] <= pcie_dma_buffering_csrfield_level0;
 end
-assign csrbank4_msi_enable_r = interface5_dat_w[0];
+assign csr_bankarray_csrbank2_buffering_reader_fifo_status_w = pcie_dma_buffering_reader_fifo_status_status[23:0];
+assign pcie_dma_buffering_reader_fifo_status_we = csr_bankarray_csrbank2_buffering_reader_fifo_status_we;
+assign pcie_dma_buffering_csrfield_depth1 = pcie_dma_buffering_writer_fifo_control_storage[23:0];
+assign pcie_dma_buffering_csrfield_scratch1 = pcie_dma_buffering_writer_fifo_control_storage[27:24];
+assign pcie_dma_buffering_csrfield_level_mode1 = pcie_dma_buffering_writer_fifo_control_storage[31];
+assign csr_bankarray_csrbank2_buffering_writer_fifo_control0_w = pcie_dma_buffering_writer_fifo_control_storage[31:0];
 always @(*) begin
-    csrbank4_msi_enable_re <= 1'd0;
-    csrbank4_msi_enable_we <= 1'd0;
-    if ((csrbank4_sel & (interface5_adr[8:0] == 1'd1))) begin
-        csrbank4_msi_enable_re <= interface5_we;
-        csrbank4_msi_enable_we <= (~interface5_we);
-    end
+    pcie_dma_buffering_writer_fifo_status_status <= 24'd0;
+    pcie_dma_buffering_writer_fifo_status_status[23:0] <= pcie_dma_buffering_csrfield_level1;
 end
-assign csrbank4_msix_enable_r = interface5_dat_w[0];
-always @(*) begin
-    csrbank4_msix_enable_re <= 1'd0;
-    csrbank4_msix_enable_we <= 1'd0;
-    if ((csrbank4_sel & (interface5_adr[8:0] == 2'd2))) begin
-        csrbank4_msix_enable_re <= interface5_we;
-        csrbank4_msix_enable_we <= (~interface5_we);
-    end
-end
-assign csrbank4_bus_master_enable_r = interface5_dat_w[0];
-always @(*) begin
-    csrbank4_bus_master_enable_we <= 1'd0;
-    csrbank4_bus_master_enable_re <= 1'd0;
-    if ((csrbank4_sel & (interface5_adr[8:0] == 2'd3))) begin
-        csrbank4_bus_master_enable_re <= interface5_we;
-        csrbank4_bus_master_enable_we <= (~interface5_we);
-    end
-end
-assign csrbank4_max_request_size_r = interface5_dat_w[15:0];
-always @(*) begin
-    csrbank4_max_request_size_we <= 1'd0;
-    csrbank4_max_request_size_re <= 1'd0;
-    if ((csrbank4_sel & (interface5_adr[8:0] == 3'd4))) begin
-        csrbank4_max_request_size_re <= interface5_we;
-        csrbank4_max_request_size_we <= (~interface5_we);
-    end
-end
-assign csrbank4_max_payload_size_r = interface5_dat_w[15:0];
-always @(*) begin
-    csrbank4_max_payload_size_re <= 1'd0;
-    csrbank4_max_payload_size_we <= 1'd0;
-    if ((csrbank4_sel & (interface5_adr[8:0] == 3'd5))) begin
-        csrbank4_max_payload_size_re <= interface5_we;
-        csrbank4_max_payload_size_we <= (~interface5_we);
-    end
-end
+assign csr_bankarray_csrbank2_buffering_writer_fifo_status_w = pcie_dma_buffering_writer_fifo_status_status[23:0];
+assign pcie_dma_buffering_writer_fifo_status_we = csr_bankarray_csrbank2_buffering_writer_fifo_status_we;
+assign csr_bankarray_csrbank3_sel = (csr_bankarray_interface3_bank_bus_adr[13:9] == 3'd7);
 always @(*) begin
     s7pciephy_link_status_status <= 10'd0;
     s7pciephy_link_status_status[0] <= s7pciephy_csrfield_status;
@@ -5565,41 +6038,187 @@ always @(*) begin
     s7pciephy_link_status_status[3:2] <= s7pciephy_csrfield_width;
     s7pciephy_link_status_status[9:4] <= s7pciephy_csrfield_ltssm;
 end
-assign csrbank4_link_status_w = s7pciephy_link_status_status[9:0];
-assign s7pciephy_link_status_we = csrbank4_link_status_we;
-assign csrbank4_msi_enable_w = s7pciephy_msi_enable_status;
-assign s7pciephy_msi_enable_we = csrbank4_msi_enable_we;
-assign csrbank4_msix_enable_w = s7pciephy_msix_enable_status;
-assign s7pciephy_msix_enable_we = csrbank4_msix_enable_we;
-assign csrbank4_bus_master_enable_w = s7pciephy_bus_master_enable_status;
-assign s7pciephy_bus_master_enable_we = csrbank4_bus_master_enable_we;
-assign csrbank4_max_request_size_w = s7pciephy_max_request_size_status[15:0];
-assign s7pciephy_max_request_size_we = csrbank4_max_request_size_we;
-assign csrbank4_max_payload_size_w = s7pciephy_max_payload_size_status[15:0];
-assign s7pciephy_max_payload_size_we = csrbank4_max_payload_size_we;
-assign csr_interconnect_adr = litepciecore_adr;
-assign csr_interconnect_we = litepciecore_we;
-assign csr_interconnect_dat_w = litepciecore_dat_w;
-assign litepciecore_dat_r = csr_interconnect_dat_r;
-assign interface0_adr = csr_interconnect_adr;
-assign interface1_adr = csr_interconnect_adr;
-assign interface3_adr = csr_interconnect_adr;
-assign interface4_adr = csr_interconnect_adr;
-assign interface5_adr = csr_interconnect_adr;
-assign interface2_adr = csr_interconnect_adr;
-assign interface0_we = csr_interconnect_we;
-assign interface1_we = csr_interconnect_we;
-assign interface3_we = csr_interconnect_we;
-assign interface4_we = csr_interconnect_we;
-assign interface5_we = csr_interconnect_we;
-assign interface2_we = csr_interconnect_we;
-assign interface0_dat_w = csr_interconnect_dat_w;
-assign interface1_dat_w = csr_interconnect_dat_w;
-assign interface3_dat_w = csr_interconnect_dat_w;
-assign interface4_dat_w = csr_interconnect_dat_w;
-assign interface5_dat_w = csr_interconnect_dat_w;
-assign interface2_dat_w = csr_interconnect_dat_w;
-assign csr_interconnect_dat_r = (((((interface0_dat_r | interface1_dat_r) | interface3_dat_r) | interface4_dat_r) | interface5_dat_r) | interface2_dat_r);
+assign csr_bankarray_csrbank3_phy_link_status_w = s7pciephy_link_status_status[9:0];
+assign s7pciephy_link_status_we = csr_bankarray_csrbank3_phy_link_status_we;
+assign csr_bankarray_csrbank3_phy_msi_enable_w = s7pciephy_msi_enable_status;
+assign s7pciephy_msi_enable_we = csr_bankarray_csrbank3_phy_msi_enable_we;
+assign csr_bankarray_csrbank3_phy_msix_enable_w = s7pciephy_msix_enable_status;
+assign s7pciephy_msix_enable_we = csr_bankarray_csrbank3_phy_msix_enable_we;
+assign csr_bankarray_csrbank3_phy_bus_master_enable_w = s7pciephy_bus_master_enable_status;
+assign s7pciephy_bus_master_enable_we = csr_bankarray_csrbank3_phy_bus_master_enable_we;
+assign csr_bankarray_csrbank3_phy_max_request_size_w = s7pciephy_max_request_size_status[15:0];
+assign s7pciephy_max_request_size_we = csr_bankarray_csrbank3_phy_max_request_size_we;
+assign csr_bankarray_csrbank3_phy_max_payload_size_w = s7pciephy_max_payload_size_status[15:0];
+assign s7pciephy_max_payload_size_we = csr_bankarray_csrbank3_phy_max_payload_size_we;
+assign csr_bankarray_csrbank4_sel = (csr_bankarray_interface4_bank_bus_adr[13:9] == 2'd3);
+assign csr_bankarray_csrbank4_enable0_r = csr_bankarray_interface4_bank_bus_dat_w[31:0];
+always @(*) begin
+    csr_bankarray_csrbank4_enable0_re <= 1'd0;
+    csr_bankarray_csrbank4_enable0_we <= 1'd0;
+    if ((csr_bankarray_csrbank4_sel & (csr_bankarray_interface4_bank_bus_adr[8:0] == 1'd0))) begin
+        csr_bankarray_csrbank4_enable0_re <= csr_bankarray_interface4_bank_bus_we;
+        csr_bankarray_csrbank4_enable0_we <= csr_bankarray_interface4_bank_bus_re;
+    end
+end
+assign csr_bankarray_csrbank4_clear0_r = csr_bankarray_interface4_bank_bus_dat_w[31:0];
+always @(*) begin
+    csr_bankarray_csrbank4_clear0_re <= 1'd0;
+    csr_bankarray_csrbank4_clear0_we <= 1'd0;
+    if ((csr_bankarray_csrbank4_sel & (csr_bankarray_interface4_bank_bus_adr[8:0] == 1'd1))) begin
+        csr_bankarray_csrbank4_clear0_re <= csr_bankarray_interface4_bank_bus_we;
+        csr_bankarray_csrbank4_clear0_we <= csr_bankarray_interface4_bank_bus_re;
+    end
+end
+assign csr_bankarray_csrbank4_vector_r = csr_bankarray_interface4_bank_bus_dat_w[31:0];
+always @(*) begin
+    csr_bankarray_csrbank4_vector_re <= 1'd0;
+    csr_bankarray_csrbank4_vector_we <= 1'd0;
+    if ((csr_bankarray_csrbank4_sel & (csr_bankarray_interface4_bank_bus_adr[8:0] == 2'd2))) begin
+        csr_bankarray_csrbank4_vector_re <= csr_bankarray_interface4_bank_bus_we;
+        csr_bankarray_csrbank4_vector_we <= csr_bankarray_interface4_bank_bus_re;
+    end
+end
+assign csr_bankarray_csrbank4_enable0_w = pcie_msi_enable_storage[31:0];
+assign csr_bankarray_csrbank4_clear0_w = pcie_msi_clear_storage[31:0];
+assign csr_bankarray_csrbank4_vector_w = pcie_msi_vector_status[31:0];
+assign pcie_msi_vector_we = csr_bankarray_csrbank4_vector_we;
+assign csr_bankarray_csrbank5_sel = (csr_bankarray_interface5_bank_bus_adr[13:9] == 2'd2);
+always @(*) begin
+    csr_bankarray_csrbank3_phy_link_status_r <= 10'd0;
+    csr_bankarray_csrbank3_phy_link_status_r <= csr_bankarray_interface3_bank_bus_dat_w[9:0];
+    csr_bankarray_csrbank3_phy_link_status_r <= csr_bankarray_interface5_bank_bus_dat_w[9:0];
+end
+always @(*) begin
+    csr_bankarray_csrbank3_phy_link_status_re <= 1'd0;
+    csr_bankarray_csrbank3_phy_link_status_we <= 1'd0;
+    if ((csr_bankarray_csrbank3_sel & (csr_bankarray_interface3_bank_bus_adr[8:0] == 1'd0))) begin
+        csr_bankarray_csrbank3_phy_link_status_re <= csr_bankarray_interface3_bank_bus_we;
+        csr_bankarray_csrbank3_phy_link_status_we <= csr_bankarray_interface3_bank_bus_re;
+    end
+    if ((csr_bankarray_csrbank5_sel & (csr_bankarray_interface5_bank_bus_adr[8:0] == 1'd0))) begin
+        csr_bankarray_csrbank3_phy_link_status_re <= csr_bankarray_interface5_bank_bus_we;
+        csr_bankarray_csrbank3_phy_link_status_we <= csr_bankarray_interface5_bank_bus_re;
+    end
+end
+always @(*) begin
+    csr_bankarray_csrbank3_phy_msi_enable_r <= 1'd0;
+    csr_bankarray_csrbank3_phy_msi_enable_r <= csr_bankarray_interface3_bank_bus_dat_w[0];
+    csr_bankarray_csrbank3_phy_msi_enable_r <= csr_bankarray_interface5_bank_bus_dat_w[0];
+end
+always @(*) begin
+    csr_bankarray_csrbank3_phy_msi_enable_re <= 1'd0;
+    csr_bankarray_csrbank3_phy_msi_enable_we <= 1'd0;
+    if ((csr_bankarray_csrbank3_sel & (csr_bankarray_interface3_bank_bus_adr[8:0] == 1'd1))) begin
+        csr_bankarray_csrbank3_phy_msi_enable_re <= csr_bankarray_interface3_bank_bus_we;
+        csr_bankarray_csrbank3_phy_msi_enable_we <= csr_bankarray_interface3_bank_bus_re;
+    end
+    if ((csr_bankarray_csrbank5_sel & (csr_bankarray_interface5_bank_bus_adr[8:0] == 1'd1))) begin
+        csr_bankarray_csrbank3_phy_msi_enable_re <= csr_bankarray_interface5_bank_bus_we;
+        csr_bankarray_csrbank3_phy_msi_enable_we <= csr_bankarray_interface5_bank_bus_re;
+    end
+end
+always @(*) begin
+    csr_bankarray_csrbank3_phy_msix_enable_r <= 1'd0;
+    csr_bankarray_csrbank3_phy_msix_enable_r <= csr_bankarray_interface3_bank_bus_dat_w[0];
+    csr_bankarray_csrbank3_phy_msix_enable_r <= csr_bankarray_interface5_bank_bus_dat_w[0];
+end
+always @(*) begin
+    csr_bankarray_csrbank3_phy_msix_enable_re <= 1'd0;
+    csr_bankarray_csrbank3_phy_msix_enable_we <= 1'd0;
+    if ((csr_bankarray_csrbank3_sel & (csr_bankarray_interface3_bank_bus_adr[8:0] == 2'd2))) begin
+        csr_bankarray_csrbank3_phy_msix_enable_re <= csr_bankarray_interface3_bank_bus_we;
+        csr_bankarray_csrbank3_phy_msix_enable_we <= csr_bankarray_interface3_bank_bus_re;
+    end
+    if ((csr_bankarray_csrbank5_sel & (csr_bankarray_interface5_bank_bus_adr[8:0] == 2'd2))) begin
+        csr_bankarray_csrbank3_phy_msix_enable_re <= csr_bankarray_interface5_bank_bus_we;
+        csr_bankarray_csrbank3_phy_msix_enable_we <= csr_bankarray_interface5_bank_bus_re;
+    end
+end
+always @(*) begin
+    csr_bankarray_csrbank3_phy_bus_master_enable_r <= 1'd0;
+    csr_bankarray_csrbank3_phy_bus_master_enable_r <= csr_bankarray_interface3_bank_bus_dat_w[0];
+    csr_bankarray_csrbank3_phy_bus_master_enable_r <= csr_bankarray_interface5_bank_bus_dat_w[0];
+end
+always @(*) begin
+    csr_bankarray_csrbank3_phy_bus_master_enable_re <= 1'd0;
+    csr_bankarray_csrbank3_phy_bus_master_enable_we <= 1'd0;
+    if ((csr_bankarray_csrbank3_sel & (csr_bankarray_interface3_bank_bus_adr[8:0] == 2'd3))) begin
+        csr_bankarray_csrbank3_phy_bus_master_enable_re <= csr_bankarray_interface3_bank_bus_we;
+        csr_bankarray_csrbank3_phy_bus_master_enable_we <= csr_bankarray_interface3_bank_bus_re;
+    end
+    if ((csr_bankarray_csrbank5_sel & (csr_bankarray_interface5_bank_bus_adr[8:0] == 2'd3))) begin
+        csr_bankarray_csrbank3_phy_bus_master_enable_re <= csr_bankarray_interface5_bank_bus_we;
+        csr_bankarray_csrbank3_phy_bus_master_enable_we <= csr_bankarray_interface5_bank_bus_re;
+    end
+end
+always @(*) begin
+    csr_bankarray_csrbank3_phy_max_request_size_r <= 16'd0;
+    csr_bankarray_csrbank3_phy_max_request_size_r <= csr_bankarray_interface3_bank_bus_dat_w[15:0];
+    csr_bankarray_csrbank3_phy_max_request_size_r <= csr_bankarray_interface5_bank_bus_dat_w[15:0];
+end
+always @(*) begin
+    csr_bankarray_csrbank3_phy_max_request_size_re <= 1'd0;
+    csr_bankarray_csrbank3_phy_max_request_size_we <= 1'd0;
+    if ((csr_bankarray_csrbank3_sel & (csr_bankarray_interface3_bank_bus_adr[8:0] == 3'd4))) begin
+        csr_bankarray_csrbank3_phy_max_request_size_re <= csr_bankarray_interface3_bank_bus_we;
+        csr_bankarray_csrbank3_phy_max_request_size_we <= csr_bankarray_interface3_bank_bus_re;
+    end
+    if ((csr_bankarray_csrbank5_sel & (csr_bankarray_interface5_bank_bus_adr[8:0] == 3'd4))) begin
+        csr_bankarray_csrbank3_phy_max_request_size_re <= csr_bankarray_interface5_bank_bus_we;
+        csr_bankarray_csrbank3_phy_max_request_size_we <= csr_bankarray_interface5_bank_bus_re;
+    end
+end
+always @(*) begin
+    csr_bankarray_csrbank3_phy_max_payload_size_r <= 16'd0;
+    csr_bankarray_csrbank3_phy_max_payload_size_r <= csr_bankarray_interface3_bank_bus_dat_w[15:0];
+    csr_bankarray_csrbank3_phy_max_payload_size_r <= csr_bankarray_interface5_bank_bus_dat_w[15:0];
+end
+always @(*) begin
+    csr_bankarray_csrbank3_phy_max_payload_size_re <= 1'd0;
+    csr_bankarray_csrbank3_phy_max_payload_size_we <= 1'd0;
+    if ((csr_bankarray_csrbank3_sel & (csr_bankarray_interface3_bank_bus_adr[8:0] == 3'd5))) begin
+        csr_bankarray_csrbank3_phy_max_payload_size_re <= csr_bankarray_interface3_bank_bus_we;
+        csr_bankarray_csrbank3_phy_max_payload_size_we <= csr_bankarray_interface3_bank_bus_re;
+    end
+    if ((csr_bankarray_csrbank5_sel & (csr_bankarray_interface5_bank_bus_adr[8:0] == 3'd5))) begin
+        csr_bankarray_csrbank3_phy_max_payload_size_re <= csr_bankarray_interface5_bank_bus_we;
+        csr_bankarray_csrbank3_phy_max_payload_size_we <= csr_bankarray_interface5_bank_bus_re;
+    end
+end
+assign csr_interconnect_adr = interface1_adr;
+assign csr_interconnect_re = interface1_re;
+assign csr_interconnect_we = interface1_we;
+assign csr_interconnect_dat_w = interface1_dat_w;
+assign interface1_dat_r = csr_interconnect_dat_r;
+assign csr_bankarray_interface0_bank_bus_adr = csr_interconnect_adr;
+assign csr_bankarray_interface1_bank_bus_adr = csr_interconnect_adr;
+assign csr_bankarray_interface2_bank_bus_adr = csr_interconnect_adr;
+assign csr_bankarray_interface3_bank_bus_adr = csr_interconnect_adr;
+assign csr_bankarray_interface4_bank_bus_adr = csr_interconnect_adr;
+assign csr_bankarray_interface5_bank_bus_adr = csr_interconnect_adr;
+assign csr_bankarray_sram_bus_adr = csr_interconnect_adr;
+assign csr_bankarray_interface0_bank_bus_re = csr_interconnect_re;
+assign csr_bankarray_interface1_bank_bus_re = csr_interconnect_re;
+assign csr_bankarray_interface2_bank_bus_re = csr_interconnect_re;
+assign csr_bankarray_interface3_bank_bus_re = csr_interconnect_re;
+assign csr_bankarray_interface4_bank_bus_re = csr_interconnect_re;
+assign csr_bankarray_interface5_bank_bus_re = csr_interconnect_re;
+assign csr_bankarray_sram_bus_re = csr_interconnect_re;
+assign csr_bankarray_interface0_bank_bus_we = csr_interconnect_we;
+assign csr_bankarray_interface1_bank_bus_we = csr_interconnect_we;
+assign csr_bankarray_interface2_bank_bus_we = csr_interconnect_we;
+assign csr_bankarray_interface3_bank_bus_we = csr_interconnect_we;
+assign csr_bankarray_interface4_bank_bus_we = csr_interconnect_we;
+assign csr_bankarray_interface5_bank_bus_we = csr_interconnect_we;
+assign csr_bankarray_sram_bus_we = csr_interconnect_we;
+assign csr_bankarray_interface0_bank_bus_dat_w = csr_interconnect_dat_w;
+assign csr_bankarray_interface1_bank_bus_dat_w = csr_interconnect_dat_w;
+assign csr_bankarray_interface2_bank_bus_dat_w = csr_interconnect_dat_w;
+assign csr_bankarray_interface3_bank_bus_dat_w = csr_interconnect_dat_w;
+assign csr_bankarray_interface4_bank_bus_dat_w = csr_interconnect_dat_w;
+assign csr_bankarray_interface5_bank_bus_dat_w = csr_interconnect_dat_w;
+assign csr_bankarray_sram_bus_dat_w = csr_interconnect_dat_w;
+assign csr_interconnect_dat_r = ((((((csr_bankarray_interface0_bank_bus_dat_r | csr_bankarray_interface1_bank_bus_dat_r) | csr_bankarray_interface2_bank_bus_dat_r) | csr_bankarray_interface3_bank_bus_dat_r) | csr_bankarray_interface4_bank_bus_dat_r) | csr_bankarray_interface5_bank_bus_dat_r) | csr_bankarray_sram_bus_dat_r);
 assign slice_proxy0 = depacketizer_header_extracter_source_payload_dat[31:0];
 assign slice_proxy1 = depacketizer_header_extracter_source_payload_dat[31:0];
 assign slice_proxy2 = depacketizer_header_extracter_source_payload_dat[31:0];
@@ -5696,97 +6315,68 @@ assign slice_proxy92 = packetizer_source_source_payload_be[15:12];
 assign slice_proxy93 = packetizer_source_source_payload_be[15:12];
 assign slice_proxy94 = packetizer_source_source_payload_be[15:12];
 assign slice_proxy95 = packetizer_source_source_payload_be[15:12];
-assign s7pciephy_tx_datapath_cdc_cdc_produce_rdomain = xilinxmultiregimpl01;
-assign s7pciephy_tx_datapath_cdc_cdc_consume_wdomain = xilinxmultiregimpl11;
-assign s7pciephy_rx_datapath_cdc_cdc_produce_rdomain = xilinxmultiregimpl21;
-assign s7pciephy_rx_datapath_cdc_cdc_consume_wdomain = xilinxmultiregimpl31;
-assign s7pciephy_msi_cdc_cdc_produce_rdomain = xilinxmultiregimpl41;
-assign s7pciephy_msi_cdc_cdc_consume_wdomain = xilinxmultiregimpl51;
-assign s7pciephy_bus_master_enable_status = xilinxmultiregimpl6_xilinxmultiregimpl61;
-assign xilinxmultiregimpl6 = s7pciephy_command[2];
-assign s7pciephy_max_request_size_status = xilinxmultiregimpl71;
-assign s7pciephy_max_payload_size_status = xilinxmultiregimpl81;
+assign s7pciephy_tx_datapath_cdc_cdc_produce_rdomain = xilinxmultiregimpl0_regs1;
+assign s7pciephy_tx_datapath_cdc_cdc_consume_wdomain = xilinxmultiregimpl1_regs1;
+assign s7pciephy_rx_datapath_cdc_cdc_produce_rdomain = xilinxmultiregimpl2_regs1;
+assign s7pciephy_rx_datapath_cdc_cdc_consume_wdomain = xilinxmultiregimpl3_regs1;
+assign s7pciephy_msi_cdc_cdc_produce_rdomain = xilinxmultiregimpl4_regs1;
+assign s7pciephy_msi_cdc_cdc_consume_wdomain = xilinxmultiregimpl5_regs1;
+assign xilinxasyncresetsynchronizerimpl6 = (~s7pciephy_locked);
+assign xilinxasyncresetsynchronizerimpl7 = (~s7pciephy_locked);
+assign xilinxasyncresetsynchronizerimpl8 = (~s7pciephy_locked);
+assign xilinxasyncresetsynchronizerimpl9 = (~s7pciephy_locked);
+assign s7pciephy_pipe_pclk_sel_r = xilinxmultiregimpl6_regs1;
+assign s7pciephy_csrfield_status = xilinxmultiregimpl7_regs1;
+assign s7pciephy_msi_enable_status = xilinxmultiregimpl8_regs1;
+assign s7pciephy_msix_enable_status = xilinxmultiregimpl9_regs1;
+assign s7pciephy_command = xilinxmultiregimpl10_regs1;
+assign s7pciephy_dcommand = xilinxmultiregimpl11_regs1;
+assign s7pciephy_bus_number = xilinxmultiregimpl12_regs1;
+assign s7pciephy_device_number = xilinxmultiregimpl13_regs1;
+assign s7pciephy_function_number = xilinxmultiregimpl14_regs1;
+assign s7pciephy_csrfield_rate = xilinxmultiregimpl15_regs1;
+assign s7pciephy_csrfield_width = xilinxmultiregimpl16_regs1;
+assign s7pciephy_csrfield_ltssm = xilinxmultiregimpl17_regs1;
 
 
 //------------------------------------------------------------------------------
 // Synchronous Logic
 //------------------------------------------------------------------------------
 
-always @(posedge from2526333147296_clk) begin
+always @(posedge from221_clk) begin
     s7pciephy_tx_datapath_cdc_cdc_graycounter0_q_binary <= s7pciephy_tx_datapath_cdc_cdc_graycounter0_q_next_binary;
     s7pciephy_tx_datapath_cdc_cdc_graycounter0_q <= s7pciephy_tx_datapath_cdc_cdc_graycounter0_q_next;
-    if (from2526333147296_rst) begin
+    if (from221_rst) begin
         s7pciephy_tx_datapath_cdc_cdc_graycounter0_q <= 5'd0;
         s7pciephy_tx_datapath_cdc_cdc_graycounter0_q_binary <= 5'd0;
     end
-    xilinxmultiregimpl10 <= s7pciephy_tx_datapath_cdc_cdc_graycounter1_q;
-    xilinxmultiregimpl11 <= xilinxmultiregimpl10;
+    xilinxmultiregimpl1_regs0 <= s7pciephy_tx_datapath_cdc_cdc_graycounter1_q;
+    xilinxmultiregimpl1_regs1 <= xilinxmultiregimpl1_regs0;
 end
 
-always @(posedge from2526333595040_clk) begin
-    s7pciephy_msi_cdc_cdc_graycounter0_q_binary <= s7pciephy_msi_cdc_cdc_graycounter0_q_next_binary;
-    s7pciephy_msi_cdc_cdc_graycounter0_q <= s7pciephy_msi_cdc_cdc_graycounter0_q_next;
-    if (from2526333595040_rst) begin
-        s7pciephy_msi_cdc_cdc_graycounter0_q <= 3'd0;
-        s7pciephy_msi_cdc_cdc_graycounter0_q_binary <= 3'd0;
-    end
-    xilinxmultiregimpl50 <= s7pciephy_msi_cdc_cdc_graycounter1_q;
-    xilinxmultiregimpl51 <= xilinxmultiregimpl50;
-end
-
-always @(posedge from2526333901200_clk) begin
+always @(posedge from685_clk) begin
     s7pciephy_rx_datapath_cdc_cdc_graycounter0_q_binary <= s7pciephy_rx_datapath_cdc_cdc_graycounter0_q_next_binary;
     s7pciephy_rx_datapath_cdc_cdc_graycounter0_q <= s7pciephy_rx_datapath_cdc_cdc_graycounter0_q_next;
-    if (from2526333901200_rst) begin
+    if (from685_rst) begin
         s7pciephy_rx_datapath_cdc_cdc_graycounter0_q <= 5'd0;
         s7pciephy_rx_datapath_cdc_cdc_graycounter0_q_binary <= 5'd0;
     end
-    xilinxmultiregimpl30 <= s7pciephy_rx_datapath_cdc_cdc_graycounter1_q;
-    xilinxmultiregimpl31 <= xilinxmultiregimpl30;
+    xilinxmultiregimpl3_regs0 <= s7pciephy_rx_datapath_cdc_cdc_graycounter1_q;
+    xilinxmultiregimpl3_regs1 <= xilinxmultiregimpl3_regs0;
+end
+
+always @(posedge from876_clk) begin
+    s7pciephy_msi_cdc_cdc_graycounter0_q_binary <= s7pciephy_msi_cdc_cdc_graycounter0_q_next_binary;
+    s7pciephy_msi_cdc_cdc_graycounter0_q <= s7pciephy_msi_cdc_cdc_graycounter0_q_next;
+    if (from876_rst) begin
+        s7pciephy_msi_cdc_cdc_graycounter0_q <= 3'd0;
+        s7pciephy_msi_cdc_cdc_graycounter0_q_binary <= 3'd0;
+    end
+    xilinxmultiregimpl5_regs0 <= s7pciephy_msi_cdc_cdc_graycounter1_q;
+    xilinxmultiregimpl5_regs1 <= xilinxmultiregimpl5_regs0;
 end
 
 always @(posedge pcie_clk) begin
-    case (s7pciephy_dcommand[14:12])
-        1'd0: begin
-            s7pciephy_max_request_size <= 8'd128;
-        end
-        1'd1: begin
-            s7pciephy_max_request_size <= 9'd256;
-        end
-        2'd2: begin
-            s7pciephy_max_request_size <= 10'd512;
-        end
-        2'd3: begin
-            s7pciephy_max_request_size <= 10'd512;
-        end
-        3'd4: begin
-            s7pciephy_max_request_size <= 10'd512;
-        end
-        3'd5: begin
-            s7pciephy_max_request_size <= 10'd512;
-        end
-    endcase
-    case (s7pciephy_dcommand[7:5])
-        1'd0: begin
-            s7pciephy_max_payload_size <= 8'd128;
-        end
-        1'd1: begin
-            s7pciephy_max_payload_size <= 9'd256;
-        end
-        2'd2: begin
-            s7pciephy_max_payload_size <= 10'd512;
-        end
-        2'd3: begin
-            s7pciephy_max_payload_size <= 10'd512;
-        end
-        3'd4: begin
-            s7pciephy_max_payload_size <= 10'd512;
-        end
-        3'd5: begin
-            s7pciephy_max_payload_size <= 10'd512;
-        end
-    endcase
-    s7pciephy_id <= {s7pciephy_bus_number, s7pciephy_device_number, s7pciephy_function_number};
     if ((s7pciephy_tx_datapath_converter_converter_source_valid & s7pciephy_tx_datapath_converter_converter_source_ready)) begin
         if (s7pciephy_tx_datapath_converter_converter_last) begin
             s7pciephy_tx_datapath_converter_converter_mux <= 1'd0;
@@ -5881,21 +6471,26 @@ always @(posedge pcie_clk) begin
     end
 end
 
+always @(posedge pclk_clk) begin
+    if ((s7pciephy_pipe_pclk_sel_r == 2'd3)) begin
+        s7pciephy_pclk_sel <= 1'd1;
+    end
+    if ((s7pciephy_pipe_pclk_sel_r == 1'd0)) begin
+        s7pciephy_pclk_sel <= 1'd0;
+    end
+    if (pclk_rst) begin
+        s7pciephy_pclk_sel <= 1'd0;
+    end
+    xilinxmultiregimpl6_regs0 <= s7pciephy_pipe_pclk_sel;
+    xilinxmultiregimpl6_regs1 <= xilinxmultiregimpl6_regs0;
+end
+
 always @(posedge sys_clk) begin
     if ((bus_errors != 32'd4294967295)) begin
         if (bus_error) begin
             bus_errors <= (bus_errors + 1'd1);
         end
     end
-    if (csrbank1_reset0_re) begin
-        reset_storage[1:0] <= csrbank1_reset0_r;
-    end
-    reset_re <= csrbank1_reset0_re;
-    if (csrbank1_scratch0_re) begin
-        scratch_storage[31:0] <= csrbank1_scratch0_r;
-    end
-    scratch_re <= csrbank1_scratch0_re;
-    bus_errors_re <= csrbank1_bus_errors_re;
     if (((~s7pciephy_tx_datapath_pipe_valid_source_valid) | s7pciephy_tx_datapath_pipe_valid_source_ready)) begin
         s7pciephy_tx_datapath_pipe_valid_source_valid <= s7pciephy_tx_datapath_pipe_valid_sink_valid;
         s7pciephy_tx_datapath_pipe_valid_source_first <= s7pciephy_tx_datapath_pipe_valid_sink_first;
@@ -5914,33 +6509,33 @@ always @(posedge sys_clk) begin
         depacketizer_header_extracter_dat <= depacketizer_header_extracter_sink_payload_dat;
         depacketizer_header_extracter_be <= depacketizer_header_extracter_sink_payload_be;
     end
-    litepciecore_litepcieendpoint_state <= litepciecore_litepcieendpoint_next_state;
+    litepcieendpoint_state <= litepcieendpoint_next_state;
     if (depacketizer_header_extracter_first_litepcietlpdepacketizer_next_value_ce0) begin
         depacketizer_header_extracter_first <= depacketizer_header_extracter_first_litepcietlpdepacketizer_next_value0;
     end
     if (depacketizer_header_extracter_last_litepcietlpdepacketizer_next_value_ce1) begin
         depacketizer_header_extracter_last <= depacketizer_header_extracter_last_litepcietlpdepacketizer_next_value1;
     end
-    if (litepciecore_litepcieendpoint_next_value_ce0) begin
-        depacketizer_header_extracter_source_payload_header[31:0] <= litepciecore_litepcieendpoint_next_value0;
+    if (litepcieendpoint_next_value_ce0) begin
+        depacketizer_header_extracter_source_payload_header[31:0] <= litepcieendpoint_next_value0;
     end
-    if (litepciecore_litepcieendpoint_next_value_ce1) begin
-        depacketizer_header_extracter_source_payload_header[63:32] <= litepciecore_litepcieendpoint_next_value1;
+    if (litepcieendpoint_next_value_ce1) begin
+        depacketizer_header_extracter_source_payload_header[63:32] <= litepcieendpoint_next_value1;
     end
-    if (litepciecore_litepcieendpoint_next_value_ce2) begin
-        depacketizer_header_extracter_source_payload_header[95:64] <= litepciecore_litepcieendpoint_next_value2;
+    if (litepcieendpoint_next_value_ce2) begin
+        depacketizer_header_extracter_source_payload_header[95:64] <= litepcieendpoint_next_value2;
     end
-    if (litepciecore_litepcieendpoint_next_value_ce3) begin
-        depacketizer_header_extracter_source_payload_header[127:96] <= litepciecore_litepcieendpoint_next_value3;
+    if (litepcieendpoint_next_value_ce3) begin
+        depacketizer_header_extracter_source_payload_header[127:96] <= litepcieendpoint_next_value3;
     end
     if (depacketizer_dispatcher_first) begin
         depacketizer_dispatcher_sel_ongoing <= depacketizer_dispatcher_sel0;
     end
-    depacketizer_dispatcher_ongoing1 <= ((depacketizer_dispatch_source_valid | depacketizer_dispatcher_ongoing1) & (~depacketizer_dispatcher_last));
+    depacketizer_dispatcher_ongoing1 <= depacketizer_dispatcher_ongoing0;
     if (depacketizer_dispatcher_last) begin
         depacketizer_dispatcher_first <= 1'd1;
     end else begin
-        if ((depacketizer_dispatch_source_valid & depacketizer_dispatch_source_ready)) begin
+        if ((depacketizer_dispatch_sink_valid & depacketizer_dispatch_sink_ready)) begin
             depacketizer_dispatcher_first <= 1'd0;
         end
     end
@@ -5960,7 +6555,7 @@ always @(posedge sys_clk) begin
             end
         end
     endcase
-    packetizer_status0_ongoing1 <= ((packetizer_tlp_raw_req_valid | packetizer_status0_ongoing1) & (~packetizer_status0_last));
+    packetizer_status0_ongoing1 <= packetizer_status0_ongoing0;
     if (packetizer_status0_last) begin
         packetizer_status0_first <= 1'd1;
     end else begin
@@ -5968,7 +6563,7 @@ always @(posedge sys_clk) begin
             packetizer_status0_first <= 1'd0;
         end
     end
-    packetizer_status1_ongoing1 <= ((packetizer_tlp_raw_cmp_valid | packetizer_status1_ongoing1) & (~packetizer_status1_last));
+    packetizer_status1_ongoing1 <= packetizer_status1_ongoing0;
     if (packetizer_status1_last) begin
         packetizer_status1_first <= 1'd1;
     end else begin
@@ -5978,177 +6573,211 @@ always @(posedge sys_clk) begin
     end
     if ((packetizer_header_inserter_3dws_sink_valid & packetizer_header_inserter_3dws_sink_ready)) begin
         packetizer_header_inserter_3dws_dat <= packetizer_header_inserter_3dws_sink_payload_dat;
+        packetizer_header_inserter_3dws_be <= packetizer_header_inserter_3dws_sink_payload_be;
         packetizer_header_inserter_3dws_last <= packetizer_header_inserter_3dws_sink_last;
     end
-    litepciecore_litepcieendpoint_litepcietlpheaderinserter128b3dws_state <= litepciecore_litepcieendpoint_litepcietlpheaderinserter128b3dws_next_state;
-    litepciecore_litepcieendpoint_litepcietlpheaderinserter128b4dws_state <= litepciecore_litepcieendpoint_litepcietlpheaderinserter128b4dws_next_state;
-    if (litepciecore_litepcieendpoint_tag_queue_syncfifo_re) begin
-        litepciecore_litepcieendpoint_tag_queue_readable <= 1'd1;
+    litepcieendpoint_litepcietlpheaderinserter128b3dws_state <= litepcieendpoint_litepcietlpheaderinserter128b3dws_next_state;
+    litepcieendpoint_litepcietlpheaderinserter128b4dws_state <= litepcieendpoint_litepcietlpheaderinserter128b4dws_next_state;
+    if (litepcieendpoint_first) begin
+        litepcieendpoint_sel_ongoing <= litepcieendpoint_sel0;
+    end
+    litepcieendpoint_ongoing1 <= litepcieendpoint_ongoing0;
+    if (litepcieendpoint_last) begin
+        litepcieendpoint_first <= 1'd1;
     end else begin
-        if (litepciecore_litepcieendpoint_tag_queue_re) begin
-            litepciecore_litepcieendpoint_tag_queue_readable <= 1'd0;
+        if ((slave_source_valid & slave_source_ready)) begin
+            litepcieendpoint_first <= 1'd0;
         end
     end
-    if (((litepciecore_litepcieendpoint_tag_queue_syncfifo_we & litepciecore_litepcieendpoint_tag_queue_syncfifo_writable) & (~litepciecore_litepcieendpoint_tag_queue_replace))) begin
-        litepciecore_litepcieendpoint_tag_queue_produce <= (litepciecore_litepcieendpoint_tag_queue_produce + 1'd1);
-    end
-    if (litepciecore_litepcieendpoint_tag_queue_do_read) begin
-        litepciecore_litepcieendpoint_tag_queue_consume <= (litepciecore_litepcieendpoint_tag_queue_consume + 1'd1);
-    end
-    if (((litepciecore_litepcieendpoint_tag_queue_syncfifo_we & litepciecore_litepcieendpoint_tag_queue_syncfifo_writable) & (~litepciecore_litepcieendpoint_tag_queue_replace))) begin
-        if ((~litepciecore_litepcieendpoint_tag_queue_do_read)) begin
-            litepciecore_litepcieendpoint_tag_queue_level0 <= (litepciecore_litepcieendpoint_tag_queue_level0 + 1'd1);
-        end
+    if (litepcieendpoint_tag_queue_syncfifo_re) begin
+        litepcieendpoint_tag_queue_readable <= 1'd1;
     end else begin
-        if (litepciecore_litepcieendpoint_tag_queue_do_read) begin
-            litepciecore_litepcieendpoint_tag_queue_level0 <= (litepciecore_litepcieendpoint_tag_queue_level0 - 1'd1);
+        if (litepcieendpoint_tag_queue_re) begin
+            litepcieendpoint_tag_queue_readable <= 1'd0;
         end
     end
-    if (litepciecore_litepcieendpoint_req_queue_syncfifo_re) begin
-        litepciecore_litepcieendpoint_req_queue_readable <= 1'd1;
-    end else begin
-        if (litepciecore_litepcieendpoint_req_queue_re) begin
-            litepciecore_litepcieendpoint_req_queue_readable <= 1'd0;
-        end
+    if (((litepcieendpoint_tag_queue_syncfifo_we & litepcieendpoint_tag_queue_syncfifo_writable) & (~litepcieendpoint_tag_queue_replace))) begin
+        litepcieendpoint_tag_queue_produce <= (litepcieendpoint_tag_queue_produce + 1'd1);
     end
-    if (((litepciecore_litepcieendpoint_req_queue_syncfifo_we & litepciecore_litepcieendpoint_req_queue_syncfifo_writable) & (~litepciecore_litepcieendpoint_req_queue_replace))) begin
-        litepciecore_litepcieendpoint_req_queue_produce <= (litepciecore_litepcieendpoint_req_queue_produce + 1'd1);
+    if (litepcieendpoint_tag_queue_do_read) begin
+        litepcieendpoint_tag_queue_consume <= (litepcieendpoint_tag_queue_consume + 1'd1);
     end
-    if (litepciecore_litepcieendpoint_req_queue_do_read) begin
-        litepciecore_litepcieendpoint_req_queue_consume <= (litepciecore_litepcieendpoint_req_queue_consume + 1'd1);
-    end
-    if (((litepciecore_litepcieendpoint_req_queue_syncfifo_we & litepciecore_litepcieendpoint_req_queue_syncfifo_writable) & (~litepciecore_litepcieendpoint_req_queue_replace))) begin
-        if ((~litepciecore_litepcieendpoint_req_queue_do_read)) begin
-            litepciecore_litepcieendpoint_req_queue_level0 <= (litepciecore_litepcieendpoint_req_queue_level0 + 1'd1);
+    if (((litepcieendpoint_tag_queue_syncfifo_we & litepcieendpoint_tag_queue_syncfifo_writable) & (~litepcieendpoint_tag_queue_replace))) begin
+        if ((~litepcieendpoint_tag_queue_do_read)) begin
+            litepcieendpoint_tag_queue_level0 <= (litepcieendpoint_tag_queue_level0 + 1'd1);
         end
     end else begin
-        if (litepciecore_litepcieendpoint_req_queue_do_read) begin
-            litepciecore_litepcieendpoint_req_queue_level0 <= (litepciecore_litepcieendpoint_req_queue_level0 - 1'd1);
+        if (litepcieendpoint_tag_queue_do_read) begin
+            litepcieendpoint_tag_queue_level0 <= (litepcieendpoint_tag_queue_level0 - 1'd1);
         end
     end
-    litepciecore_litepcieendpoint_fsm0_state <= litepciecore_litepcieendpoint_fsm0_next_state;
-    if (litepciecore_litepcieendpoint_syncfifo0_syncfifo0_re) begin
-        litepciecore_litepcieendpoint_syncfifo0_readable <= 1'd1;
+    if (litepcieendpoint_req_queue_syncfifo_re) begin
+        litepcieendpoint_req_queue_readable <= 1'd1;
     end else begin
-        if (litepciecore_litepcieendpoint_syncfifo0_re) begin
-            litepciecore_litepcieendpoint_syncfifo0_readable <= 1'd0;
+        if (litepcieendpoint_req_queue_re) begin
+            litepcieendpoint_req_queue_readable <= 1'd0;
         end
     end
-    if (((litepciecore_litepcieendpoint_syncfifo0_syncfifo0_we & litepciecore_litepcieendpoint_syncfifo0_syncfifo0_writable) & (~litepciecore_litepcieendpoint_syncfifo0_replace))) begin
-        litepciecore_litepcieendpoint_syncfifo0_produce <= (litepciecore_litepcieendpoint_syncfifo0_produce + 1'd1);
+    if (((litepcieendpoint_req_queue_syncfifo_we & litepcieendpoint_req_queue_syncfifo_writable) & (~litepcieendpoint_req_queue_replace))) begin
+        litepcieendpoint_req_queue_produce <= (litepcieendpoint_req_queue_produce + 1'd1);
     end
-    if (litepciecore_litepcieendpoint_syncfifo0_do_read) begin
-        litepciecore_litepcieendpoint_syncfifo0_consume <= (litepciecore_litepcieendpoint_syncfifo0_consume + 1'd1);
+    if (litepcieendpoint_req_queue_do_read) begin
+        litepcieendpoint_req_queue_consume <= (litepcieendpoint_req_queue_consume + 1'd1);
     end
-    if (((litepciecore_litepcieendpoint_syncfifo0_syncfifo0_we & litepciecore_litepcieendpoint_syncfifo0_syncfifo0_writable) & (~litepciecore_litepcieendpoint_syncfifo0_replace))) begin
-        if ((~litepciecore_litepcieendpoint_syncfifo0_do_read)) begin
-            litepciecore_litepcieendpoint_syncfifo0_level0 <= (litepciecore_litepcieendpoint_syncfifo0_level0 + 1'd1);
-        end
-    end else begin
-        if (litepciecore_litepcieendpoint_syncfifo0_do_read) begin
-            litepciecore_litepcieendpoint_syncfifo0_level0 <= (litepciecore_litepcieendpoint_syncfifo0_level0 - 1'd1);
-        end
-    end
-    if (litepciecore_litepcieendpoint_syncfifo1_syncfifo1_re) begin
-        litepciecore_litepcieendpoint_syncfifo1_readable <= 1'd1;
-    end else begin
-        if (litepciecore_litepcieendpoint_syncfifo1_re) begin
-            litepciecore_litepcieendpoint_syncfifo1_readable <= 1'd0;
-        end
-    end
-    if (((litepciecore_litepcieendpoint_syncfifo1_syncfifo1_we & litepciecore_litepcieendpoint_syncfifo1_syncfifo1_writable) & (~litepciecore_litepcieendpoint_syncfifo1_replace))) begin
-        litepciecore_litepcieendpoint_syncfifo1_produce <= (litepciecore_litepcieendpoint_syncfifo1_produce + 1'd1);
-    end
-    if (litepciecore_litepcieendpoint_syncfifo1_do_read) begin
-        litepciecore_litepcieendpoint_syncfifo1_consume <= (litepciecore_litepcieendpoint_syncfifo1_consume + 1'd1);
-    end
-    if (((litepciecore_litepcieendpoint_syncfifo1_syncfifo1_we & litepciecore_litepcieendpoint_syncfifo1_syncfifo1_writable) & (~litepciecore_litepcieendpoint_syncfifo1_replace))) begin
-        if ((~litepciecore_litepcieendpoint_syncfifo1_do_read)) begin
-            litepciecore_litepcieendpoint_syncfifo1_level0 <= (litepciecore_litepcieendpoint_syncfifo1_level0 + 1'd1);
+    if (((litepcieendpoint_req_queue_syncfifo_we & litepcieendpoint_req_queue_syncfifo_writable) & (~litepcieendpoint_req_queue_replace))) begin
+        if ((~litepcieendpoint_req_queue_do_read)) begin
+            litepcieendpoint_req_queue_level0 <= (litepcieendpoint_req_queue_level0 + 1'd1);
         end
     end else begin
-        if (litepciecore_litepcieendpoint_syncfifo1_do_read) begin
-            litepciecore_litepcieendpoint_syncfifo1_level0 <= (litepciecore_litepcieendpoint_syncfifo1_level0 - 1'd1);
+        if (litepcieendpoint_req_queue_do_read) begin
+            litepcieendpoint_req_queue_level0 <= (litepcieendpoint_req_queue_level0 - 1'd1);
         end
     end
-    if (litepciecore_litepcieendpoint_syncfifo2_syncfifo2_re) begin
-        litepciecore_litepcieendpoint_syncfifo2_readable <= 1'd1;
+    litepcieendpoint_fsm0_state <= litepcieendpoint_fsm0_next_state;
+    if (litepcieendpoint_syncfifo0_syncfifo0_re) begin
+        litepcieendpoint_syncfifo0_readable <= 1'd1;
     end else begin
-        if (litepciecore_litepcieendpoint_syncfifo2_re) begin
-            litepciecore_litepcieendpoint_syncfifo2_readable <= 1'd0;
+        if (litepcieendpoint_syncfifo0_re) begin
+            litepcieendpoint_syncfifo0_readable <= 1'd0;
         end
     end
-    if (((litepciecore_litepcieendpoint_syncfifo2_syncfifo2_we & litepciecore_litepcieendpoint_syncfifo2_syncfifo2_writable) & (~litepciecore_litepcieendpoint_syncfifo2_replace))) begin
-        litepciecore_litepcieendpoint_syncfifo2_produce <= (litepciecore_litepcieendpoint_syncfifo2_produce + 1'd1);
+    if (((litepcieendpoint_syncfifo0_syncfifo0_we & litepcieendpoint_syncfifo0_syncfifo0_writable) & (~litepcieendpoint_syncfifo0_replace))) begin
+        litepcieendpoint_syncfifo0_produce <= (litepcieendpoint_syncfifo0_produce + 1'd1);
     end
-    if (litepciecore_litepcieendpoint_syncfifo2_do_read) begin
-        litepciecore_litepcieendpoint_syncfifo2_consume <= (litepciecore_litepcieendpoint_syncfifo2_consume + 1'd1);
+    if (litepcieendpoint_syncfifo0_do_read) begin
+        litepcieendpoint_syncfifo0_consume <= (litepcieendpoint_syncfifo0_consume + 1'd1);
     end
-    if (((litepciecore_litepcieendpoint_syncfifo2_syncfifo2_we & litepciecore_litepcieendpoint_syncfifo2_syncfifo2_writable) & (~litepciecore_litepcieendpoint_syncfifo2_replace))) begin
-        if ((~litepciecore_litepcieendpoint_syncfifo2_do_read)) begin
-            litepciecore_litepcieendpoint_syncfifo2_level0 <= (litepciecore_litepcieendpoint_syncfifo2_level0 + 1'd1);
-        end
-    end else begin
-        if (litepciecore_litepcieendpoint_syncfifo2_do_read) begin
-            litepciecore_litepcieendpoint_syncfifo2_level0 <= (litepciecore_litepcieendpoint_syncfifo2_level0 - 1'd1);
-        end
-    end
-    if (litepciecore_litepcieendpoint_syncfifo3_syncfifo3_re) begin
-        litepciecore_litepcieendpoint_syncfifo3_readable <= 1'd1;
-    end else begin
-        if (litepciecore_litepcieendpoint_syncfifo3_re) begin
-            litepciecore_litepcieendpoint_syncfifo3_readable <= 1'd0;
-        end
-    end
-    if (((litepciecore_litepcieendpoint_syncfifo3_syncfifo3_we & litepciecore_litepcieendpoint_syncfifo3_syncfifo3_writable) & (~litepciecore_litepcieendpoint_syncfifo3_replace))) begin
-        litepciecore_litepcieendpoint_syncfifo3_produce <= (litepciecore_litepcieendpoint_syncfifo3_produce + 1'd1);
-    end
-    if (litepciecore_litepcieendpoint_syncfifo3_do_read) begin
-        litepciecore_litepcieendpoint_syncfifo3_consume <= (litepciecore_litepcieendpoint_syncfifo3_consume + 1'd1);
-    end
-    if (((litepciecore_litepcieendpoint_syncfifo3_syncfifo3_we & litepciecore_litepcieendpoint_syncfifo3_syncfifo3_writable) & (~litepciecore_litepcieendpoint_syncfifo3_replace))) begin
-        if ((~litepciecore_litepcieendpoint_syncfifo3_do_read)) begin
-            litepciecore_litepcieendpoint_syncfifo3_level0 <= (litepciecore_litepcieendpoint_syncfifo3_level0 + 1'd1);
+    if (((litepcieendpoint_syncfifo0_syncfifo0_we & litepcieendpoint_syncfifo0_syncfifo0_writable) & (~litepcieendpoint_syncfifo0_replace))) begin
+        if ((~litepcieendpoint_syncfifo0_do_read)) begin
+            litepcieendpoint_syncfifo0_level0 <= (litepcieendpoint_syncfifo0_level0 + 1'd1);
         end
     end else begin
-        if (litepciecore_litepcieendpoint_syncfifo3_do_read) begin
-            litepciecore_litepcieendpoint_syncfifo3_level0 <= (litepciecore_litepcieendpoint_syncfifo3_level0 - 1'd1);
+        if (litepcieendpoint_syncfifo0_do_read) begin
+            litepcieendpoint_syncfifo0_level0 <= (litepcieendpoint_syncfifo0_level0 - 1'd1);
         end
     end
-    litepciecore_litepcieendpoint_fsm1_state <= litepciecore_litepcieendpoint_fsm1_next_state;
-    if (litepciecore_litepcieendpoint_fill_tag_litepciecrossbar_next_value_ce) begin
-        litepciecore_litepcieendpoint_fill_tag <= litepciecore_litepcieendpoint_fill_tag_litepciecrossbar_next_value;
+    if (litepcieendpoint_syncfifo1_syncfifo1_re) begin
+        litepcieendpoint_syncfifo1_readable <= 1'd1;
+    end else begin
+        if (litepcieendpoint_syncfifo1_re) begin
+            litepcieendpoint_syncfifo1_readable <= 1'd0;
+        end
     end
-    case (litepciecore_litepcieendpoint_grant)
+    if (((litepcieendpoint_syncfifo1_syncfifo1_we & litepcieendpoint_syncfifo1_syncfifo1_writable) & (~litepcieendpoint_syncfifo1_replace))) begin
+        litepcieendpoint_syncfifo1_produce <= (litepcieendpoint_syncfifo1_produce + 1'd1);
+    end
+    if (litepcieendpoint_syncfifo1_do_read) begin
+        litepcieendpoint_syncfifo1_consume <= (litepcieendpoint_syncfifo1_consume + 1'd1);
+    end
+    if (((litepcieendpoint_syncfifo1_syncfifo1_we & litepcieendpoint_syncfifo1_syncfifo1_writable) & (~litepcieendpoint_syncfifo1_replace))) begin
+        if ((~litepcieendpoint_syncfifo1_do_read)) begin
+            litepcieendpoint_syncfifo1_level0 <= (litepcieendpoint_syncfifo1_level0 + 1'd1);
+        end
+    end else begin
+        if (litepcieendpoint_syncfifo1_do_read) begin
+            litepcieendpoint_syncfifo1_level0 <= (litepcieendpoint_syncfifo1_level0 - 1'd1);
+        end
+    end
+    if (litepcieendpoint_syncfifo2_syncfifo2_re) begin
+        litepcieendpoint_syncfifo2_readable <= 1'd1;
+    end else begin
+        if (litepcieendpoint_syncfifo2_re) begin
+            litepcieendpoint_syncfifo2_readable <= 1'd0;
+        end
+    end
+    if (((litepcieendpoint_syncfifo2_syncfifo2_we & litepcieendpoint_syncfifo2_syncfifo2_writable) & (~litepcieendpoint_syncfifo2_replace))) begin
+        litepcieendpoint_syncfifo2_produce <= (litepcieendpoint_syncfifo2_produce + 1'd1);
+    end
+    if (litepcieendpoint_syncfifo2_do_read) begin
+        litepcieendpoint_syncfifo2_consume <= (litepcieendpoint_syncfifo2_consume + 1'd1);
+    end
+    if (((litepcieendpoint_syncfifo2_syncfifo2_we & litepcieendpoint_syncfifo2_syncfifo2_writable) & (~litepcieendpoint_syncfifo2_replace))) begin
+        if ((~litepcieendpoint_syncfifo2_do_read)) begin
+            litepcieendpoint_syncfifo2_level0 <= (litepcieendpoint_syncfifo2_level0 + 1'd1);
+        end
+    end else begin
+        if (litepcieendpoint_syncfifo2_do_read) begin
+            litepcieendpoint_syncfifo2_level0 <= (litepcieendpoint_syncfifo2_level0 - 1'd1);
+        end
+    end
+    if (litepcieendpoint_syncfifo3_syncfifo3_re) begin
+        litepcieendpoint_syncfifo3_readable <= 1'd1;
+    end else begin
+        if (litepcieendpoint_syncfifo3_re) begin
+            litepcieendpoint_syncfifo3_readable <= 1'd0;
+        end
+    end
+    if (((litepcieendpoint_syncfifo3_syncfifo3_we & litepcieendpoint_syncfifo3_syncfifo3_writable) & (~litepcieendpoint_syncfifo3_replace))) begin
+        litepcieendpoint_syncfifo3_produce <= (litepcieendpoint_syncfifo3_produce + 1'd1);
+    end
+    if (litepcieendpoint_syncfifo3_do_read) begin
+        litepcieendpoint_syncfifo3_consume <= (litepcieendpoint_syncfifo3_consume + 1'd1);
+    end
+    if (((litepcieendpoint_syncfifo3_syncfifo3_we & litepcieendpoint_syncfifo3_syncfifo3_writable) & (~litepcieendpoint_syncfifo3_replace))) begin
+        if ((~litepcieendpoint_syncfifo3_do_read)) begin
+            litepcieendpoint_syncfifo3_level0 <= (litepcieendpoint_syncfifo3_level0 + 1'd1);
+        end
+    end else begin
+        if (litepcieendpoint_syncfifo3_do_read) begin
+            litepcieendpoint_syncfifo3_level0 <= (litepcieendpoint_syncfifo3_level0 - 1'd1);
+        end
+    end
+    litepcieendpoint_fsm1_state <= litepcieendpoint_fsm1_next_state;
+    if (litepcieendpoint_fill_tag_litepciecrossbar_next_value_ce) begin
+        litepcieendpoint_fill_tag <= litepcieendpoint_fill_tag_litepciecrossbar_next_value;
+    end
+    if (litepcieendpoint_dispatcher0_first) begin
+        litepcieendpoint_dispatcher0_sel_ongoing <= litepcieendpoint_dispatcher0_sel0;
+    end
+    litepcieendpoint_dispatcher0_ongoing1 <= litepcieendpoint_dispatcher0_ongoing0;
+    if (litepcieendpoint_dispatcher0_last) begin
+        litepcieendpoint_dispatcher0_first <= 1'd1;
+    end else begin
+        if ((litepcieendpoint_master_in_source_valid & litepcieendpoint_master_in_source_ready)) begin
+            litepcieendpoint_dispatcher0_first <= 1'd0;
+        end
+    end
+    if (litepcieendpoint_dispatcher1_first) begin
+        litepcieendpoint_dispatcher1_sel_ongoing <= litepcieendpoint_dispatcher1_sel0;
+    end
+    litepcieendpoint_dispatcher1_ongoing1 <= litepcieendpoint_dispatcher1_ongoing0;
+    if (litepcieendpoint_dispatcher1_last) begin
+        litepcieendpoint_dispatcher1_first <= 1'd1;
+    end else begin
+        if ((litepcieendpoint_source_valid & litepcieendpoint_source_ready)) begin
+            litepcieendpoint_dispatcher1_first <= 1'd0;
+        end
+    end
+    case (litepcieendpoint_grant)
         1'd0: begin
-            if ((~litepciecore_litepcieendpoint_request[0])) begin
-                if (litepciecore_litepcieendpoint_request[1]) begin
-                    litepciecore_litepcieendpoint_grant <= 1'd1;
+            if ((~litepcieendpoint_request[0])) begin
+                if (litepcieendpoint_request[1]) begin
+                    litepcieendpoint_grant <= 1'd1;
                 end
             end
         end
         1'd1: begin
-            if ((~litepciecore_litepcieendpoint_request[1])) begin
-                if (litepciecore_litepcieendpoint_request[0]) begin
-                    litepciecore_litepcieendpoint_grant <= 1'd0;
+            if ((~litepcieendpoint_request[1])) begin
+                if (litepcieendpoint_request[0]) begin
+                    litepcieendpoint_grant <= 1'd0;
                 end
             end
         end
     endcase
-    litepciecore_litepcieendpoint_status0_ongoing1 <= ((litepciecore_litepcieendpoint_master_out_sink_valid | litepciecore_litepcieendpoint_status0_ongoing1) & (~litepciecore_litepcieendpoint_status0_last));
-    if (litepciecore_litepcieendpoint_status0_last) begin
-        litepciecore_litepcieendpoint_status0_first <= 1'd1;
+    litepcieendpoint_status0_ongoing1 <= litepcieendpoint_status0_ongoing0;
+    if (litepcieendpoint_status0_last) begin
+        litepcieendpoint_status0_first <= 1'd1;
     end else begin
-        if ((litepciecore_litepcieendpoint_master_out_sink_valid & litepciecore_litepcieendpoint_master_out_sink_ready)) begin
-            litepciecore_litepcieendpoint_status0_first <= 1'd0;
+        if ((litepcieendpoint_master_out_sink_valid & litepcieendpoint_master_out_sink_ready)) begin
+            litepcieendpoint_status0_first <= 1'd0;
         end
     end
-    litepciecore_litepcieendpoint_status1_ongoing1 <= ((litepciecore_litepcieendpoint_sink_valid | litepciecore_litepcieendpoint_status1_ongoing1) & (~litepciecore_litepcieendpoint_status1_last));
-    if (litepciecore_litepcieendpoint_status1_last) begin
-        litepciecore_litepcieendpoint_status1_first <= 1'd1;
+    litepcieendpoint_status1_ongoing1 <= litepcieendpoint_status1_ongoing0;
+    if (litepcieendpoint_status1_last) begin
+        litepcieendpoint_status1_first <= 1'd1;
     end else begin
-        if ((litepciecore_litepcieendpoint_sink_valid & litepciecore_litepcieendpoint_sink_ready)) begin
-            litepciecore_litepcieendpoint_status1_first <= 1'd0;
+        if ((litepcieendpoint_sink_valid & litepcieendpoint_sink_ready)) begin
+            litepcieendpoint_status1_first <= 1'd0;
         end
     end
     pcie_wishbone_master_wishbone_sel <= 4'd15;
@@ -6173,643 +6802,667 @@ always @(posedge sys_clk) begin
     if (pcie_wishbone_master_update_dat) begin
         pcie_wishbone_master_sink_payload_dat <= pcie_wishbone_master_wishbone_dat_r;
     end
-    litepciecore_litepciewishbonemaster_state <= litepciecore_litepciewishbonemaster_next_state;
-    if ((writer_table_loop_prog_n_storage == 1'd0)) begin
-        writer_table_table_sink_payload_address[31:0] <= writer_table_address_lsb;
-        writer_table_table_sink_payload_length <= writer_table_length;
-        writer_table_table_sink_payload_irq_disable <= writer_table_irq_disable;
-        writer_table_table_sink_payload_last_disable <= writer_table_last_disable;
-        writer_table_table_sink_first <= (writer_table_table_level == 1'd0);
-        writer_table_table_sink_valid <= writer_table_we_re;
+    litepciewishbonemaster_state <= litepciewishbonemaster_next_state;
+    pcie_dma_writer_enable_storage[1] <= pcie_dma_writer_is_ongoing;
+    if ((pcie_dma_writer_table_loop_prog_n_storage == 1'd0)) begin
+        pcie_dma_writer_table_table_sink_payload_address[31:0] <= pcie_dma_writer_table_address_lsb;
+        pcie_dma_writer_table_table_sink_payload_address[63:32] <= pcie_dma_writer_table_address_msb;
+        pcie_dma_writer_table_table_sink_payload_length <= pcie_dma_writer_table_length;
+        pcie_dma_writer_table_table_sink_payload_irq_disable <= pcie_dma_writer_table_irq_disable;
+        pcie_dma_writer_table_table_sink_payload_last_disable <= pcie_dma_writer_table_last_disable;
+        pcie_dma_writer_table_table_sink_first <= (pcie_dma_writer_table_table_level == 1'd0);
+        pcie_dma_writer_table_table_sink_valid <= pcie_dma_writer_table_we_re;
     end else begin
-        writer_table_table_sink_first <= writer_table_table_source_first;
-        writer_table_table_sink_last <= writer_table_table_source_last;
-        writer_table_table_sink_payload_address <= writer_table_table_source_payload_address;
-        writer_table_table_sink_payload_length <= writer_table_table_source_payload_length;
-        writer_table_table_sink_payload_irq_disable <= writer_table_table_source_payload_irq_disable;
-        writer_table_table_sink_payload_last_disable <= writer_table_table_source_payload_last_disable;
-        writer_table_table_sink_valid <= (writer_table_table_source_valid & writer_table_table_source_ready);
+        pcie_dma_writer_table_table_sink_first <= pcie_dma_writer_table_table_source_first;
+        pcie_dma_writer_table_table_sink_last <= pcie_dma_writer_table_table_source_last;
+        pcie_dma_writer_table_table_sink_payload_address <= pcie_dma_writer_table_table_source_payload_address;
+        pcie_dma_writer_table_table_sink_payload_length <= pcie_dma_writer_table_table_source_payload_length;
+        pcie_dma_writer_table_table_sink_payload_irq_disable <= pcie_dma_writer_table_table_source_payload_irq_disable;
+        pcie_dma_writer_table_table_sink_payload_last_disable <= pcie_dma_writer_table_table_source_payload_last_disable;
+        pcie_dma_writer_table_table_sink_valid <= (pcie_dma_writer_table_table_source_valid & pcie_dma_writer_table_table_source_ready);
     end
-    if (writer_table_table_reset) begin
-        writer_table_loop_first <= 1'd1;
-        writer_table_index <= 1'd0;
-        writer_table_count <= 1'd0;
+    if (pcie_dma_writer_table_table_reset) begin
+        pcie_dma_writer_table_loop_first <= 1'd1;
+        pcie_dma_writer_table_index <= 1'd0;
+        pcie_dma_writer_table_count <= 1'd0;
     end else begin
-        if ((writer_table_table_source_valid & writer_table_table_source_ready)) begin
-            if (((writer_table_loop_prog_n_storage == 1'd1) & writer_table_table_source_first)) begin
-                writer_table_index <= 1'd0;
-                writer_table_loop_first <= 1'd0;
-                writer_table_count <= (writer_table_count + {(~writer_table_loop_first)});
+        if ((pcie_dma_writer_table_table_source_valid & pcie_dma_writer_table_table_source_ready)) begin
+            if (((pcie_dma_writer_table_loop_prog_n_storage == 1'd1) & pcie_dma_writer_table_table_source_first)) begin
+                pcie_dma_writer_table_index <= 1'd0;
+                pcie_dma_writer_table_loop_first <= 1'd0;
+                pcie_dma_writer_table_count <= (pcie_dma_writer_table_count + {(~pcie_dma_writer_table_loop_first)});
             end else begin
-                writer_table_index <= (writer_table_index + 1'd1);
-                if ((writer_table_index == 16'd65535)) begin
-                    writer_table_count <= (writer_table_count + 1'd1);
+                pcie_dma_writer_table_index <= (pcie_dma_writer_table_index + 1'd1);
+                if ((pcie_dma_writer_table_index == 16'd65535)) begin
+                    pcie_dma_writer_table_count <= (pcie_dma_writer_table_count + 1'd1);
                 end
             end
         end
     end
-    if (((writer_table_table_syncfifo_we & writer_table_table_syncfifo_writable) & (~writer_table_table_replace))) begin
-        writer_table_table_produce <= (writer_table_table_produce + 1'd1);
+    if (((pcie_dma_writer_table_table_syncfifo_we & pcie_dma_writer_table_table_syncfifo_writable) & (~pcie_dma_writer_table_table_replace))) begin
+        pcie_dma_writer_table_table_produce <= (pcie_dma_writer_table_table_produce + 1'd1);
     end
-    if (writer_table_table_do_read) begin
-        writer_table_table_consume <= (writer_table_table_consume + 1'd1);
+    if (pcie_dma_writer_table_table_do_read) begin
+        pcie_dma_writer_table_table_consume <= (pcie_dma_writer_table_table_consume + 1'd1);
     end
-    if (((writer_table_table_syncfifo_we & writer_table_table_syncfifo_writable) & (~writer_table_table_replace))) begin
-        if ((~writer_table_table_do_read)) begin
-            writer_table_table_level <= (writer_table_table_level + 1'd1);
+    if (((pcie_dma_writer_table_table_syncfifo_we & pcie_dma_writer_table_table_syncfifo_writable) & (~pcie_dma_writer_table_table_replace))) begin
+        if ((~pcie_dma_writer_table_table_do_read)) begin
+            pcie_dma_writer_table_table_level <= (pcie_dma_writer_table_table_level + 1'd1);
         end
     end else begin
-        if (writer_table_table_do_read) begin
-            writer_table_table_level <= (writer_table_table_level - 1'd1);
+        if (pcie_dma_writer_table_table_do_read) begin
+            pcie_dma_writer_table_table_level <= (pcie_dma_writer_table_table_level - 1'd1);
         end
     end
-    if (writer_table_table_reset) begin
-        writer_table_table_level <= 9'd0;
-        writer_table_table_produce <= 8'd0;
-        writer_table_table_consume <= 8'd0;
+    if (pcie_dma_writer_table_table_reset) begin
+        pcie_dma_writer_table_table_level <= 9'd0;
+        pcie_dma_writer_table_table_produce <= 8'd0;
+        pcie_dma_writer_table_table_consume <= 8'd0;
     end
-    litepciecore_litepciedmawriter_bufferizeendpoints_state <= litepciecore_litepciedmawriter_bufferizeendpoints_next_state;
-    if (writer_splitter_desc_offset_bufferizeendpoints_next_value_ce0) begin
-        writer_splitter_desc_offset <= writer_splitter_desc_offset_bufferizeendpoints_next_value0;
+    litepciedmawriter_resetinserter_state <= litepciedmawriter_resetinserter_next_state;
+    if (pcie_dma_writer_splitter_source_first_resetinserter_next_value_ce0) begin
+        pcie_dma_writer_splitter_source_first <= pcie_dma_writer_splitter_source_first_resetinserter_next_value0;
     end
-    if (writer_splitter_desc_length_bufferizeendpoints_next_value_ce1) begin
-        writer_splitter_desc_length <= writer_splitter_desc_length_bufferizeendpoints_next_value1;
+    if (pcie_dma_writer_splitter_source_last_resetinserter_next_value_ce1) begin
+        pcie_dma_writer_splitter_source_last <= pcie_dma_writer_splitter_source_last_resetinserter_next_value1;
     end
-    if (writer_splitter_desc_id_bufferizeendpoints_next_value_ce2) begin
-        writer_splitter_desc_id <= writer_splitter_desc_id_bufferizeendpoints_next_value2;
+    if (pcie_dma_writer_splitter_source_payload_address_resetinserter_next_value_ce2) begin
+        pcie_dma_writer_splitter_source_payload_address <= pcie_dma_writer_splitter_source_payload_address_resetinserter_next_value2;
     end
-    if (((~writer_splitter_pipe_valid_source_valid) | writer_splitter_pipe_valid_source_ready)) begin
-        writer_splitter_pipe_valid_source_valid <= writer_splitter_pipe_valid_sink_valid;
-        writer_splitter_pipe_valid_source_first <= writer_splitter_pipe_valid_sink_first;
-        writer_splitter_pipe_valid_source_last <= writer_splitter_pipe_valid_sink_last;
-        writer_splitter_pipe_valid_source_payload_address <= writer_splitter_pipe_valid_sink_payload_address;
-        writer_splitter_pipe_valid_source_payload_length <= writer_splitter_pipe_valid_sink_payload_length;
-        writer_splitter_pipe_valid_source_payload_irq_disable <= writer_splitter_pipe_valid_sink_payload_irq_disable;
-        writer_splitter_pipe_valid_source_payload_last_disable <= writer_splitter_pipe_valid_sink_payload_last_disable;
-        writer_splitter_pipe_valid_source_payload_user_id <= writer_splitter_pipe_valid_sink_payload_user_id;
+    if (pcie_dma_writer_splitter_length_resetinserter_next_value_ce3) begin
+        pcie_dma_writer_splitter_length <= pcie_dma_writer_splitter_length_resetinserter_next_value3;
     end
-    if (writer_splitter_reset) begin
-        writer_splitter_desc_length <= 32'd0;
-        writer_splitter_desc_offset <= 32'd0;
-        writer_splitter_desc_id <= 32'd0;
-        writer_splitter_pipe_valid_source_valid <= 1'd0;
-        writer_splitter_pipe_valid_source_payload_address <= 32'd0;
-        writer_splitter_pipe_valid_source_payload_length <= 24'd0;
-        writer_splitter_pipe_valid_source_payload_irq_disable <= 1'd0;
-        writer_splitter_pipe_valid_source_payload_last_disable <= 1'd0;
-        writer_splitter_pipe_valid_source_payload_user_id <= 8'd0;
-        litepciecore_litepciedmawriter_bufferizeendpoints_state <= 1'd0;
+    if (pcie_dma_writer_splitter_source_payload_length_resetinserter_next_value_ce4) begin
+        pcie_dma_writer_splitter_source_payload_length <= pcie_dma_writer_splitter_source_payload_length_resetinserter_next_value4;
     end
-    if (writer_data_fifo_syncfifo_re) begin
-        writer_data_fifo_readable <= 1'd1;
+    if (pcie_dma_writer_splitter_source_payload_user_id_resetinserter_next_value_ce5) begin
+        pcie_dma_writer_splitter_source_payload_user_id <= pcie_dma_writer_splitter_source_payload_user_id_resetinserter_next_value5;
+    end
+    if (pcie_dma_writer_splitter_reset) begin
+        pcie_dma_writer_splitter_source_payload_address <= 64'd0;
+        pcie_dma_writer_splitter_source_payload_length <= 24'd0;
+        pcie_dma_writer_splitter_source_payload_user_id <= 8'd0;
+        pcie_dma_writer_splitter_length <= 24'd0;
+        litepciedmawriter_resetinserter_state <= 1'd0;
+    end
+    if (pcie_dma_writer_data_fifo_syncfifo_re) begin
+        pcie_dma_writer_data_fifo_readable <= 1'd1;
     end else begin
-        if (writer_data_fifo_re) begin
-            writer_data_fifo_readable <= 1'd0;
+        if (pcie_dma_writer_data_fifo_re) begin
+            pcie_dma_writer_data_fifo_readable <= 1'd0;
         end
     end
-    if (((writer_data_fifo_syncfifo_we & writer_data_fifo_syncfifo_writable) & (~writer_data_fifo_replace))) begin
-        writer_data_fifo_produce <= (writer_data_fifo_produce + 1'd1);
+    if (((pcie_dma_writer_data_fifo_syncfifo_we & pcie_dma_writer_data_fifo_syncfifo_writable) & (~pcie_dma_writer_data_fifo_replace))) begin
+        pcie_dma_writer_data_fifo_produce <= (pcie_dma_writer_data_fifo_produce + 1'd1);
     end
-    if (writer_data_fifo_do_read) begin
-        writer_data_fifo_consume <= (writer_data_fifo_consume + 1'd1);
+    if (pcie_dma_writer_data_fifo_do_read) begin
+        pcie_dma_writer_data_fifo_consume <= (pcie_dma_writer_data_fifo_consume + 1'd1);
     end
-    if (((writer_data_fifo_syncfifo_we & writer_data_fifo_syncfifo_writable) & (~writer_data_fifo_replace))) begin
-        if ((~writer_data_fifo_do_read)) begin
-            writer_data_fifo_level0 <= (writer_data_fifo_level0 + 1'd1);
+    if (((pcie_dma_writer_data_fifo_syncfifo_we & pcie_dma_writer_data_fifo_syncfifo_writable) & (~pcie_dma_writer_data_fifo_replace))) begin
+        if ((~pcie_dma_writer_data_fifo_do_read)) begin
+            pcie_dma_writer_data_fifo_level0 <= (pcie_dma_writer_data_fifo_level0 + 1'd1);
         end
     end else begin
-        if (writer_data_fifo_do_read) begin
-            writer_data_fifo_level0 <= (writer_data_fifo_level0 - 1'd1);
+        if (pcie_dma_writer_data_fifo_do_read) begin
+            pcie_dma_writer_data_fifo_level0 <= (pcie_dma_writer_data_fifo_level0 - 1'd1);
         end
     end
-    if (writer_data_fifo_reset) begin
-        writer_data_fifo_readable <= 1'd0;
-        writer_data_fifo_level0 <= 8'd0;
-        writer_data_fifo_produce <= 7'd0;
-        writer_data_fifo_consume <= 7'd0;
+    if (pcie_dma_writer_data_fifo_reset) begin
+        pcie_dma_writer_data_fifo_readable <= 1'd0;
+        pcie_dma_writer_data_fifo_level0 <= 8'd0;
+        pcie_dma_writer_data_fifo_produce <= 7'd0;
+        pcie_dma_writer_data_fifo_consume <= 7'd0;
     end
-    litepciecore_litepciedmawriter_fsm_state <= litepciecore_litepciedmawriter_fsm_next_state;
-    if (writer_req_count_fsm_next_value_ce) begin
-        writer_req_count <= writer_req_count_fsm_next_value;
+    litepciedmawriter_fsm_state <= litepciedmawriter_fsm_next_state;
+    if (pcie_dma_writer_req_count_fsm_next_value_ce) begin
+        pcie_dma_writer_req_count <= pcie_dma_writer_req_count_fsm_next_value;
     end
-    if (((litepciemasterinternalport1_source_valid & litepciemasterinternalport1_source_first) & litepciemasterinternalport1_source_ready)) begin
-        reader_last_user_id <= litepciemasterinternalport1_source_payload_user_id;
+    if (((pcie_dma_litepciemasterinternalport1_source_valid & pcie_dma_litepciemasterinternalport1_source_first) & pcie_dma_litepciemasterinternalport1_source_ready)) begin
+        pcie_dma_reader_last_user_id <= pcie_dma_litepciemasterinternalport1_source_payload_user_id;
     end
-    reader_pending_words <= ((reader_pending_words + reader_pending_words_queue) - reader_pending_words_dequeue);
-    if ((~reader_enable_storage)) begin
-        reader_pending_words <= 1'd0;
+    pcie_dma_reader_pending_words <= ((pcie_dma_reader_pending_words + pcie_dma_reader_pending_words_queue) - pcie_dma_reader_pending_words_dequeue);
+    if ((~pcie_dma_reader_enable_storage[0])) begin
+        pcie_dma_reader_pending_words <= 1'd0;
     end
-    if ((reader_table_loop_prog_n_storage == 1'd0)) begin
-        reader_table_table_sink_payload_address[31:0] <= reader_table_address_lsb;
-        reader_table_table_sink_payload_length <= reader_table_length;
-        reader_table_table_sink_payload_irq_disable <= reader_table_irq_disable;
-        reader_table_table_sink_payload_last_disable <= reader_table_last_disable;
-        reader_table_table_sink_first <= (reader_table_table_level == 1'd0);
-        reader_table_table_sink_valid <= reader_table_we_re;
+    pcie_dma_reader_enable_storage[1] <= pcie_dma_reader_is_ongoing;
+    if ((pcie_dma_reader_table_loop_prog_n_storage == 1'd0)) begin
+        pcie_dma_reader_table_table_sink_payload_address[31:0] <= pcie_dma_reader_table_address_lsb;
+        pcie_dma_reader_table_table_sink_payload_address[63:32] <= pcie_dma_reader_table_address_msb;
+        pcie_dma_reader_table_table_sink_payload_length <= pcie_dma_reader_table_length;
+        pcie_dma_reader_table_table_sink_payload_irq_disable <= pcie_dma_reader_table_irq_disable;
+        pcie_dma_reader_table_table_sink_payload_last_disable <= pcie_dma_reader_table_last_disable;
+        pcie_dma_reader_table_table_sink_first <= (pcie_dma_reader_table_table_level == 1'd0);
+        pcie_dma_reader_table_table_sink_valid <= pcie_dma_reader_table_we_re;
     end else begin
-        reader_table_table_sink_first <= reader_table_table_source_first;
-        reader_table_table_sink_last <= reader_table_table_source_last;
-        reader_table_table_sink_payload_address <= reader_table_table_source_payload_address;
-        reader_table_table_sink_payload_length <= reader_table_table_source_payload_length;
-        reader_table_table_sink_payload_irq_disable <= reader_table_table_source_payload_irq_disable;
-        reader_table_table_sink_payload_last_disable <= reader_table_table_source_payload_last_disable;
-        reader_table_table_sink_valid <= (reader_table_table_source_valid & reader_table_table_source_ready);
+        pcie_dma_reader_table_table_sink_first <= pcie_dma_reader_table_table_source_first;
+        pcie_dma_reader_table_table_sink_last <= pcie_dma_reader_table_table_source_last;
+        pcie_dma_reader_table_table_sink_payload_address <= pcie_dma_reader_table_table_source_payload_address;
+        pcie_dma_reader_table_table_sink_payload_length <= pcie_dma_reader_table_table_source_payload_length;
+        pcie_dma_reader_table_table_sink_payload_irq_disable <= pcie_dma_reader_table_table_source_payload_irq_disable;
+        pcie_dma_reader_table_table_sink_payload_last_disable <= pcie_dma_reader_table_table_source_payload_last_disable;
+        pcie_dma_reader_table_table_sink_valid <= (pcie_dma_reader_table_table_source_valid & pcie_dma_reader_table_table_source_ready);
     end
-    if (reader_table_table_reset) begin
-        reader_table_loop_first <= 1'd1;
-        reader_table_index <= 1'd0;
-        reader_table_count <= 1'd0;
+    if (pcie_dma_reader_table_table_reset) begin
+        pcie_dma_reader_table_loop_first <= 1'd1;
+        pcie_dma_reader_table_index <= 1'd0;
+        pcie_dma_reader_table_count <= 1'd0;
     end else begin
-        if ((reader_table_table_source_valid & reader_table_table_source_ready)) begin
-            if (((reader_table_loop_prog_n_storage == 1'd1) & reader_table_table_source_first)) begin
-                reader_table_index <= 1'd0;
-                reader_table_loop_first <= 1'd0;
-                reader_table_count <= (reader_table_count + {(~reader_table_loop_first)});
+        if ((pcie_dma_reader_table_table_source_valid & pcie_dma_reader_table_table_source_ready)) begin
+            if (((pcie_dma_reader_table_loop_prog_n_storage == 1'd1) & pcie_dma_reader_table_table_source_first)) begin
+                pcie_dma_reader_table_index <= 1'd0;
+                pcie_dma_reader_table_loop_first <= 1'd0;
+                pcie_dma_reader_table_count <= (pcie_dma_reader_table_count + {(~pcie_dma_reader_table_loop_first)});
             end else begin
-                reader_table_index <= (reader_table_index + 1'd1);
-                if ((reader_table_index == 16'd65535)) begin
-                    reader_table_count <= (reader_table_count + 1'd1);
+                pcie_dma_reader_table_index <= (pcie_dma_reader_table_index + 1'd1);
+                if ((pcie_dma_reader_table_index == 16'd65535)) begin
+                    pcie_dma_reader_table_count <= (pcie_dma_reader_table_count + 1'd1);
                 end
             end
         end
     end
-    if (((reader_table_table_syncfifo_we & reader_table_table_syncfifo_writable) & (~reader_table_table_replace))) begin
-        reader_table_table_produce <= (reader_table_table_produce + 1'd1);
+    if (((pcie_dma_reader_table_table_syncfifo_we & pcie_dma_reader_table_table_syncfifo_writable) & (~pcie_dma_reader_table_table_replace))) begin
+        pcie_dma_reader_table_table_produce <= (pcie_dma_reader_table_table_produce + 1'd1);
     end
-    if (reader_table_table_do_read) begin
-        reader_table_table_consume <= (reader_table_table_consume + 1'd1);
+    if (pcie_dma_reader_table_table_do_read) begin
+        pcie_dma_reader_table_table_consume <= (pcie_dma_reader_table_table_consume + 1'd1);
     end
-    if (((reader_table_table_syncfifo_we & reader_table_table_syncfifo_writable) & (~reader_table_table_replace))) begin
-        if ((~reader_table_table_do_read)) begin
-            reader_table_table_level <= (reader_table_table_level + 1'd1);
+    if (((pcie_dma_reader_table_table_syncfifo_we & pcie_dma_reader_table_table_syncfifo_writable) & (~pcie_dma_reader_table_table_replace))) begin
+        if ((~pcie_dma_reader_table_table_do_read)) begin
+            pcie_dma_reader_table_table_level <= (pcie_dma_reader_table_table_level + 1'd1);
         end
     end else begin
-        if (reader_table_table_do_read) begin
-            reader_table_table_level <= (reader_table_table_level - 1'd1);
+        if (pcie_dma_reader_table_table_do_read) begin
+            pcie_dma_reader_table_table_level <= (pcie_dma_reader_table_table_level - 1'd1);
         end
     end
-    if (reader_table_table_reset) begin
-        reader_table_table_level <= 9'd0;
-        reader_table_table_produce <= 8'd0;
-        reader_table_table_consume <= 8'd0;
+    if (pcie_dma_reader_table_table_reset) begin
+        pcie_dma_reader_table_table_level <= 9'd0;
+        pcie_dma_reader_table_table_produce <= 8'd0;
+        pcie_dma_reader_table_table_consume <= 8'd0;
     end
-    litepciecore_litepciedmareader_bufferizeendpoints_state <= litepciecore_litepciedmareader_bufferizeendpoints_next_state;
-    if (reader_splitter_desc_offset_next_value_ce0) begin
-        reader_splitter_desc_offset <= reader_splitter_desc_offset_next_value0;
+    litepciedmareader_resetinserter_state <= litepciedmareader_resetinserter_next_state;
+    if (pcie_dma_reader_splitter_source_first_next_value_ce0) begin
+        pcie_dma_reader_splitter_source_first <= pcie_dma_reader_splitter_source_first_next_value0;
     end
-    if (reader_splitter_desc_length_next_value_ce1) begin
-        reader_splitter_desc_length <= reader_splitter_desc_length_next_value1;
+    if (pcie_dma_reader_splitter_source_last_next_value_ce1) begin
+        pcie_dma_reader_splitter_source_last <= pcie_dma_reader_splitter_source_last_next_value1;
     end
-    if (reader_splitter_desc_id_next_value_ce2) begin
-        reader_splitter_desc_id <= reader_splitter_desc_id_next_value2;
+    if (pcie_dma_reader_splitter_source_payload_address_next_value_ce2) begin
+        pcie_dma_reader_splitter_source_payload_address <= pcie_dma_reader_splitter_source_payload_address_next_value2;
     end
-    if (((~reader_splitter_pipe_valid_source_valid) | reader_splitter_pipe_valid_source_ready)) begin
-        reader_splitter_pipe_valid_source_valid <= reader_splitter_pipe_valid_sink_valid;
-        reader_splitter_pipe_valid_source_first <= reader_splitter_pipe_valid_sink_first;
-        reader_splitter_pipe_valid_source_last <= reader_splitter_pipe_valid_sink_last;
-        reader_splitter_pipe_valid_source_payload_address <= reader_splitter_pipe_valid_sink_payload_address;
-        reader_splitter_pipe_valid_source_payload_length <= reader_splitter_pipe_valid_sink_payload_length;
-        reader_splitter_pipe_valid_source_payload_irq_disable <= reader_splitter_pipe_valid_sink_payload_irq_disable;
-        reader_splitter_pipe_valid_source_payload_last_disable <= reader_splitter_pipe_valid_sink_payload_last_disable;
-        reader_splitter_pipe_valid_source_payload_user_id <= reader_splitter_pipe_valid_sink_payload_user_id;
+    if (pcie_dma_reader_splitter_length_next_value_ce3) begin
+        pcie_dma_reader_splitter_length <= pcie_dma_reader_splitter_length_next_value3;
     end
-    if (reader_splitter_reset) begin
-        reader_splitter_desc_length <= 32'd0;
-        reader_splitter_desc_offset <= 32'd0;
-        reader_splitter_desc_id <= 32'd0;
-        reader_splitter_pipe_valid_source_valid <= 1'd0;
-        reader_splitter_pipe_valid_source_payload_address <= 32'd0;
-        reader_splitter_pipe_valid_source_payload_length <= 24'd0;
-        reader_splitter_pipe_valid_source_payload_irq_disable <= 1'd0;
-        reader_splitter_pipe_valid_source_payload_last_disable <= 1'd0;
-        reader_splitter_pipe_valid_source_payload_user_id <= 8'd0;
-        litepciecore_litepciedmareader_bufferizeendpoints_state <= 1'd0;
+    if (pcie_dma_reader_splitter_source_payload_length_next_value_ce4) begin
+        pcie_dma_reader_splitter_source_payload_length <= pcie_dma_reader_splitter_source_payload_length_next_value4;
     end
-    if (reader_data_fifo_syncfifo_re) begin
-        reader_data_fifo_readable <= 1'd1;
+    if (pcie_dma_reader_splitter_source_payload_user_id_next_value_ce5) begin
+        pcie_dma_reader_splitter_source_payload_user_id <= pcie_dma_reader_splitter_source_payload_user_id_next_value5;
+    end
+    if (pcie_dma_reader_splitter_reset) begin
+        pcie_dma_reader_splitter_source_payload_address <= 64'd0;
+        pcie_dma_reader_splitter_source_payload_length <= 24'd0;
+        pcie_dma_reader_splitter_source_payload_user_id <= 8'd0;
+        pcie_dma_reader_splitter_length <= 24'd0;
+        litepciedmareader_resetinserter_state <= 1'd0;
+    end
+    if (pcie_dma_reader_data_fifo_syncfifo_re) begin
+        pcie_dma_reader_data_fifo_readable <= 1'd1;
     end else begin
-        if (reader_data_fifo_re) begin
-            reader_data_fifo_readable <= 1'd0;
+        if (pcie_dma_reader_data_fifo_re) begin
+            pcie_dma_reader_data_fifo_readable <= 1'd0;
         end
     end
-    if (((reader_data_fifo_syncfifo_we & reader_data_fifo_syncfifo_writable) & (~reader_data_fifo_replace))) begin
-        reader_data_fifo_produce <= (reader_data_fifo_produce + 1'd1);
+    if (((pcie_dma_reader_data_fifo_syncfifo_we & pcie_dma_reader_data_fifo_syncfifo_writable) & (~pcie_dma_reader_data_fifo_replace))) begin
+        pcie_dma_reader_data_fifo_produce <= (pcie_dma_reader_data_fifo_produce + 1'd1);
     end
-    if (reader_data_fifo_do_read) begin
-        reader_data_fifo_consume <= (reader_data_fifo_consume + 1'd1);
+    if (pcie_dma_reader_data_fifo_do_read) begin
+        pcie_dma_reader_data_fifo_consume <= (pcie_dma_reader_data_fifo_consume + 1'd1);
     end
-    if (((reader_data_fifo_syncfifo_we & reader_data_fifo_syncfifo_writable) & (~reader_data_fifo_replace))) begin
-        if ((~reader_data_fifo_do_read)) begin
-            reader_data_fifo_level0 <= (reader_data_fifo_level0 + 1'd1);
+    if (((pcie_dma_reader_data_fifo_syncfifo_we & pcie_dma_reader_data_fifo_syncfifo_writable) & (~pcie_dma_reader_data_fifo_replace))) begin
+        if ((~pcie_dma_reader_data_fifo_do_read)) begin
+            pcie_dma_reader_data_fifo_level0 <= (pcie_dma_reader_data_fifo_level0 + 1'd1);
         end
     end else begin
-        if (reader_data_fifo_do_read) begin
-            reader_data_fifo_level0 <= (reader_data_fifo_level0 - 1'd1);
+        if (pcie_dma_reader_data_fifo_do_read) begin
+            pcie_dma_reader_data_fifo_level0 <= (pcie_dma_reader_data_fifo_level0 - 1'd1);
         end
     end
-    if (reader_data_fifo_reset) begin
-        reader_data_fifo_readable <= 1'd0;
-        reader_data_fifo_level0 <= 10'd0;
-        reader_data_fifo_produce <= 9'd0;
-        reader_data_fifo_consume <= 9'd0;
+    if (pcie_dma_reader_data_fifo_reset) begin
+        pcie_dma_reader_data_fifo_readable <= 1'd0;
+        pcie_dma_reader_data_fifo_level0 <= 10'd0;
+        pcie_dma_reader_data_fifo_produce <= 9'd0;
+        pcie_dma_reader_data_fifo_consume <= 9'd0;
     end
-    litepciecore_litepciedmareader_fsm_state <= litepciecore_litepciedmareader_fsm_next_state;
-    if ((buffering_reader_fifo_level1 < buffering_reader_fifo_level_min)) begin
-        buffering_reader_fifo_level_min <= buffering_reader_fifo_level1;
+    litepciedmareader_fsm_state <= litepciedmareader_fsm_next_state;
+    if ((pcie_dma_buffering_reader_fifo_level1 < pcie_dma_buffering_reader_fifo_level_min)) begin
+        pcie_dma_buffering_reader_fifo_level_min <= pcie_dma_buffering_reader_fifo_level1;
     end
-    if ((buffering_reader_fifo_status_re | (buffering_csrfield_level_mode0 == 1'd0))) begin
-        buffering_reader_fifo_level_min <= 10'd1023;
+    if ((pcie_dma_buffering_reader_fifo_status_re | (pcie_dma_buffering_csrfield_level_mode0 == 1'd0))) begin
+        pcie_dma_buffering_reader_fifo_level_min <= 10'd1023;
     end
-    if ((buffering_writer_fifo_level1 > buffering_writer_fifo_level_max)) begin
-        buffering_writer_fifo_level_max <= buffering_writer_fifo_level1;
+    if ((pcie_dma_buffering_writer_fifo_level1 > pcie_dma_buffering_writer_fifo_level_max)) begin
+        pcie_dma_buffering_writer_fifo_level_max <= pcie_dma_buffering_writer_fifo_level1;
     end
-    if ((buffering_writer_fifo_status_re | (buffering_csrfield_level_mode1 == 1'd0))) begin
-        buffering_writer_fifo_level_max <= 1'd0;
+    if ((pcie_dma_buffering_writer_fifo_status_re | (pcie_dma_buffering_csrfield_level_mode1 == 1'd0))) begin
+        pcie_dma_buffering_writer_fifo_level_max <= 1'd0;
     end
-    if (buffering_reader_fifo_syncfifo_re) begin
-        buffering_reader_fifo_readable <= 1'd1;
+    if (pcie_dma_buffering_reader_fifo_syncfifo_re) begin
+        pcie_dma_buffering_reader_fifo_readable <= 1'd1;
     end else begin
-        if (buffering_reader_fifo_re) begin
-            buffering_reader_fifo_readable <= 1'd0;
+        if (pcie_dma_buffering_reader_fifo_re) begin
+            pcie_dma_buffering_reader_fifo_readable <= 1'd0;
         end
     end
-    if (((buffering_reader_fifo_syncfifo_we & buffering_reader_fifo_syncfifo_writable) & (~buffering_reader_fifo_replace))) begin
-        buffering_reader_fifo_produce <= (buffering_reader_fifo_produce + 1'd1);
+    if (((pcie_dma_buffering_reader_fifo_syncfifo_we & pcie_dma_buffering_reader_fifo_syncfifo_writable) & (~pcie_dma_buffering_reader_fifo_replace))) begin
+        pcie_dma_buffering_reader_fifo_produce <= (pcie_dma_buffering_reader_fifo_produce + 1'd1);
     end
-    if (buffering_reader_fifo_do_read) begin
-        buffering_reader_fifo_consume <= (buffering_reader_fifo_consume + 1'd1);
+    if (pcie_dma_buffering_reader_fifo_do_read) begin
+        pcie_dma_buffering_reader_fifo_consume <= (pcie_dma_buffering_reader_fifo_consume + 1'd1);
     end
-    if (((buffering_reader_fifo_syncfifo_we & buffering_reader_fifo_syncfifo_writable) & (~buffering_reader_fifo_replace))) begin
-        if ((~buffering_reader_fifo_do_read)) begin
-            buffering_reader_fifo_level0 <= (buffering_reader_fifo_level0 + 1'd1);
-        end
-    end else begin
-        if (buffering_reader_fifo_do_read) begin
-            buffering_reader_fifo_level0 <= (buffering_reader_fifo_level0 - 1'd1);
-        end
-    end
-    if (buffering_writer_fifo_syncfifo_re) begin
-        buffering_writer_fifo_readable <= 1'd1;
-    end else begin
-        if (buffering_writer_fifo_re) begin
-            buffering_writer_fifo_readable <= 1'd0;
-        end
-    end
-    if (((buffering_writer_fifo_syncfifo_we & buffering_writer_fifo_syncfifo_writable) & (~buffering_writer_fifo_replace))) begin
-        buffering_writer_fifo_produce <= (buffering_writer_fifo_produce + 1'd1);
-    end
-    if (buffering_writer_fifo_do_read) begin
-        buffering_writer_fifo_consume <= (buffering_writer_fifo_consume + 1'd1);
-    end
-    if (((buffering_writer_fifo_syncfifo_we & buffering_writer_fifo_syncfifo_writable) & (~buffering_writer_fifo_replace))) begin
-        if ((~buffering_writer_fifo_do_read)) begin
-            buffering_writer_fifo_level0 <= (buffering_writer_fifo_level0 + 1'd1);
+    if (((pcie_dma_buffering_reader_fifo_syncfifo_we & pcie_dma_buffering_reader_fifo_syncfifo_writable) & (~pcie_dma_buffering_reader_fifo_replace))) begin
+        if ((~pcie_dma_buffering_reader_fifo_do_read)) begin
+            pcie_dma_buffering_reader_fifo_level0 <= (pcie_dma_buffering_reader_fifo_level0 + 1'd1);
         end
     end else begin
-        if (buffering_writer_fifo_do_read) begin
-            buffering_writer_fifo_level0 <= (buffering_writer_fifo_level0 - 1'd1);
+        if (pcie_dma_buffering_reader_fifo_do_read) begin
+            pcie_dma_buffering_reader_fifo_level0 <= (pcie_dma_buffering_reader_fifo_level0 - 1'd1);
         end
     end
-    if (((~bufferizeendpoints0_pipe_valid_source_valid) | bufferizeendpoints0_pipe_valid_source_ready)) begin
-        bufferizeendpoints0_pipe_valid_source_valid <= bufferizeendpoints0_pipe_valid_sink_valid;
-        bufferizeendpoints0_pipe_valid_source_first <= bufferizeendpoints0_pipe_valid_sink_first;
-        bufferizeendpoints0_pipe_valid_source_last <= bufferizeendpoints0_pipe_valid_sink_last;
-        bufferizeendpoints0_pipe_valid_source_payload_data <= bufferizeendpoints0_pipe_valid_sink_payload_data;
+    if (pcie_dma_buffering_writer_fifo_syncfifo_re) begin
+        pcie_dma_buffering_writer_fifo_readable <= 1'd1;
+    end else begin
+        if (pcie_dma_buffering_writer_fifo_re) begin
+            pcie_dma_buffering_writer_fifo_readable <= 1'd0;
+        end
     end
-    if (((~bufferizeendpoints1_pipe_valid_source_valid) | bufferizeendpoints1_pipe_valid_source_ready)) begin
-        bufferizeendpoints1_pipe_valid_source_valid <= bufferizeendpoints1_pipe_valid_sink_valid;
-        bufferizeendpoints1_pipe_valid_source_first <= bufferizeendpoints1_pipe_valid_sink_first;
-        bufferizeendpoints1_pipe_valid_source_last <= bufferizeendpoints1_pipe_valid_sink_last;
-        bufferizeendpoints1_pipe_valid_source_payload_data <= bufferizeendpoints1_pipe_valid_sink_payload_data;
+    if (((pcie_dma_buffering_writer_fifo_syncfifo_we & pcie_dma_buffering_writer_fifo_syncfifo_writable) & (~pcie_dma_buffering_writer_fifo_replace))) begin
+        pcie_dma_buffering_writer_fifo_produce <= (pcie_dma_buffering_writer_fifo_produce + 1'd1);
+    end
+    if (pcie_dma_buffering_writer_fifo_do_read) begin
+        pcie_dma_buffering_writer_fifo_consume <= (pcie_dma_buffering_writer_fifo_consume + 1'd1);
+    end
+    if (((pcie_dma_buffering_writer_fifo_syncfifo_we & pcie_dma_buffering_writer_fifo_syncfifo_writable) & (~pcie_dma_buffering_writer_fifo_replace))) begin
+        if ((~pcie_dma_buffering_writer_fifo_do_read)) begin
+            pcie_dma_buffering_writer_fifo_level0 <= (pcie_dma_buffering_writer_fifo_level0 + 1'd1);
+        end
+    end else begin
+        if (pcie_dma_buffering_writer_fifo_do_read) begin
+            pcie_dma_buffering_writer_fifo_level0 <= (pcie_dma_buffering_writer_fifo_level0 - 1'd1);
+        end
+    end
+    if (((~pcie_dma_bufferizeendpoints0_pipe_valid_source_valid) | pcie_dma_bufferizeendpoints0_pipe_valid_source_ready)) begin
+        pcie_dma_bufferizeendpoints0_pipe_valid_source_valid <= pcie_dma_bufferizeendpoints0_pipe_valid_sink_valid;
+        pcie_dma_bufferizeendpoints0_pipe_valid_source_first <= pcie_dma_bufferizeendpoints0_pipe_valid_sink_first;
+        pcie_dma_bufferizeendpoints0_pipe_valid_source_last <= pcie_dma_bufferizeendpoints0_pipe_valid_sink_last;
+        pcie_dma_bufferizeendpoints0_pipe_valid_source_payload_data <= pcie_dma_bufferizeendpoints0_pipe_valid_sink_payload_data;
+    end
+    if (((~pcie_dma_bufferizeendpoints1_pipe_valid_source_valid) | pcie_dma_bufferizeendpoints1_pipe_valid_source_ready)) begin
+        pcie_dma_bufferizeendpoints1_pipe_valid_source_valid <= pcie_dma_bufferizeendpoints1_pipe_valid_sink_valid;
+        pcie_dma_bufferizeendpoints1_pipe_valid_source_first <= pcie_dma_bufferizeendpoints1_pipe_valid_sink_first;
+        pcie_dma_bufferizeendpoints1_pipe_valid_source_last <= pcie_dma_bufferizeendpoints1_pipe_valid_sink_last;
+        pcie_dma_bufferizeendpoints1_pipe_valid_source_payload_data <= pcie_dma_bufferizeendpoints1_pipe_valid_sink_payload_data;
     end
     pcie_msi_vector <= (pcie_msi_enable & ((pcie_msi_vector & (~pcie_msi_clear)) | pcie_msi_irqs));
-    pcie_msi_msi <= (pcie_msi_msi | (pcie_msi_irqs & pcie_msi_enable));
+    pcie_msi_msi <= ((pcie_msi_msi | pcie_msi_irqs) & pcie_msi_enable);
     if (pcie_msi_source_ready) begin
         pcie_msi_msi <= (pcie_msi_irqs & pcie_msi_enable);
     end
-    litepciecore_wishbone2csr_state <= litepciecore_wishbone2csr_next_state;
-    interface0_dat_r <= 1'd0;
-    if (csrbank0_sel) begin
-        case (interface0_adr[8:0])
+    wishbone2csr_state <= wishbone2csr_next_state;
+    csr_bankarray_interface0_bank_bus_dat_r <= 1'd0;
+    if (csr_bankarray_csrbank0_sel) begin
+        case (csr_bankarray_interface0_bank_bus_adr[8:0])
             1'd0: begin
-                interface0_dat_r <= csrbank0_cntrl15_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_cntrl15_w;
             end
             1'd1: begin
-                interface0_dat_r <= csrbank0_cntrl14_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_cntrl14_w;
             end
             2'd2: begin
-                interface0_dat_r <= csrbank0_cntrl13_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_cntrl13_w;
             end
             2'd3: begin
-                interface0_dat_r <= csrbank0_cntrl12_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_cntrl12_w;
             end
             3'd4: begin
-                interface0_dat_r <= csrbank0_cntrl11_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_cntrl11_w;
             end
             3'd5: begin
-                interface0_dat_r <= csrbank0_cntrl10_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_cntrl10_w;
             end
             3'd6: begin
-                interface0_dat_r <= csrbank0_cntrl9_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_cntrl9_w;
             end
             3'd7: begin
-                interface0_dat_r <= csrbank0_cntrl8_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_cntrl8_w;
             end
             4'd8: begin
-                interface0_dat_r <= csrbank0_cntrl7_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_cntrl7_w;
             end
             4'd9: begin
-                interface0_dat_r <= csrbank0_cntrl6_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_cntrl6_w;
             end
             4'd10: begin
-                interface0_dat_r <= csrbank0_cntrl5_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_cntrl5_w;
             end
             4'd11: begin
-                interface0_dat_r <= csrbank0_cntrl4_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_cntrl4_w;
             end
             4'd12: begin
-                interface0_dat_r <= csrbank0_cntrl3_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_cntrl3_w;
             end
             4'd13: begin
-                interface0_dat_r <= csrbank0_cntrl2_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_cntrl2_w;
             end
             4'd14: begin
-                interface0_dat_r <= csrbank0_cntrl1_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_cntrl1_w;
             end
             4'd15: begin
-                interface0_dat_r <= csrbank0_cntrl0_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_cntrl0_w;
             end
             5'd16: begin
-                interface0_dat_r <= csrbank0_enable0_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_enable0_w;
             end
             5'd17: begin
-                interface0_dat_r <= csrbank0_test0_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_test0_w;
             end
             5'd18: begin
-                interface0_dat_r <= csrbank0_ndma_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_ndma_w;
             end
             5'd19: begin
-                interface0_dat_r <= csrbank0_enable_both0_w;
+                csr_bankarray_interface0_bank_bus_dat_r <= csr_bankarray_csrbank0_enable_both0_w;
             end
         endcase
     end
     if (CNTRL_cntrl_we) begin
         CNTRL_cntrl_storage <= CNTRL_cntrl_dat_w;
     end
-    if (csrbank0_cntrl15_re) begin
-        CNTRL_cntrl_storage[511:480] <= csrbank0_cntrl15_r;
+    if (csr_bankarray_csrbank0_cntrl15_re) begin
+        CNTRL_cntrl_storage[511:480] <= csr_bankarray_csrbank0_cntrl15_r;
     end
-    if (csrbank0_cntrl14_re) begin
-        CNTRL_cntrl_storage[479:448] <= csrbank0_cntrl14_r;
+    if (csr_bankarray_csrbank0_cntrl14_re) begin
+        CNTRL_cntrl_storage[479:448] <= csr_bankarray_csrbank0_cntrl14_r;
     end
-    if (csrbank0_cntrl13_re) begin
-        CNTRL_cntrl_storage[447:416] <= csrbank0_cntrl13_r;
+    if (csr_bankarray_csrbank0_cntrl13_re) begin
+        CNTRL_cntrl_storage[447:416] <= csr_bankarray_csrbank0_cntrl13_r;
     end
-    if (csrbank0_cntrl12_re) begin
-        CNTRL_cntrl_storage[415:384] <= csrbank0_cntrl12_r;
+    if (csr_bankarray_csrbank0_cntrl12_re) begin
+        CNTRL_cntrl_storage[415:384] <= csr_bankarray_csrbank0_cntrl12_r;
     end
-    if (csrbank0_cntrl11_re) begin
-        CNTRL_cntrl_storage[383:352] <= csrbank0_cntrl11_r;
+    if (csr_bankarray_csrbank0_cntrl11_re) begin
+        CNTRL_cntrl_storage[383:352] <= csr_bankarray_csrbank0_cntrl11_r;
     end
-    if (csrbank0_cntrl10_re) begin
-        CNTRL_cntrl_storage[351:320] <= csrbank0_cntrl10_r;
+    if (csr_bankarray_csrbank0_cntrl10_re) begin
+        CNTRL_cntrl_storage[351:320] <= csr_bankarray_csrbank0_cntrl10_r;
     end
-    if (csrbank0_cntrl9_re) begin
-        CNTRL_cntrl_storage[319:288] <= csrbank0_cntrl9_r;
+    if (csr_bankarray_csrbank0_cntrl9_re) begin
+        CNTRL_cntrl_storage[319:288] <= csr_bankarray_csrbank0_cntrl9_r;
     end
-    if (csrbank0_cntrl8_re) begin
-        CNTRL_cntrl_storage[287:256] <= csrbank0_cntrl8_r;
+    if (csr_bankarray_csrbank0_cntrl8_re) begin
+        CNTRL_cntrl_storage[287:256] <= csr_bankarray_csrbank0_cntrl8_r;
     end
-    if (csrbank0_cntrl7_re) begin
-        CNTRL_cntrl_storage[255:224] <= csrbank0_cntrl7_r;
+    if (csr_bankarray_csrbank0_cntrl7_re) begin
+        CNTRL_cntrl_storage[255:224] <= csr_bankarray_csrbank0_cntrl7_r;
     end
-    if (csrbank0_cntrl6_re) begin
-        CNTRL_cntrl_storage[223:192] <= csrbank0_cntrl6_r;
+    if (csr_bankarray_csrbank0_cntrl6_re) begin
+        CNTRL_cntrl_storage[223:192] <= csr_bankarray_csrbank0_cntrl6_r;
     end
-    if (csrbank0_cntrl5_re) begin
-        CNTRL_cntrl_storage[191:160] <= csrbank0_cntrl5_r;
+    if (csr_bankarray_csrbank0_cntrl5_re) begin
+        CNTRL_cntrl_storage[191:160] <= csr_bankarray_csrbank0_cntrl5_r;
     end
-    if (csrbank0_cntrl4_re) begin
-        CNTRL_cntrl_storage[159:128] <= csrbank0_cntrl4_r;
+    if (csr_bankarray_csrbank0_cntrl4_re) begin
+        CNTRL_cntrl_storage[159:128] <= csr_bankarray_csrbank0_cntrl4_r;
     end
-    if (csrbank0_cntrl3_re) begin
-        CNTRL_cntrl_storage[127:96] <= csrbank0_cntrl3_r;
+    if (csr_bankarray_csrbank0_cntrl3_re) begin
+        CNTRL_cntrl_storage[127:96] <= csr_bankarray_csrbank0_cntrl3_r;
     end
-    if (csrbank0_cntrl2_re) begin
-        CNTRL_cntrl_storage[95:64] <= csrbank0_cntrl2_r;
+    if (csr_bankarray_csrbank0_cntrl2_re) begin
+        CNTRL_cntrl_storage[95:64] <= csr_bankarray_csrbank0_cntrl2_r;
     end
-    if (csrbank0_cntrl1_re) begin
-        CNTRL_cntrl_storage[63:32] <= csrbank0_cntrl1_r;
+    if (csr_bankarray_csrbank0_cntrl1_re) begin
+        CNTRL_cntrl_storage[63:32] <= csr_bankarray_csrbank0_cntrl1_r;
     end
-    if (csrbank0_cntrl0_re) begin
-        CNTRL_cntrl_storage[31:0] <= csrbank0_cntrl0_r;
+    if (csr_bankarray_csrbank0_cntrl0_re) begin
+        CNTRL_cntrl_storage[31:0] <= csr_bankarray_csrbank0_cntrl0_r;
     end
-    CNTRL_cntrl_re <= csrbank0_cntrl0_re;
-    if (csrbank0_enable0_re) begin
-        CNTRL_enable_storage <= csrbank0_enable0_r;
+    CNTRL_cntrl_re <= csr_bankarray_csrbank0_cntrl0_re;
+    if (csr_bankarray_csrbank0_enable0_re) begin
+        CNTRL_enable_storage <= csr_bankarray_csrbank0_enable0_r;
     end
-    CNTRL_enable_re <= csrbank0_enable0_re;
-    if (csrbank0_test0_re) begin
-        CNTRL_test_storage[31:0] <= csrbank0_test0_r;
+    CNTRL_enable_re <= csr_bankarray_csrbank0_enable0_re;
+    if (csr_bankarray_csrbank0_test0_re) begin
+        CNTRL_test_storage[31:0] <= csr_bankarray_csrbank0_test0_r;
     end
-    CNTRL_test_re <= csrbank0_test0_re;
-    CNTRL_ndma_re <= csrbank0_ndma_re;
-    if (csrbank0_enable_both0_re) begin
-        CNTRL_enable_both_storage <= csrbank0_enable_both0_r;
+    CNTRL_test_re <= csr_bankarray_csrbank0_test0_re;
+    CNTRL_ndma_re <= csr_bankarray_csrbank0_ndma_re;
+    if (csr_bankarray_csrbank0_enable_both0_re) begin
+        CNTRL_enable_both_storage <= csr_bankarray_csrbank0_enable_both0_r;
     end
-    CNTRL_enable_both_re <= csrbank0_enable_both0_re;
-    interface1_dat_r <= 1'd0;
-    if (csrbank1_sel) begin
-        case (interface1_adr[8:0])
+    CNTRL_enable_both_re <= csr_bankarray_csrbank0_enable_both0_re;
+    csr_bankarray_interface1_bank_bus_dat_r <= 1'd0;
+    if (csr_bankarray_csrbank1_sel) begin
+        case (csr_bankarray_interface1_bank_bus_adr[8:0])
             1'd0: begin
-                interface1_dat_r <= csrbank1_reset0_w;
+                csr_bankarray_interface1_bank_bus_dat_r <= csr_bankarray_csrbank1_reset0_w;
             end
             1'd1: begin
-                interface1_dat_r <= csrbank1_scratch0_w;
+                csr_bankarray_interface1_bank_bus_dat_r <= csr_bankarray_csrbank1_scratch0_w;
             end
             2'd2: begin
-                interface1_dat_r <= csrbank1_bus_errors_w;
+                csr_bankarray_interface1_bank_bus_dat_r <= csr_bankarray_csrbank1_bus_errors_w;
             end
         endcase
     end
-    mmap_sel_r <= mmap_sel;
-    interface3_dat_r <= 1'd0;
-    if (csrbank2_sel) begin
-        case (interface3_adr[8:0])
+    if (csr_bankarray_csrbank1_reset0_re) begin
+        reset_storage[1:0] <= csr_bankarray_csrbank1_reset0_r;
+    end
+    reset_re <= csr_bankarray_csrbank1_reset0_re;
+    if (csr_bankarray_csrbank1_scratch0_re) begin
+        scratch_storage[31:0] <= csr_bankarray_csrbank1_scratch0_r;
+    end
+    scratch_re <= csr_bankarray_csrbank1_scratch0_re;
+    bus_errors_re <= csr_bankarray_csrbank1_bus_errors_re;
+    csr_bankarray_sel_r <= csr_bankarray_sel;
+    csr_bankarray_interface2_bank_bus_dat_r <= 1'd0;
+    if (csr_bankarray_csrbank2_sel) begin
+        case (csr_bankarray_interface2_bank_bus_adr[8:0])
             1'd0: begin
-                interface3_dat_r <= csrbank2_writer_enable0_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_writer_enable0_w;
             end
             1'd1: begin
-                interface3_dat_r <= csrbank2_writer_table_value1_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_writer_table_value1_w;
             end
             2'd2: begin
-                interface3_dat_r <= csrbank2_writer_table_value0_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_writer_table_value0_w;
             end
             2'd3: begin
-                interface3_dat_r <= csrbank2_writer_table_we0_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_writer_table_we0_w;
             end
             3'd4: begin
-                interface3_dat_r <= csrbank2_writer_table_loop_prog_n0_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_writer_table_loop_prog_n0_w;
             end
             3'd5: begin
-                interface3_dat_r <= csrbank2_writer_table_loop_status_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_writer_table_loop_status_w;
             end
             3'd6: begin
-                interface3_dat_r <= csrbank2_writer_table_level_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_writer_table_level_w;
             end
             3'd7: begin
-                interface3_dat_r <= csrbank2_writer_table_reset0_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_writer_table_reset0_w;
             end
             4'd8: begin
-                interface3_dat_r <= csrbank2_reader_enable0_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_reader_enable0_w;
             end
             4'd9: begin
-                interface3_dat_r <= csrbank2_reader_table_value1_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_reader_table_value1_w;
             end
             4'd10: begin
-                interface3_dat_r <= csrbank2_reader_table_value0_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_reader_table_value0_w;
             end
             4'd11: begin
-                interface3_dat_r <= csrbank2_reader_table_we0_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_reader_table_we0_w;
             end
             4'd12: begin
-                interface3_dat_r <= csrbank2_reader_table_loop_prog_n0_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_reader_table_loop_prog_n0_w;
             end
             4'd13: begin
-                interface3_dat_r <= csrbank2_reader_table_loop_status_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_reader_table_loop_status_w;
             end
             4'd14: begin
-                interface3_dat_r <= csrbank2_reader_table_level_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_reader_table_level_w;
             end
             4'd15: begin
-                interface3_dat_r <= csrbank2_reader_table_reset0_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_reader_table_reset0_w;
             end
             5'd16: begin
-                interface3_dat_r <= csrbank2_buffering_reader_fifo_control0_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_buffering_reader_fifo_control0_w;
             end
             5'd17: begin
-                interface3_dat_r <= csrbank2_buffering_reader_fifo_status_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_buffering_reader_fifo_status_w;
             end
             5'd18: begin
-                interface3_dat_r <= csrbank2_buffering_writer_fifo_control0_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_buffering_writer_fifo_control0_w;
             end
             5'd19: begin
-                interface3_dat_r <= csrbank2_buffering_writer_fifo_status_w;
+                csr_bankarray_interface2_bank_bus_dat_r <= csr_bankarray_csrbank2_buffering_writer_fifo_status_w;
             end
         endcase
     end
-    if (csrbank2_writer_enable0_re) begin
-        writer_enable_storage <= csrbank2_writer_enable0_r;
+    if (csr_bankarray_csrbank2_writer_enable0_re) begin
+        pcie_dma_writer_enable_storage[1:0] <= csr_bankarray_csrbank2_writer_enable0_r;
     end
-    writer_enable_re <= csrbank2_writer_enable0_re;
-    if (csrbank2_writer_table_value1_re) begin
-        writer_table_value_storage[57:32] <= csrbank2_writer_table_value1_r;
+    pcie_dma_writer_enable_re <= csr_bankarray_csrbank2_writer_enable0_re;
+    if (csr_bankarray_csrbank2_writer_table_value1_re) begin
+        pcie_dma_writer_table_value_storage[57:32] <= csr_bankarray_csrbank2_writer_table_value1_r;
     end
-    if (csrbank2_writer_table_value0_re) begin
-        writer_table_value_storage[31:0] <= csrbank2_writer_table_value0_r;
+    if (csr_bankarray_csrbank2_writer_table_value0_re) begin
+        pcie_dma_writer_table_value_storage[31:0] <= csr_bankarray_csrbank2_writer_table_value0_r;
     end
-    writer_table_value_re <= csrbank2_writer_table_value0_re;
-    if (csrbank2_writer_table_we0_re) begin
-        writer_table_we_storage[31:0] <= csrbank2_writer_table_we0_r;
+    pcie_dma_writer_table_value_re <= csr_bankarray_csrbank2_writer_table_value0_re;
+    if (csr_bankarray_csrbank2_writer_table_we0_re) begin
+        pcie_dma_writer_table_we_storage[31:0] <= csr_bankarray_csrbank2_writer_table_we0_r;
     end
-    writer_table_we_re <= csrbank2_writer_table_we0_re;
-    if (csrbank2_writer_table_loop_prog_n0_re) begin
-        writer_table_loop_prog_n_storage <= csrbank2_writer_table_loop_prog_n0_r;
+    pcie_dma_writer_table_we_re <= csr_bankarray_csrbank2_writer_table_we0_re;
+    if (csr_bankarray_csrbank2_writer_table_loop_prog_n0_re) begin
+        pcie_dma_writer_table_loop_prog_n_storage <= csr_bankarray_csrbank2_writer_table_loop_prog_n0_r;
     end
-    writer_table_loop_prog_n_re <= csrbank2_writer_table_loop_prog_n0_re;
-    writer_table_loop_status_re <= csrbank2_writer_table_loop_status_re;
-    writer_table_level_re <= csrbank2_writer_table_level_re;
-    if (csrbank2_writer_table_reset0_re) begin
-        writer_table_reset_storage <= csrbank2_writer_table_reset0_r;
+    pcie_dma_writer_table_loop_prog_n_re <= csr_bankarray_csrbank2_writer_table_loop_prog_n0_re;
+    pcie_dma_writer_table_loop_status_re <= csr_bankarray_csrbank2_writer_table_loop_status_re;
+    pcie_dma_writer_table_level_re <= csr_bankarray_csrbank2_writer_table_level_re;
+    if (csr_bankarray_csrbank2_writer_table_reset0_re) begin
+        pcie_dma_writer_table_reset_storage <= csr_bankarray_csrbank2_writer_table_reset0_r;
     end
-    writer_table_reset_re <= csrbank2_writer_table_reset0_re;
-    if (csrbank2_reader_enable0_re) begin
-        reader_enable_storage <= csrbank2_reader_enable0_r;
+    pcie_dma_writer_table_reset_re <= csr_bankarray_csrbank2_writer_table_reset0_re;
+    if (csr_bankarray_csrbank2_reader_enable0_re) begin
+        pcie_dma_reader_enable_storage[1:0] <= csr_bankarray_csrbank2_reader_enable0_r;
     end
-    reader_enable_re <= csrbank2_reader_enable0_re;
-    if (csrbank2_reader_table_value1_re) begin
-        reader_table_value_storage[57:32] <= csrbank2_reader_table_value1_r;
+    pcie_dma_reader_enable_re <= csr_bankarray_csrbank2_reader_enable0_re;
+    if (csr_bankarray_csrbank2_reader_table_value1_re) begin
+        pcie_dma_reader_table_value_storage[57:32] <= csr_bankarray_csrbank2_reader_table_value1_r;
     end
-    if (csrbank2_reader_table_value0_re) begin
-        reader_table_value_storage[31:0] <= csrbank2_reader_table_value0_r;
+    if (csr_bankarray_csrbank2_reader_table_value0_re) begin
+        pcie_dma_reader_table_value_storage[31:0] <= csr_bankarray_csrbank2_reader_table_value0_r;
     end
-    reader_table_value_re <= csrbank2_reader_table_value0_re;
-    if (csrbank2_reader_table_we0_re) begin
-        reader_table_we_storage[31:0] <= csrbank2_reader_table_we0_r;
+    pcie_dma_reader_table_value_re <= csr_bankarray_csrbank2_reader_table_value0_re;
+    if (csr_bankarray_csrbank2_reader_table_we0_re) begin
+        pcie_dma_reader_table_we_storage[31:0] <= csr_bankarray_csrbank2_reader_table_we0_r;
     end
-    reader_table_we_re <= csrbank2_reader_table_we0_re;
-    if (csrbank2_reader_table_loop_prog_n0_re) begin
-        reader_table_loop_prog_n_storage <= csrbank2_reader_table_loop_prog_n0_r;
+    pcie_dma_reader_table_we_re <= csr_bankarray_csrbank2_reader_table_we0_re;
+    if (csr_bankarray_csrbank2_reader_table_loop_prog_n0_re) begin
+        pcie_dma_reader_table_loop_prog_n_storage <= csr_bankarray_csrbank2_reader_table_loop_prog_n0_r;
     end
-    reader_table_loop_prog_n_re <= csrbank2_reader_table_loop_prog_n0_re;
-    reader_table_loop_status_re <= csrbank2_reader_table_loop_status_re;
-    reader_table_level_re <= csrbank2_reader_table_level_re;
-    if (csrbank2_reader_table_reset0_re) begin
-        reader_table_reset_storage <= csrbank2_reader_table_reset0_r;
+    pcie_dma_reader_table_loop_prog_n_re <= csr_bankarray_csrbank2_reader_table_loop_prog_n0_re;
+    pcie_dma_reader_table_loop_status_re <= csr_bankarray_csrbank2_reader_table_loop_status_re;
+    pcie_dma_reader_table_level_re <= csr_bankarray_csrbank2_reader_table_level_re;
+    if (csr_bankarray_csrbank2_reader_table_reset0_re) begin
+        pcie_dma_reader_table_reset_storage <= csr_bankarray_csrbank2_reader_table_reset0_r;
     end
-    reader_table_reset_re <= csrbank2_reader_table_reset0_re;
-    if (csrbank2_buffering_reader_fifo_control0_re) begin
-        buffering_reader_fifo_control_storage[31:0] <= csrbank2_buffering_reader_fifo_control0_r;
+    pcie_dma_reader_table_reset_re <= csr_bankarray_csrbank2_reader_table_reset0_re;
+    if (csr_bankarray_csrbank2_buffering_reader_fifo_control0_re) begin
+        pcie_dma_buffering_reader_fifo_control_storage[31:0] <= csr_bankarray_csrbank2_buffering_reader_fifo_control0_r;
     end
-    buffering_reader_fifo_control_re <= csrbank2_buffering_reader_fifo_control0_re;
-    buffering_reader_fifo_status_re <= csrbank2_buffering_reader_fifo_status_re;
-    if (csrbank2_buffering_writer_fifo_control0_re) begin
-        buffering_writer_fifo_control_storage[31:0] <= csrbank2_buffering_writer_fifo_control0_r;
+    pcie_dma_buffering_reader_fifo_control_re <= csr_bankarray_csrbank2_buffering_reader_fifo_control0_re;
+    pcie_dma_buffering_reader_fifo_status_re <= csr_bankarray_csrbank2_buffering_reader_fifo_status_re;
+    if (csr_bankarray_csrbank2_buffering_writer_fifo_control0_re) begin
+        pcie_dma_buffering_writer_fifo_control_storage[31:0] <= csr_bankarray_csrbank2_buffering_writer_fifo_control0_r;
     end
-    buffering_writer_fifo_control_re <= csrbank2_buffering_writer_fifo_control0_re;
-    buffering_writer_fifo_status_re <= csrbank2_buffering_writer_fifo_status_re;
-    interface4_dat_r <= 1'd0;
-    if (csrbank3_sel) begin
-        case (interface4_adr[8:0])
+    pcie_dma_buffering_writer_fifo_control_re <= csr_bankarray_csrbank2_buffering_writer_fifo_control0_re;
+    pcie_dma_buffering_writer_fifo_status_re <= csr_bankarray_csrbank2_buffering_writer_fifo_status_re;
+    csr_bankarray_interface3_bank_bus_dat_r <= 1'd0;
+    if (csr_bankarray_csrbank3_sel) begin
+        case (csr_bankarray_interface3_bank_bus_adr[8:0])
             1'd0: begin
-                interface4_dat_r <= csrbank3_enable0_w;
+                csr_bankarray_interface3_bank_bus_dat_r <= csr_bankarray_csrbank3_phy_link_status_w;
             end
             1'd1: begin
-                interface4_dat_r <= csrbank3_clear0_w;
+                csr_bankarray_interface3_bank_bus_dat_r <= csr_bankarray_csrbank3_phy_msi_enable_w;
             end
             2'd2: begin
-                interface4_dat_r <= csrbank3_vector_w;
-            end
-        endcase
-    end
-    if (csrbank3_enable0_re) begin
-        pcie_msi_enable_storage[31:0] <= csrbank3_enable0_r;
-    end
-    pcie_msi_enable_re <= csrbank3_enable0_re;
-    if (csrbank3_clear0_re) begin
-        pcie_msi_clear_storage[31:0] <= csrbank3_clear0_r;
-    end
-    pcie_msi_clear_re <= csrbank3_clear0_re;
-    pcie_msi_vector_re <= csrbank3_vector_re;
-    interface5_dat_r <= 1'd0;
-    if (csrbank4_sel) begin
-        case (interface5_adr[8:0])
-            1'd0: begin
-                interface5_dat_r <= csrbank4_link_status_w;
-            end
-            1'd1: begin
-                interface5_dat_r <= csrbank4_msi_enable_w;
-            end
-            2'd2: begin
-                interface5_dat_r <= csrbank4_msix_enable_w;
+                csr_bankarray_interface3_bank_bus_dat_r <= csr_bankarray_csrbank3_phy_msix_enable_w;
             end
             2'd3: begin
-                interface5_dat_r <= csrbank4_bus_master_enable_w;
+                csr_bankarray_interface3_bank_bus_dat_r <= csr_bankarray_csrbank3_phy_bus_master_enable_w;
             end
             3'd4: begin
-                interface5_dat_r <= csrbank4_max_request_size_w;
+                csr_bankarray_interface3_bank_bus_dat_r <= csr_bankarray_csrbank3_phy_max_request_size_w;
             end
             3'd5: begin
-                interface5_dat_r <= csrbank4_max_payload_size_w;
+                csr_bankarray_interface3_bank_bus_dat_r <= csr_bankarray_csrbank3_phy_max_payload_size_w;
             end
         endcase
     end
-    s7pciephy_link_status_re <= csrbank4_link_status_re;
-    s7pciephy_msi_enable_re <= csrbank4_msi_enable_re;
-    s7pciephy_msix_enable_re <= csrbank4_msix_enable_re;
-    s7pciephy_bus_master_enable_re <= csrbank4_bus_master_enable_re;
-    s7pciephy_max_request_size_re <= csrbank4_max_request_size_re;
-    s7pciephy_max_payload_size_re <= csrbank4_max_payload_size_re;
+    s7pciephy_link_status_re <= csr_bankarray_csrbank3_phy_link_status_re;
+    s7pciephy_msi_enable_re <= csr_bankarray_csrbank3_phy_msi_enable_re;
+    s7pciephy_msix_enable_re <= csr_bankarray_csrbank3_phy_msix_enable_re;
+    s7pciephy_bus_master_enable_re <= csr_bankarray_csrbank3_phy_bus_master_enable_re;
+    s7pciephy_max_request_size_re <= csr_bankarray_csrbank3_phy_max_request_size_re;
+    s7pciephy_max_payload_size_re <= csr_bankarray_csrbank3_phy_max_payload_size_re;
+    csr_bankarray_interface4_bank_bus_dat_r <= 1'd0;
+    if (csr_bankarray_csrbank4_sel) begin
+        case (csr_bankarray_interface4_bank_bus_adr[8:0])
+            1'd0: begin
+                csr_bankarray_interface4_bank_bus_dat_r <= csr_bankarray_csrbank4_enable0_w;
+            end
+            1'd1: begin
+                csr_bankarray_interface4_bank_bus_dat_r <= csr_bankarray_csrbank4_clear0_w;
+            end
+            2'd2: begin
+                csr_bankarray_interface4_bank_bus_dat_r <= csr_bankarray_csrbank4_vector_w;
+            end
+        endcase
+    end
+    if (csr_bankarray_csrbank4_enable0_re) begin
+        pcie_msi_enable_storage[31:0] <= csr_bankarray_csrbank4_enable0_r;
+    end
+    pcie_msi_enable_re <= csr_bankarray_csrbank4_enable0_re;
+    if (csr_bankarray_csrbank4_clear0_re) begin
+        pcie_msi_clear_storage[31:0] <= csr_bankarray_csrbank4_clear0_r;
+    end
+    pcie_msi_clear_re <= csr_bankarray_csrbank4_clear0_re;
+    pcie_msi_vector_re <= csr_bankarray_csrbank4_vector_re;
+    csr_bankarray_interface5_bank_bus_dat_r <= 1'd0;
+    if (csr_bankarray_csrbank5_sel) begin
+        case (csr_bankarray_interface5_bank_bus_adr[8:0])
+            1'd0: begin
+                csr_bankarray_interface5_bank_bus_dat_r <= csr_bankarray_csrbank3_phy_link_status_w;
+            end
+            1'd1: begin
+                csr_bankarray_interface5_bank_bus_dat_r <= csr_bankarray_csrbank3_phy_msi_enable_w;
+            end
+            2'd2: begin
+                csr_bankarray_interface5_bank_bus_dat_r <= csr_bankarray_csrbank3_phy_msix_enable_w;
+            end
+            2'd3: begin
+                csr_bankarray_interface5_bank_bus_dat_r <= csr_bankarray_csrbank3_phy_bus_master_enable_w;
+            end
+            3'd4: begin
+                csr_bankarray_interface5_bank_bus_dat_r <= csr_bankarray_csrbank3_phy_max_request_size_w;
+            end
+            3'd5: begin
+                csr_bankarray_interface5_bank_bus_dat_r <= csr_bankarray_csrbank3_phy_max_payload_size_w;
+            end
+        endcase
+    end
     if (sys_rst) begin
         reset_storage <= 2'd0;
         reset_re <= 1'd0;
@@ -6856,99 +7509,89 @@ always @(posedge sys_clk) begin
         CNTRL_ndma_re <= 1'd0;
         CNTRL_enable_both_storage <= 1'd0;
         CNTRL_enable_both_re <= 1'd0;
-        writer_enable_storage <= 1'd0;
-        writer_enable_re <= 1'd0;
-        writer_table_value_re <= 1'd0;
-        writer_table_we_storage <= 32'd0;
-        writer_table_we_re <= 1'd0;
-        writer_table_loop_prog_n_storage <= 1'd0;
-        writer_table_loop_prog_n_re <= 1'd0;
-        writer_table_index <= 16'd0;
-        writer_table_count <= 16'd0;
-        writer_table_loop_status_re <= 1'd0;
-        writer_table_level_re <= 1'd0;
-        writer_table_reset_storage <= 1'd0;
-        writer_table_reset_re <= 1'd0;
-        writer_table_table_sink_valid <= 1'd0;
-        writer_table_table_sink_payload_address <= 32'd0;
-        writer_table_table_sink_payload_length <= 24'd0;
-        writer_table_table_sink_payload_irq_disable <= 1'd0;
-        writer_table_table_sink_payload_last_disable <= 1'd0;
-        writer_table_table_level <= 9'd0;
-        writer_table_table_produce <= 8'd0;
-        writer_table_table_consume <= 8'd0;
-        writer_table_loop_first <= 1'd0;
-        writer_splitter_desc_length <= 32'd0;
-        writer_splitter_desc_offset <= 32'd0;
-        writer_splitter_desc_id <= 32'd0;
-        writer_splitter_pipe_valid_source_valid <= 1'd0;
-        writer_splitter_pipe_valid_source_payload_address <= 32'd0;
-        writer_splitter_pipe_valid_source_payload_length <= 24'd0;
-        writer_splitter_pipe_valid_source_payload_irq_disable <= 1'd0;
-        writer_splitter_pipe_valid_source_payload_last_disable <= 1'd0;
-        writer_splitter_pipe_valid_source_payload_user_id <= 8'd0;
-        writer_data_fifo_readable <= 1'd0;
-        writer_data_fifo_level0 <= 8'd0;
-        writer_data_fifo_produce <= 7'd0;
-        writer_data_fifo_consume <= 7'd0;
-        writer_req_count <= 24'd0;
-        reader_enable_storage <= 1'd0;
-        reader_enable_re <= 1'd0;
-        reader_table_value_re <= 1'd0;
-        reader_table_we_storage <= 32'd0;
-        reader_table_we_re <= 1'd0;
-        reader_table_loop_prog_n_storage <= 1'd0;
-        reader_table_loop_prog_n_re <= 1'd0;
-        reader_table_index <= 16'd0;
-        reader_table_count <= 16'd0;
-        reader_table_loop_status_re <= 1'd0;
-        reader_table_level_re <= 1'd0;
-        reader_table_reset_storage <= 1'd0;
-        reader_table_reset_re <= 1'd0;
-        reader_table_table_sink_valid <= 1'd0;
-        reader_table_table_sink_payload_address <= 32'd0;
-        reader_table_table_sink_payload_length <= 24'd0;
-        reader_table_table_sink_payload_irq_disable <= 1'd0;
-        reader_table_table_sink_payload_last_disable <= 1'd0;
-        reader_table_table_level <= 9'd0;
-        reader_table_table_produce <= 8'd0;
-        reader_table_table_consume <= 8'd0;
-        reader_table_loop_first <= 1'd0;
-        reader_splitter_desc_length <= 32'd0;
-        reader_splitter_desc_offset <= 32'd0;
-        reader_splitter_desc_id <= 32'd0;
-        reader_splitter_pipe_valid_source_valid <= 1'd0;
-        reader_splitter_pipe_valid_source_payload_address <= 32'd0;
-        reader_splitter_pipe_valid_source_payload_length <= 24'd0;
-        reader_splitter_pipe_valid_source_payload_irq_disable <= 1'd0;
-        reader_splitter_pipe_valid_source_payload_last_disable <= 1'd0;
-        reader_splitter_pipe_valid_source_payload_user_id <= 8'd0;
-        reader_last_user_id <= 8'd255;
-        reader_data_fifo_readable <= 1'd0;
-        reader_data_fifo_level0 <= 10'd0;
-        reader_data_fifo_produce <= 9'd0;
-        reader_data_fifo_consume <= 9'd0;
-        reader_pending_words <= 10'd0;
-        buffering_reader_fifo_control_storage <= 32'd8192;
-        buffering_reader_fifo_control_re <= 1'd0;
-        buffering_reader_fifo_status_re <= 1'd0;
-        buffering_writer_fifo_control_storage <= 32'd8192;
-        buffering_writer_fifo_control_re <= 1'd0;
-        buffering_writer_fifo_status_re <= 1'd0;
-        buffering_reader_fifo_readable <= 1'd0;
-        buffering_reader_fifo_level0 <= 10'd0;
-        buffering_reader_fifo_produce <= 9'd0;
-        buffering_reader_fifo_consume <= 9'd0;
-        buffering_reader_fifo_level_min <= 10'd0;
-        buffering_writer_fifo_readable <= 1'd0;
-        buffering_writer_fifo_level0 <= 10'd0;
-        buffering_writer_fifo_produce <= 9'd0;
-        buffering_writer_fifo_consume <= 9'd0;
-        buffering_writer_fifo_level_max <= 10'd0;
-        bufferizeendpoints0_pipe_valid_source_valid <= 1'd0;
-        bufferizeendpoints0_pipe_valid_source_payload_data <= 128'd0;
-        bufferizeendpoints1_pipe_valid_source_valid <= 1'd0;
-        bufferizeendpoints1_pipe_valid_source_payload_data <= 128'd0;
+        pcie_dma_writer_enable_storage <= 2'd0;
+        pcie_dma_writer_enable_re <= 1'd0;
+        pcie_dma_writer_table_value_re <= 1'd0;
+        pcie_dma_writer_table_we_storage <= 32'd0;
+        pcie_dma_writer_table_we_re <= 1'd0;
+        pcie_dma_writer_table_loop_prog_n_storage <= 1'd0;
+        pcie_dma_writer_table_loop_prog_n_re <= 1'd0;
+        pcie_dma_writer_table_index <= 16'd0;
+        pcie_dma_writer_table_count <= 16'd0;
+        pcie_dma_writer_table_loop_status_re <= 1'd0;
+        pcie_dma_writer_table_level_re <= 1'd0;
+        pcie_dma_writer_table_reset_storage <= 1'd0;
+        pcie_dma_writer_table_reset_re <= 1'd0;
+        pcie_dma_writer_table_table_sink_valid <= 1'd0;
+        pcie_dma_writer_table_table_sink_payload_address <= 64'd0;
+        pcie_dma_writer_table_table_sink_payload_length <= 24'd0;
+        pcie_dma_writer_table_table_sink_payload_irq_disable <= 1'd0;
+        pcie_dma_writer_table_table_sink_payload_last_disable <= 1'd0;
+        pcie_dma_writer_table_table_level <= 9'd0;
+        pcie_dma_writer_table_table_produce <= 8'd0;
+        pcie_dma_writer_table_table_consume <= 8'd0;
+        pcie_dma_writer_table_loop_first <= 1'd0;
+        pcie_dma_writer_splitter_source_payload_address <= 64'd0;
+        pcie_dma_writer_splitter_source_payload_length <= 24'd0;
+        pcie_dma_writer_splitter_source_payload_user_id <= 8'd0;
+        pcie_dma_writer_splitter_length <= 24'd0;
+        pcie_dma_writer_data_fifo_readable <= 1'd0;
+        pcie_dma_writer_data_fifo_level0 <= 8'd0;
+        pcie_dma_writer_data_fifo_produce <= 7'd0;
+        pcie_dma_writer_data_fifo_consume <= 7'd0;
+        pcie_dma_writer_req_count <= 24'd0;
+        pcie_dma_reader_enable_storage <= 2'd0;
+        pcie_dma_reader_enable_re <= 1'd0;
+        pcie_dma_reader_table_value_re <= 1'd0;
+        pcie_dma_reader_table_we_storage <= 32'd0;
+        pcie_dma_reader_table_we_re <= 1'd0;
+        pcie_dma_reader_table_loop_prog_n_storage <= 1'd0;
+        pcie_dma_reader_table_loop_prog_n_re <= 1'd0;
+        pcie_dma_reader_table_index <= 16'd0;
+        pcie_dma_reader_table_count <= 16'd0;
+        pcie_dma_reader_table_loop_status_re <= 1'd0;
+        pcie_dma_reader_table_level_re <= 1'd0;
+        pcie_dma_reader_table_reset_storage <= 1'd0;
+        pcie_dma_reader_table_reset_re <= 1'd0;
+        pcie_dma_reader_table_table_sink_valid <= 1'd0;
+        pcie_dma_reader_table_table_sink_payload_address <= 64'd0;
+        pcie_dma_reader_table_table_sink_payload_length <= 24'd0;
+        pcie_dma_reader_table_table_sink_payload_irq_disable <= 1'd0;
+        pcie_dma_reader_table_table_sink_payload_last_disable <= 1'd0;
+        pcie_dma_reader_table_table_level <= 9'd0;
+        pcie_dma_reader_table_table_produce <= 8'd0;
+        pcie_dma_reader_table_table_consume <= 8'd0;
+        pcie_dma_reader_table_loop_first <= 1'd0;
+        pcie_dma_reader_splitter_source_payload_address <= 64'd0;
+        pcie_dma_reader_splitter_source_payload_length <= 24'd0;
+        pcie_dma_reader_splitter_source_payload_user_id <= 8'd0;
+        pcie_dma_reader_splitter_length <= 24'd0;
+        pcie_dma_reader_last_user_id <= 8'd255;
+        pcie_dma_reader_data_fifo_readable <= 1'd0;
+        pcie_dma_reader_data_fifo_level0 <= 10'd0;
+        pcie_dma_reader_data_fifo_produce <= 9'd0;
+        pcie_dma_reader_data_fifo_consume <= 9'd0;
+        pcie_dma_reader_pending_words <= 10'd0;
+        pcie_dma_buffering_reader_fifo_control_storage <= 32'd8192;
+        pcie_dma_buffering_reader_fifo_control_re <= 1'd0;
+        pcie_dma_buffering_reader_fifo_status_re <= 1'd0;
+        pcie_dma_buffering_writer_fifo_control_storage <= 32'd8192;
+        pcie_dma_buffering_writer_fifo_control_re <= 1'd0;
+        pcie_dma_buffering_writer_fifo_status_re <= 1'd0;
+        pcie_dma_buffering_reader_fifo_readable <= 1'd0;
+        pcie_dma_buffering_reader_fifo_level0 <= 10'd0;
+        pcie_dma_buffering_reader_fifo_produce <= 9'd0;
+        pcie_dma_buffering_reader_fifo_consume <= 9'd0;
+        pcie_dma_buffering_reader_fifo_level_min <= 10'd0;
+        pcie_dma_buffering_writer_fifo_readable <= 1'd0;
+        pcie_dma_buffering_writer_fifo_level0 <= 10'd0;
+        pcie_dma_buffering_writer_fifo_produce <= 9'd0;
+        pcie_dma_buffering_writer_fifo_consume <= 9'd0;
+        pcie_dma_buffering_writer_fifo_level_max <= 10'd0;
+        pcie_dma_bufferizeendpoints0_pipe_valid_source_valid <= 1'd0;
+        pcie_dma_bufferizeendpoints0_pipe_valid_source_payload_data <= 128'd0;
+        pcie_dma_bufferizeendpoints1_pipe_valid_source_valid <= 1'd0;
+        pcie_dma_bufferizeendpoints1_pipe_valid_source_payload_data <= 128'd0;
         pcie_msi_enable_storage <= 32'd0;
         pcie_msi_enable_re <= 1'd0;
         pcie_msi_clear_storage <= 32'd0;
@@ -6956,88 +7599,113 @@ always @(posedge sys_clk) begin
         pcie_msi_vector_re <= 1'd0;
         pcie_msi_vector <= 32'd0;
         pcie_msi_msi <= 32'd0;
-        mmap_sel_r <= 1'd0;
-        litepciecore_litepcieendpoint_state <= 2'd0;
-        litepciecore_litepcieendpoint_litepcietlpheaderinserter128b3dws_state <= 1'd0;
-        litepciecore_litepcieendpoint_litepcietlpheaderinserter128b4dws_state <= 1'd0;
-        litepciecore_litepcieendpoint_tag_queue_readable <= 1'd0;
-        litepciecore_litepcieendpoint_tag_queue_level0 <= 3'd0;
-        litepciecore_litepcieendpoint_tag_queue_produce <= 2'd0;
-        litepciecore_litepcieendpoint_tag_queue_consume <= 2'd0;
-        litepciecore_litepcieendpoint_req_queue_readable <= 1'd0;
-        litepciecore_litepcieendpoint_req_queue_level0 <= 3'd0;
-        litepciecore_litepcieendpoint_req_queue_produce <= 2'd0;
-        litepciecore_litepcieendpoint_req_queue_consume <= 2'd0;
-        litepciecore_litepcieendpoint_syncfifo0_readable <= 1'd0;
-        litepciecore_litepcieendpoint_syncfifo0_level0 <= 8'd0;
-        litepciecore_litepcieendpoint_syncfifo0_produce <= 7'd0;
-        litepciecore_litepcieendpoint_syncfifo0_consume <= 7'd0;
-        litepciecore_litepcieendpoint_syncfifo1_readable <= 1'd0;
-        litepciecore_litepcieendpoint_syncfifo1_level0 <= 8'd0;
-        litepciecore_litepcieendpoint_syncfifo1_produce <= 7'd0;
-        litepciecore_litepcieendpoint_syncfifo1_consume <= 7'd0;
-        litepciecore_litepcieendpoint_syncfifo2_readable <= 1'd0;
-        litepciecore_litepcieendpoint_syncfifo2_level0 <= 8'd0;
-        litepciecore_litepcieendpoint_syncfifo2_produce <= 7'd0;
-        litepciecore_litepcieendpoint_syncfifo2_consume <= 7'd0;
-        litepciecore_litepcieendpoint_syncfifo3_readable <= 1'd0;
-        litepciecore_litepcieendpoint_syncfifo3_level0 <= 8'd0;
-        litepciecore_litepcieendpoint_syncfifo3_produce <= 7'd0;
-        litepciecore_litepcieendpoint_syncfifo3_consume <= 7'd0;
-        litepciecore_litepcieendpoint_fill_tag <= 2'd0;
-        litepciecore_litepcieendpoint_grant <= 1'd0;
-        litepciecore_litepcieendpoint_status0_first <= 1'd1;
-        litepciecore_litepcieendpoint_status0_ongoing1 <= 1'd0;
-        litepciecore_litepcieendpoint_status1_first <= 1'd1;
-        litepciecore_litepcieendpoint_status1_ongoing1 <= 1'd0;
-        litepciecore_litepcieendpoint_fsm0_state <= 2'd0;
-        litepciecore_litepcieendpoint_fsm1_state <= 2'd0;
-        litepciecore_litepciewishbonemaster_state <= 2'd0;
-        litepciecore_litepciedmawriter_bufferizeendpoints_state <= 1'd0;
-        litepciecore_litepciedmawriter_fsm_state <= 1'd0;
-        litepciecore_litepciedmareader_bufferizeendpoints_state <= 1'd0;
-        litepciecore_litepciedmareader_fsm_state <= 1'd0;
-        litepciecore_wishbone2csr_state <= 1'd0;
+        csr_bankarray_sel_r <= 1'd0;
+        litepcieendpoint_state <= 2'd0;
+        litepcieendpoint_litepcietlpheaderinserter128b3dws_state <= 1'd0;
+        litepcieendpoint_litepcietlpheaderinserter128b4dws_state <= 1'd0;
+        litepcieendpoint_first <= 1'd1;
+        litepcieendpoint_ongoing1 <= 1'd0;
+        litepcieendpoint_sel_ongoing <= 1'd0;
+        litepcieendpoint_tag_queue_readable <= 1'd0;
+        litepcieendpoint_tag_queue_level0 <= 3'd0;
+        litepcieendpoint_tag_queue_produce <= 2'd0;
+        litepcieendpoint_tag_queue_consume <= 2'd0;
+        litepcieendpoint_req_queue_readable <= 1'd0;
+        litepcieendpoint_req_queue_level0 <= 3'd0;
+        litepcieendpoint_req_queue_produce <= 2'd0;
+        litepcieendpoint_req_queue_consume <= 2'd0;
+        litepcieendpoint_syncfifo0_readable <= 1'd0;
+        litepcieendpoint_syncfifo0_level0 <= 8'd0;
+        litepcieendpoint_syncfifo0_produce <= 7'd0;
+        litepcieendpoint_syncfifo0_consume <= 7'd0;
+        litepcieendpoint_syncfifo1_readable <= 1'd0;
+        litepcieendpoint_syncfifo1_level0 <= 8'd0;
+        litepcieendpoint_syncfifo1_produce <= 7'd0;
+        litepcieendpoint_syncfifo1_consume <= 7'd0;
+        litepcieendpoint_syncfifo2_readable <= 1'd0;
+        litepcieendpoint_syncfifo2_level0 <= 8'd0;
+        litepcieendpoint_syncfifo2_produce <= 7'd0;
+        litepcieendpoint_syncfifo2_consume <= 7'd0;
+        litepcieendpoint_syncfifo3_readable <= 1'd0;
+        litepcieendpoint_syncfifo3_level0 <= 8'd0;
+        litepcieendpoint_syncfifo3_produce <= 7'd0;
+        litepcieendpoint_syncfifo3_consume <= 7'd0;
+        litepcieendpoint_fill_tag <= 2'd0;
+        litepcieendpoint_dispatcher0_first <= 1'd1;
+        litepcieendpoint_dispatcher0_ongoing1 <= 1'd0;
+        litepcieendpoint_dispatcher0_sel_ongoing <= 1'd0;
+        litepcieendpoint_dispatcher1_first <= 1'd1;
+        litepcieendpoint_dispatcher1_ongoing1 <= 1'd0;
+        litepcieendpoint_dispatcher1_sel_ongoing <= 1'd0;
+        litepcieendpoint_grant <= 1'd0;
+        litepcieendpoint_status0_first <= 1'd1;
+        litepcieendpoint_status0_ongoing1 <= 1'd0;
+        litepcieendpoint_status1_first <= 1'd1;
+        litepcieendpoint_status1_ongoing1 <= 1'd0;
+        litepcieendpoint_fsm0_state <= 2'd0;
+        litepcieendpoint_fsm1_state <= 2'd0;
+        litepciewishbonemaster_state <= 2'd0;
+        litepciedmawriter_resetinserter_state <= 1'd0;
+        litepciedmawriter_fsm_state <= 1'd0;
+        litepciedmareader_resetinserter_state <= 1'd0;
+        litepciedmareader_fsm_state <= 1'd0;
+        wishbone2csr_state <= 1'd0;
     end
-    xilinxmultiregimpl6_xilinxmultiregimpl60 <= s7pciephy_command[2];
-    xilinxmultiregimpl6_xilinxmultiregimpl61 <= xilinxmultiregimpl6_xilinxmultiregimpl60;
-    xilinxmultiregimpl70 <= s7pciephy_max_request_size;
-    xilinxmultiregimpl71 <= xilinxmultiregimpl70;
-    xilinxmultiregimpl80 <= s7pciephy_max_payload_size;
-    xilinxmultiregimpl81 <= xilinxmultiregimpl80;
+    xilinxmultiregimpl7_regs0 <= s7pciephy_sig0;
+    xilinxmultiregimpl7_regs1 <= xilinxmultiregimpl7_regs0;
+    xilinxmultiregimpl8_regs0 <= s7pciephy_sig1;
+    xilinxmultiregimpl8_regs1 <= xilinxmultiregimpl8_regs0;
+    xilinxmultiregimpl9_regs0 <= s7pciephy_sig2;
+    xilinxmultiregimpl9_regs1 <= xilinxmultiregimpl9_regs0;
+    xilinxmultiregimpl10_regs0 <= s7pciephy_sig3;
+    xilinxmultiregimpl10_regs1 <= xilinxmultiregimpl10_regs0;
+    xilinxmultiregimpl11_regs0 <= s7pciephy_sig4;
+    xilinxmultiregimpl11_regs1 <= xilinxmultiregimpl11_regs0;
+    xilinxmultiregimpl12_regs0 <= s7pciephy_sig5;
+    xilinxmultiregimpl12_regs1 <= xilinxmultiregimpl12_regs0;
+    xilinxmultiregimpl13_regs0 <= s7pciephy_sig6;
+    xilinxmultiregimpl13_regs1 <= xilinxmultiregimpl13_regs0;
+    xilinxmultiregimpl14_regs0 <= s7pciephy_sig7;
+    xilinxmultiregimpl14_regs1 <= xilinxmultiregimpl14_regs0;
+    xilinxmultiregimpl15_regs0 <= s7pciephy_sig8;
+    xilinxmultiregimpl15_regs1 <= xilinxmultiregimpl15_regs0;
+    xilinxmultiregimpl16_regs0 <= s7pciephy_sig9;
+    xilinxmultiregimpl16_regs1 <= xilinxmultiregimpl16_regs0;
+    xilinxmultiregimpl17_regs0 <= s7pciephy_sig10;
+    xilinxmultiregimpl17_regs1 <= xilinxmultiregimpl17_regs0;
 end
 
-always @(posedge to2526333147296_clk) begin
+always @(posedge to221_clk) begin
     s7pciephy_tx_datapath_cdc_cdc_graycounter1_q_binary <= s7pciephy_tx_datapath_cdc_cdc_graycounter1_q_next_binary;
     s7pciephy_tx_datapath_cdc_cdc_graycounter1_q <= s7pciephy_tx_datapath_cdc_cdc_graycounter1_q_next;
-    if (to2526333147296_rst) begin
+    if (to221_rst) begin
         s7pciephy_tx_datapath_cdc_cdc_graycounter1_q <= 5'd0;
         s7pciephy_tx_datapath_cdc_cdc_graycounter1_q_binary <= 5'd0;
     end
-    xilinxmultiregimpl00 <= s7pciephy_tx_datapath_cdc_cdc_graycounter0_q;
-    xilinxmultiregimpl01 <= xilinxmultiregimpl00;
+    xilinxmultiregimpl0_regs0 <= s7pciephy_tx_datapath_cdc_cdc_graycounter0_q;
+    xilinxmultiregimpl0_regs1 <= xilinxmultiregimpl0_regs0;
 end
 
-always @(posedge to2526333595040_clk) begin
-    s7pciephy_msi_cdc_cdc_graycounter1_q_binary <= s7pciephy_msi_cdc_cdc_graycounter1_q_next_binary;
-    s7pciephy_msi_cdc_cdc_graycounter1_q <= s7pciephy_msi_cdc_cdc_graycounter1_q_next;
-    if (to2526333595040_rst) begin
-        s7pciephy_msi_cdc_cdc_graycounter1_q <= 3'd0;
-        s7pciephy_msi_cdc_cdc_graycounter1_q_binary <= 3'd0;
-    end
-    xilinxmultiregimpl40 <= s7pciephy_msi_cdc_cdc_graycounter0_q;
-    xilinxmultiregimpl41 <= xilinxmultiregimpl40;
-end
-
-always @(posedge to2526333901200_clk) begin
+always @(posedge to685_clk) begin
     s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_binary <= s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_next_binary;
     s7pciephy_rx_datapath_cdc_cdc_graycounter1_q <= s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_next;
-    if (to2526333901200_rst) begin
+    if (to685_rst) begin
         s7pciephy_rx_datapath_cdc_cdc_graycounter1_q <= 5'd0;
         s7pciephy_rx_datapath_cdc_cdc_graycounter1_q_binary <= 5'd0;
     end
-    xilinxmultiregimpl20 <= s7pciephy_rx_datapath_cdc_cdc_graycounter0_q;
-    xilinxmultiregimpl21 <= xilinxmultiregimpl20;
+    xilinxmultiregimpl2_regs0 <= s7pciephy_rx_datapath_cdc_cdc_graycounter0_q;
+    xilinxmultiregimpl2_regs1 <= xilinxmultiregimpl2_regs0;
+end
+
+always @(posedge to876_clk) begin
+    s7pciephy_msi_cdc_cdc_graycounter1_q_binary <= s7pciephy_msi_cdc_cdc_graycounter1_q_next_binary;
+    s7pciephy_msi_cdc_cdc_graycounter1_q <= s7pciephy_msi_cdc_cdc_graycounter1_q_next;
+    if (to876_rst) begin
+        s7pciephy_msi_cdc_cdc_graycounter1_q <= 3'd0;
+        s7pciephy_msi_cdc_cdc_graycounter1_q_binary <= 3'd0;
+    end
+    xilinxmultiregimpl4_regs0 <= s7pciephy_msi_cdc_cdc_graycounter0_q;
+    xilinxmultiregimpl4_regs1 <= xilinxmultiregimpl4_regs0;
 end
 
 
@@ -7055,16 +7723,22 @@ initial begin
 end
 reg [5:0] mem_adr0;
 always @(posedge sys_clk) begin
-	mem_adr0 <= mmap_adr;
+	mem_adr0 <= csr_bankarray_adr;
 end
-assign mmap_dat_r = mem[mem_adr0];
+assign csr_bankarray_dat_r = mem[mem_adr0];
 
 
+//------------------------------------------------------------------------------
+// Instance IBUFDS_GTE2 of IBUFDS_GTE2 Module.
+//------------------------------------------------------------------------------
 IBUFDS_GTE2 IBUFDS_GTE2(
-	.CEB(1'd0),
-	.I(pcie_clk_p),
-	.IB(pcie_clk_n),
-	.O(s7pciephy_pcie_refclk)
+	// Inputs.
+	.CEB (1'd0),
+	.I   (pcie_clk_p),
+	.IB  (pcie_clk_n),
+
+	// Outputs.
+	.O   (s7pciephy_pcie_refclk)
 );
 
 //------------------------------------------------------------------------------
@@ -7075,12 +7749,12 @@ IBUFDS_GTE2 IBUFDS_GTE2(
 reg [145:0] storage[0:15];
 reg [145:0] storage_dat0;
 reg [145:0] storage_dat1;
-always @(posedge from2526333147296_clk) begin
+always @(posedge from221_clk) begin
 	if (s7pciephy_tx_datapath_cdc_cdc_wrport_we)
 		storage[s7pciephy_tx_datapath_cdc_cdc_wrport_adr] <= s7pciephy_tx_datapath_cdc_cdc_wrport_dat_w;
 	storage_dat0 <= storage[s7pciephy_tx_datapath_cdc_cdc_wrport_adr];
 end
-always @(posedge to2526333147296_clk) begin
+always @(posedge to221_clk) begin
 	storage_dat1 <= storage[s7pciephy_tx_datapath_cdc_cdc_rdport_adr];
 end
 assign s7pciephy_tx_datapath_cdc_cdc_wrport_dat_r = storage_dat0;
@@ -7095,12 +7769,12 @@ assign s7pciephy_tx_datapath_cdc_cdc_rdport_dat_r = storage_dat1;
 reg [145:0] storage_1[0:15];
 reg [145:0] storage_1_dat0;
 reg [145:0] storage_1_dat1;
-always @(posedge from2526333901200_clk) begin
+always @(posedge from685_clk) begin
 	if (s7pciephy_rx_datapath_cdc_cdc_wrport_we)
 		storage_1[s7pciephy_rx_datapath_cdc_cdc_wrport_adr] <= s7pciephy_rx_datapath_cdc_cdc_wrport_dat_w;
 	storage_1_dat0 <= storage_1[s7pciephy_rx_datapath_cdc_cdc_wrport_adr];
 end
-always @(posedge to2526333901200_clk) begin
+always @(posedge to685_clk) begin
 	storage_1_dat1 <= storage_1[s7pciephy_rx_datapath_cdc_cdc_rdport_adr];
 end
 assign s7pciephy_rx_datapath_cdc_cdc_wrport_dat_r = storage_1_dat0;
@@ -7115,12 +7789,12 @@ assign s7pciephy_rx_datapath_cdc_cdc_rdport_dat_r = storage_1_dat1;
 reg [9:0] storage_2[0:3];
 reg [9:0] storage_2_dat0;
 reg [9:0] storage_2_dat1;
-always @(posedge from2526333595040_clk) begin
+always @(posedge from876_clk) begin
 	if (s7pciephy_msi_cdc_cdc_wrport_we)
 		storage_2[s7pciephy_msi_cdc_cdc_wrport_adr] <= s7pciephy_msi_cdc_cdc_wrport_dat_w;
 	storage_2_dat0 <= storage_2[s7pciephy_msi_cdc_cdc_wrport_adr];
 end
-always @(posedge to2526333595040_clk) begin
+always @(posedge to876_clk) begin
 	storage_2_dat1 <= storage_2[s7pciephy_msi_cdc_cdc_rdport_adr];
 end
 assign s7pciephy_msi_cdc_cdc_wrport_dat_r = storage_2_dat0;
@@ -7128,21 +7802,92 @@ assign s7pciephy_msi_cdc_cdc_rdport_dat_r = storage_2_dat1;
 
 
 //------------------------------------------------------------------------------
-// Memory storage_3: 256-words x 60-bit
+// Instance BUFG of BUFG Module.
 //------------------------------------------------------------------------------
-// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First  | Write-Granularity: 60 
+BUFG BUFG(
+	// Inputs.
+	.I (s7pciephy_pipe_txoutclk),
+
+	// Outputs.
+	.O (s7pciephy_pipe_txoutclk_bufg)
+);
+
+//------------------------------------------------------------------------------
+// Instance BUFG_1 of BUFG Module.
+//------------------------------------------------------------------------------
+BUFG BUFG_1(
+	// Inputs.
+	.I (s7pciephy_clkout0),
+
+	// Outputs.
+	.O (s7pciephy_clkout_buf0)
+);
+
+//------------------------------------------------------------------------------
+// Instance BUFG_2 of BUFG Module.
+//------------------------------------------------------------------------------
+BUFG BUFG_2(
+	// Inputs.
+	.I (s7pciephy_clkout1),
+
+	// Outputs.
+	.O (s7pciephy_clkout_buf1)
+);
+
+//------------------------------------------------------------------------------
+// Instance BUFG_3 of BUFG Module.
+//------------------------------------------------------------------------------
+BUFG BUFG_3(
+	// Inputs.
+	.I (s7pciephy_clkout2),
+
+	// Outputs.
+	.O (s7pciephy_clkout_buf2)
+);
+
+//------------------------------------------------------------------------------
+// Instance BUFG_4 of BUFG Module.
+//------------------------------------------------------------------------------
+BUFG BUFG_4(
+	// Inputs.
+	.I (s7pciephy_clkout3),
+
+	// Outputs.
+	.O (s7pciephy_clkout_buf3)
+);
+
+//------------------------------------------------------------------------------
+// Instance BUFGCTRL of BUFGCTRL Module.
+//------------------------------------------------------------------------------
+BUFGCTRL BUFGCTRL(
+	// Inputs.
+	.CE0 (1'd1),
+	.CE1 (1'd1),
+	.I0  (clk125_clk),
+	.I1  (clk250_clk),
+	.S0  ((s7pciephy_pclk_sel == 1'd0)),
+	.S1  ((s7pciephy_pclk_sel == 1'd1)),
+
+	// Outputs.
+	.O   (pclk_clk)
+);
+
+//------------------------------------------------------------------------------
+// Memory storage_3: 256-words x 92-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First  | Write-Granularity: 92 
 // Port 1 | Read: Async | Write: ---- | 
-reg [59:0] storage_3[0:255];
-reg [59:0] storage_3_dat0;
+reg [91:0] storage_3[0:255];
+reg [91:0] storage_3_dat0;
 always @(posedge sys_clk) begin
-	if (writer_table_table_wrport_we)
-		storage_3[writer_table_table_wrport_adr] <= writer_table_table_wrport_dat_w;
-	storage_3_dat0 <= storage_3[writer_table_table_wrport_adr];
+	if (pcie_dma_writer_table_table_wrport_we)
+		storage_3[pcie_dma_writer_table_table_wrport_adr] <= pcie_dma_writer_table_table_wrport_dat_w;
+	storage_3_dat0 <= storage_3[pcie_dma_writer_table_table_wrport_adr];
 end
 always @(posedge sys_clk) begin
 end
-assign writer_table_table_wrport_dat_r = storage_3_dat0;
-assign writer_table_table_rdport_dat_r = storage_3[writer_table_table_rdport_adr];
+assign pcie_dma_writer_table_table_wrport_dat_r = storage_3_dat0;
+assign pcie_dma_writer_table_table_rdport_dat_r = storage_3[pcie_dma_writer_table_table_rdport_adr];
 
 
 //------------------------------------------------------------------------------
@@ -7154,34 +7899,34 @@ reg [129:0] storage_4[0:127];
 reg [129:0] storage_4_dat0;
 reg [129:0] storage_4_dat1;
 always @(posedge sys_clk) begin
-	if (writer_data_fifo_wrport_we)
-		storage_4[writer_data_fifo_wrport_adr] <= writer_data_fifo_wrport_dat_w;
-	storage_4_dat0 <= storage_4[writer_data_fifo_wrport_adr];
+	if (pcie_dma_writer_data_fifo_wrport_we)
+		storage_4[pcie_dma_writer_data_fifo_wrport_adr] <= pcie_dma_writer_data_fifo_wrport_dat_w;
+	storage_4_dat0 <= storage_4[pcie_dma_writer_data_fifo_wrport_adr];
 end
 always @(posedge sys_clk) begin
-	if (writer_data_fifo_rdport_re)
-		storage_4_dat1 <= storage_4[writer_data_fifo_rdport_adr];
+	if (pcie_dma_writer_data_fifo_rdport_re)
+		storage_4_dat1 <= storage_4[pcie_dma_writer_data_fifo_rdport_adr];
 end
-assign writer_data_fifo_wrport_dat_r = storage_4_dat0;
-assign writer_data_fifo_rdport_dat_r = storage_4_dat1;
+assign pcie_dma_writer_data_fifo_wrport_dat_r = storage_4_dat0;
+assign pcie_dma_writer_data_fifo_rdport_dat_r = storage_4_dat1;
 
 
 //------------------------------------------------------------------------------
-// Memory storage_5: 256-words x 60-bit
+// Memory storage_5: 256-words x 92-bit
 //------------------------------------------------------------------------------
-// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First  | Write-Granularity: 60 
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First  | Write-Granularity: 92 
 // Port 1 | Read: Async | Write: ---- | 
-reg [59:0] storage_5[0:255];
-reg [59:0] storage_5_dat0;
+reg [91:0] storage_5[0:255];
+reg [91:0] storage_5_dat0;
 always @(posedge sys_clk) begin
-	if (reader_table_table_wrport_we)
-		storage_5[reader_table_table_wrport_adr] <= reader_table_table_wrport_dat_w;
-	storage_5_dat0 <= storage_5[reader_table_table_wrport_adr];
+	if (pcie_dma_reader_table_table_wrport_we)
+		storage_5[pcie_dma_reader_table_table_wrport_adr] <= pcie_dma_reader_table_table_wrport_dat_w;
+	storage_5_dat0 <= storage_5[pcie_dma_reader_table_table_wrport_adr];
 end
 always @(posedge sys_clk) begin
 end
-assign reader_table_table_wrport_dat_r = storage_5_dat0;
-assign reader_table_table_rdport_dat_r = storage_5[reader_table_table_rdport_adr];
+assign pcie_dma_reader_table_table_wrport_dat_r = storage_5_dat0;
+assign pcie_dma_reader_table_table_rdport_dat_r = storage_5[pcie_dma_reader_table_table_rdport_adr];
 
 
 //------------------------------------------------------------------------------
@@ -7193,16 +7938,16 @@ reg [129:0] storage_6[0:511];
 reg [129:0] storage_6_dat0;
 reg [129:0] storage_6_dat1;
 always @(posedge sys_clk) begin
-	if (reader_data_fifo_wrport_we)
-		storage_6[reader_data_fifo_wrport_adr] <= reader_data_fifo_wrport_dat_w;
-	storage_6_dat0 <= storage_6[reader_data_fifo_wrport_adr];
+	if (pcie_dma_reader_data_fifo_wrport_we)
+		storage_6[pcie_dma_reader_data_fifo_wrport_adr] <= pcie_dma_reader_data_fifo_wrport_dat_w;
+	storage_6_dat0 <= storage_6[pcie_dma_reader_data_fifo_wrport_adr];
 end
 always @(posedge sys_clk) begin
-	if (reader_data_fifo_rdport_re)
-		storage_6_dat1 <= storage_6[reader_data_fifo_rdport_adr];
+	if (pcie_dma_reader_data_fifo_rdport_re)
+		storage_6_dat1 <= storage_6[pcie_dma_reader_data_fifo_rdport_adr];
 end
-assign reader_data_fifo_wrport_dat_r = storage_6_dat0;
-assign reader_data_fifo_rdport_dat_r = storage_6_dat1;
+assign pcie_dma_reader_data_fifo_wrport_dat_r = storage_6_dat0;
+assign pcie_dma_reader_data_fifo_rdport_dat_r = storage_6_dat1;
 
 
 //------------------------------------------------------------------------------
@@ -7214,16 +7959,16 @@ reg [129:0] storage_7[0:511];
 reg [129:0] storage_7_dat0;
 reg [129:0] storage_7_dat1;
 always @(posedge sys_clk) begin
-	if (buffering_reader_fifo_wrport_we)
-		storage_7[buffering_reader_fifo_wrport_adr] <= buffering_reader_fifo_wrport_dat_w;
-	storage_7_dat0 <= storage_7[buffering_reader_fifo_wrport_adr];
+	if (pcie_dma_buffering_reader_fifo_wrport_we)
+		storage_7[pcie_dma_buffering_reader_fifo_wrport_adr] <= pcie_dma_buffering_reader_fifo_wrport_dat_w;
+	storage_7_dat0 <= storage_7[pcie_dma_buffering_reader_fifo_wrport_adr];
 end
 always @(posedge sys_clk) begin
-	if (buffering_reader_fifo_rdport_re)
-		storage_7_dat1 <= storage_7[buffering_reader_fifo_rdport_adr];
+	if (pcie_dma_buffering_reader_fifo_rdport_re)
+		storage_7_dat1 <= storage_7[pcie_dma_buffering_reader_fifo_rdport_adr];
 end
-assign buffering_reader_fifo_wrport_dat_r = storage_7_dat0;
-assign buffering_reader_fifo_rdport_dat_r = storage_7_dat1;
+assign pcie_dma_buffering_reader_fifo_wrport_dat_r = storage_7_dat0;
+assign pcie_dma_buffering_reader_fifo_rdport_dat_r = storage_7_dat1;
 
 
 //------------------------------------------------------------------------------
@@ -7235,200 +7980,347 @@ reg [129:0] storage_8[0:511];
 reg [129:0] storage_8_dat0;
 reg [129:0] storage_8_dat1;
 always @(posedge sys_clk) begin
-	if (buffering_writer_fifo_wrport_we)
-		storage_8[buffering_writer_fifo_wrport_adr] <= buffering_writer_fifo_wrport_dat_w;
-	storage_8_dat0 <= storage_8[buffering_writer_fifo_wrport_adr];
+	if (pcie_dma_buffering_writer_fifo_wrport_we)
+		storage_8[pcie_dma_buffering_writer_fifo_wrport_adr] <= pcie_dma_buffering_writer_fifo_wrport_dat_w;
+	storage_8_dat0 <= storage_8[pcie_dma_buffering_writer_fifo_wrport_adr];
 end
 always @(posedge sys_clk) begin
-	if (buffering_writer_fifo_rdport_re)
-		storage_8_dat1 <= storage_8[buffering_writer_fifo_rdport_adr];
+	if (pcie_dma_buffering_writer_fifo_rdport_re)
+		storage_8_dat1 <= storage_8[pcie_dma_buffering_writer_fifo_rdport_adr];
 end
-assign buffering_writer_fifo_wrport_dat_r = storage_8_dat0;
-assign buffering_writer_fifo_rdport_dat_r = storage_8_dat1;
+assign pcie_dma_buffering_writer_fifo_wrport_dat_r = storage_8_dat0;
+assign pcie_dma_buffering_writer_fifo_rdport_dat_r = storage_8_dat1;
 
 
-pcie_support #(
-	.C_DATA_WIDTH(7'd64),
-	.KEEP_WIDTH(4'd8),
-	.LINK_CAP_MAX_LINK_WIDTH(2'd2),
-	.PCIE_GT_DEVICE("GTP"),
-	.PCIE_REFCLK_FREQ(1'd0),
-	.PCIE_USERCLK1_FREQ(2'd3),
-	.PCIE_USERCLK2_FREQ(2'd3)
-) pcie_support (
-	.cfg_aer_interrupt_msgnum(1'd0),
-	.cfg_ds_bus_number(1'd0),
-	.cfg_ds_device_number(1'd0),
-	.cfg_ds_function_number(1'd0),
-	.cfg_dsn(1'd0),
-	.cfg_err_acs(1'd0),
-	.cfg_err_aer_headerlog(1'd0),
-	.cfg_err_atomic_egress_blocked(1'd0),
-	.cfg_err_cor(1'd0),
-	.cfg_err_cpl_abort(1'd0),
-	.cfg_err_cpl_timeout(1'd0),
-	.cfg_err_cpl_unexpect(1'd0),
-	.cfg_err_ecrc(1'd0),
-	.cfg_err_internal_cor(1'd0),
-	.cfg_err_internal_uncor(1'd0),
-	.cfg_err_locked(1'd0),
-	.cfg_err_malformed(1'd0),
-	.cfg_err_mc_blocked(1'd0),
-	.cfg_err_norecovery(1'd0),
-	.cfg_err_poisoned(1'd0),
-	.cfg_err_posted(1'd0),
-	.cfg_err_tlp_cpl_header(1'd0),
-	.cfg_err_ur(1'd0),
-	.cfg_interrupt(s7pciephy_msi_cdc_source_source_valid),
-	.cfg_interrupt_assert(1'd0),
-	.cfg_interrupt_di(s7pciephy_msi_cdc_source_source_payload_dat),
-	.cfg_interrupt_stat(1'd0),
-	.cfg_mgmt_byte_en(1'd0),
-	.cfg_mgmt_di(1'd0),
-	.cfg_mgmt_dwaddr(1'd0),
-	.cfg_mgmt_rd_en(1'd0),
-	.cfg_mgmt_wr_en(1'd0),
-	.cfg_mgmt_wr_readonly(1'd0),
-	.cfg_mgmt_wr_rw1c_as_rw(1'd0),
-	.cfg_pciecap_interrupt_msgnum(1'd0),
-	.cfg_pm_force_state(1'd0),
-	.cfg_pm_force_state_en(1'd0),
-	.cfg_pm_halt_aspm_l0s(1'd0),
-	.cfg_pm_halt_aspm_l1(1'd0),
-	.cfg_pm_send_pme_to(1'd0),
-	.cfg_pm_wake(1'd0),
-	.cfg_trn_pending(1'd0),
-	.cfg_turnoff_ok(1'd0),
-	.fc_sel(1'd0),
-	.m_axis_rx_tready(s7pciephy_rx_datapath_sink_sink_ready),
-	.pci_exp_rxn(pcie_rx_n),
-	.pci_exp_rxp(pcie_rx_p),
-	.pcie_drp_addr(1'd0),
-	.pcie_drp_clk(1'd1),
-	.pcie_drp_di(1'd0),
-	.pcie_drp_en(1'd0),
-	.pcie_drp_we(1'd0),
-	.pipe_mmcm_rst_n(1'd1),
-	.pipe_pclk_sel_slave(1'd0),
-	.pl_directed_link_auton(1'd0),
-	.pl_directed_link_change(1'd0),
-	.pl_directed_link_speed(1'd0),
-	.pl_directed_link_width(1'd0),
-	.pl_downstream_deemph_source(1'd0),
-	.pl_transmit_hot_rst(1'd0),
-	.pl_upstream_prefer_deemph(1'd1),
-	.rx_np_ok(1'd1),
-	.rx_np_req(1'd1),
-	.s_axis_tx_tdata(s7pciephy_tx_datapath_source_source_payload_dat),
-	.s_axis_tx_tkeep(s7pciephy_tx_datapath_source_source_payload_be),
-	.s_axis_tx_tlast(s7pciephy_tx_datapath_source_source_last),
-	.s_axis_tx_tuser(1'd0),
-	.s_axis_tx_tvalid(s7pciephy_tx_datapath_source_source_valid),
-	.sys_clk(s7pciephy_pcie_refclk),
-	.sys_rst_n(s7pciephy_pcie_rst_n),
-	.tx_cfg_gnt(1'd1),
-	.cfg_aer_ecrc_check_en(s7pciephy22),
-	.cfg_aer_ecrc_gen_en(s7pciephy23),
-	.cfg_aer_rooterr_corr_err_received(s7pciephy47),
-	.cfg_aer_rooterr_corr_err_reporting_en(s7pciephy44),
-	.cfg_aer_rooterr_fatal_err_received(s7pciephy49),
-	.cfg_aer_rooterr_fatal_err_reporting_en(s7pciephy46),
-	.cfg_aer_rooterr_non_fatal_err_received(s7pciephy48),
-	.cfg_aer_rooterr_non_fatal_err_reporting_en(s7pciephy45),
-	.cfg_bridge_serr_en(s7pciephy38),
-	.cfg_bus_number(s7pciephy_bus_number),
-	.cfg_command(s7pciephy_command),
-	.cfg_dcommand(s7pciephy_dcommand),
-	.cfg_dcommand2(s7pciephy31),
-	.cfg_device_number(s7pciephy_device_number),
-	.cfg_dstatus(s7pciephy28),
-	.cfg_err_aer_headerlog_set(s7pciephy21),
-	.cfg_err_cpl_rdy(s7pciephy20),
-	.cfg_function_number(s7pciephy_function_number),
-	.cfg_interrupt_do(s7pciephy24),
-	.cfg_interrupt_mmenable(s7pciephy25),
-	.cfg_interrupt_msienable(s7pciephy_msi_enable_status),
-	.cfg_interrupt_msixenable(s7pciephy_msix_enable_status),
-	.cfg_interrupt_msixfm(s7pciephy26),
-	.cfg_interrupt_rdy(s7pciephy_msi_cdc_source_source_ready),
-	.cfg_lcommand(s7pciephy30),
-	.cfg_lstatus(s7pciephy29),
-	.cfg_mgmt_do(s7pciephy18),
-	.cfg_mgmt_rd_wr_done(s7pciephy19),
-	.cfg_msg_data(s7pciephy52),
-	.cfg_msg_received(s7pciephy51),
-	.cfg_msg_received_assert_int_a(s7pciephy60),
-	.cfg_msg_received_assert_int_b(s7pciephy61),
-	.cfg_msg_received_assert_int_c(s7pciephy62),
-	.cfg_msg_received_assert_int_d(s7pciephy63),
-	.cfg_msg_received_deassert_int_a(s7pciephy64),
-	.cfg_msg_received_deassert_int_b(s7pciephy65),
-	.cfg_msg_received_deassert_int_c(s7pciephy66),
-	.cfg_msg_received_deassert_int_d(s7pciephy67),
-	.cfg_msg_received_err_cor(s7pciephy55),
-	.cfg_msg_received_err_fatal(s7pciephy57),
-	.cfg_msg_received_err_non_fatal(s7pciephy56),
-	.cfg_msg_received_pm_as_nak(s7pciephy53),
-	.cfg_msg_received_pm_pme(s7pciephy58),
-	.cfg_msg_received_pme_to_ack(s7pciephy59),
-	.cfg_msg_received_setslotpowerlimit(s7pciephy54),
-	.cfg_pcie_link_state(s7pciephy32),
-	.cfg_pmcsr_pme_en(s7pciephy34),
-	.cfg_pmcsr_pme_status(s7pciephy36),
-	.cfg_pmcsr_powerstate(s7pciephy35),
-	.cfg_received_func_lvl_rst(s7pciephy37),
-	.cfg_root_control_pme_int_en(s7pciephy43),
-	.cfg_root_control_syserr_corr_err_en(s7pciephy40),
-	.cfg_root_control_syserr_fatal_err_en(s7pciephy42),
-	.cfg_root_control_syserr_non_fatal_err_en(s7pciephy41),
-	.cfg_slot_control_electromech_il_ctl_pulse(s7pciephy39),
-	.cfg_status(s7pciephy27),
-	.cfg_to_turnoff(s7pciephy33),
-	.cfg_vc_tcvc_map(s7pciephy50),
-	.fc_cpld(s7pciephy12),
-	.fc_cplh(s7pciephy13),
-	.fc_npd(s7pciephy14),
-	.fc_nph(s7pciephy15),
-	.fc_pd(s7pciephy16),
-	.fc_ph(s7pciephy17),
-	.m_axis_rx_tdata(s7pciephy_rx_datapath_sink_sink_payload_dat),
-	.m_axis_rx_tkeep(s7pciephy_rx_datapath_sink_sink_payload_be),
-	.m_axis_rx_tlast(s7pciephy_m_axis_rx_tlast),
-	.m_axis_rx_tuser(s7pciephy_m_axis_rx_tuser),
-	.m_axis_rx_tvalid(s7pciephy_rx_datapath_sink_sink_valid),
-	.pci_exp_txn(pcie_tx_n),
-	.pci_exp_txp(pcie_tx_p),
-	.pcie_drp_do(s7pciephy79),
-	.pcie_drp_rdy(s7pciephy78),
-	.pipe_dclk_out(s7pciephy3),
-	.pipe_mmcm_lock_out(s7pciephy7),
-	.pipe_oobclk_out(s7pciephy6),
-	.pipe_pclk_out_slave(s7pciephy0),
-	.pipe_rxoutclk_out(s7pciephy2),
-	.pipe_rxusrclk_out(s7pciephy1),
-	.pipe_userclk1_out(s7pciephy4),
-	.pipe_userclk2_out(s7pciephy5),
-	.pl_directed_change_done(s7pciephy76),
-	.pl_initial_link_width(s7pciephy75),
-	.pl_lane_reversal_mode(s7pciephy68),
-	.pl_link_gen2_cap(s7pciephy73),
-	.pl_link_partner_gen2_supported(s7pciephy74),
-	.pl_link_upcfg_cap(s7pciephy72),
-	.pl_ltssm_state(s7pciephy_csrfield_ltssm),
-	.pl_phy_lnk_up(s7pciephy69),
-	.pl_received_hot_rst(s7pciephy77),
-	.pl_rx_pm_state(s7pciephy71),
-	.pl_sel_lnk_rate(s7pciephy_csrfield_rate),
-	.pl_sel_lnk_width(s7pciephy_csrfield_width),
-	.pl_tx_pm_state(s7pciephy70),
-	.s_axis_tx_tready(s7pciephy_tx_datapath_source_source_ready),
-	.tx_buf_av(s7pciephy9),
-	.tx_cfg_req(s7pciephy11),
-	.tx_err_drop(s7pciephy10),
-	.user_app_rdy(s7pciephy8),
-	.user_clk_out(pcie_clk),
-	.user_lnk_up(s7pciephy_csrfield_status),
-	.user_reset_out(pcie_rst)
+//------------------------------------------------------------------------------
+// Instance FDCE of FDCE Module.
+//------------------------------------------------------------------------------
+FDCE FDCE(
+	// Inputs.
+	.C   (s7pciephy_clkin),
+	.CE  (1'd1),
+	.CLR (1'd0),
+	.D   (s7pciephy_reset),
+
+	// Outputs.
+	.Q   (reset0)
+);
+
+//------------------------------------------------------------------------------
+// Instance FDCE_1 of FDCE Module.
+//------------------------------------------------------------------------------
+FDCE FDCE_1(
+	// Inputs.
+	.C   (s7pciephy_clkin),
+	.CE  (1'd1),
+	.CLR (1'd0),
+	.D   (reset0),
+
+	// Outputs.
+	.Q   (reset1)
+);
+
+//------------------------------------------------------------------------------
+// Instance FDCE_2 of FDCE Module.
+//------------------------------------------------------------------------------
+FDCE FDCE_2(
+	// Inputs.
+	.C   (s7pciephy_clkin),
+	.CE  (1'd1),
+	.CLR (1'd0),
+	.D   (reset1),
+
+	// Outputs.
+	.Q   (reset2)
+);
+
+//------------------------------------------------------------------------------
+// Instance FDCE_3 of FDCE Module.
+//------------------------------------------------------------------------------
+FDCE FDCE_3(
+	// Inputs.
+	.C   (s7pciephy_clkin),
+	.CE  (1'd1),
+	.CLR (1'd0),
+	.D   (reset2),
+
+	// Outputs.
+	.Q   (reset3)
+);
+
+//------------------------------------------------------------------------------
+// Instance FDCE_4 of FDCE Module.
+//------------------------------------------------------------------------------
+FDCE FDCE_4(
+	// Inputs.
+	.C   (s7pciephy_clkin),
+	.CE  (1'd1),
+	.CLR (1'd0),
+	.D   (reset3),
+
+	// Outputs.
+	.Q   (reset4)
+);
+
+//------------------------------------------------------------------------------
+// Instance FDCE_5 of FDCE Module.
+//------------------------------------------------------------------------------
+FDCE FDCE_5(
+	// Inputs.
+	.C   (s7pciephy_clkin),
+	.CE  (1'd1),
+	.CLR (1'd0),
+	.D   (reset4),
+
+	// Outputs.
+	.Q   (reset5)
+);
+
+//------------------------------------------------------------------------------
+// Instance FDCE_6 of FDCE Module.
+//------------------------------------------------------------------------------
+FDCE FDCE_6(
+	// Inputs.
+	.C   (s7pciephy_clkin),
+	.CE  (1'd1),
+	.CLR (1'd0),
+	.D   (reset5),
+
+	// Outputs.
+	.Q   (reset6)
+);
+
+//------------------------------------------------------------------------------
+// Instance FDCE_7 of FDCE Module.
+//------------------------------------------------------------------------------
+FDCE FDCE_7(
+	// Inputs.
+	.C   (s7pciephy_clkin),
+	.CE  (1'd1),
+	.CLR (1'd0),
+	.D   (reset6),
+
+	// Outputs.
+	.Q   (reset7)
+);
+
+//------------------------------------------------------------------------------
+// Instance MMCME2_ADV of MMCME2_ADV Module.
+//------------------------------------------------------------------------------
+MMCME2_ADV #(
+	// Parameters.
+	.BANDWIDTH        ("OPTIMIZED"),
+	.CLKFBOUT_MULT_F  (4'd10),
+	.CLKIN1_PERIOD    (10.0),
+	.CLKOUT0_DIVIDE_F (4'd8),
+	.CLKOUT0_PHASE    (1'd0),
+	.CLKOUT1_DIVIDE   (3'd4),
+	.CLKOUT1_PHASE    (1'd0),
+	.CLKOUT2_DIVIDE   (4'd8),
+	.CLKOUT2_PHASE    (1'd0),
+	.CLKOUT3_DIVIDE   (4'd8),
+	.CLKOUT3_PHASE    (1'd0),
+	.DIVCLK_DIVIDE    (1'd1),
+	.REF_JITTER1      (0.01)
+) MMCME2_ADV (
+	// Inputs.
+	.CLKFBIN  (mmcm_fb),
+	.CLKIN1   (s7pciephy_clkin),
+	.PWRDWN   (s7pciephy_power_down),
+	.RST      (reset7),
+
+	// Outputs.
+	.CLKFBOUT (mmcm_fb),
+	.CLKOUT0  (s7pciephy_clkout0),
+	.CLKOUT1  (s7pciephy_clkout1),
+	.CLKOUT2  (s7pciephy_clkout2),
+	.CLKOUT3  (s7pciephy_clkout3),
+	.LOCKED   (s7pciephy_locked)
+);
+
+//------------------------------------------------------------------------------
+// Instance pcie_s7 of pcie_s7 Module.
+//------------------------------------------------------------------------------
+pcie_s7 pcie_s7(
+	// Inputs.
+	.cfg_aer_interrupt_msgnum                   (1'd0),
+	.cfg_ds_bus_number                          (1'd0),
+	.cfg_ds_device_number                       (1'd0),
+	.cfg_ds_function_number                     (1'd0),
+	.cfg_dsn                                    (1'd0),
+	.cfg_err_acs                                (1'd0),
+	.cfg_err_aer_headerlog                      (1'd0),
+	.cfg_err_atomic_egress_blocked              (1'd0),
+	.cfg_err_cor                                (1'd0),
+	.cfg_err_cpl_abort                          (1'd0),
+	.cfg_err_cpl_timeout                        (1'd0),
+	.cfg_err_cpl_unexpect                       (1'd0),
+	.cfg_err_ecrc                               (1'd0),
+	.cfg_err_internal_cor                       (1'd0),
+	.cfg_err_internal_uncor                     (1'd0),
+	.cfg_err_locked                             (1'd0),
+	.cfg_err_malformed                          (1'd0),
+	.cfg_err_mc_blocked                         (1'd0),
+	.cfg_err_norecovery                         (1'd0),
+	.cfg_err_poisoned                           (1'd0),
+	.cfg_err_posted                             (1'd0),
+	.cfg_err_tlp_cpl_header                     (1'd0),
+	.cfg_err_ur                                 (1'd0),
+	.cfg_interrupt                              (s7pciephy_msi_cdc_source_source_valid),
+	.cfg_interrupt_assert                       (1'd0),
+	.cfg_interrupt_di                           (s7pciephy_msi_cdc_source_source_payload_dat),
+	.cfg_interrupt_stat                         (1'd0),
+	.cfg_mgmt_byte_en                           (1'd0),
+	.cfg_mgmt_di                                (1'd0),
+	.cfg_mgmt_dwaddr                            (1'd0),
+	.cfg_mgmt_rd_en                             (1'd0),
+	.cfg_mgmt_wr_en                             (1'd0),
+	.cfg_mgmt_wr_readonly                       (1'd0),
+	.cfg_mgmt_wr_rw1c_as_rw                     (1'd0),
+	.cfg_pciecap_interrupt_msgnum               (1'd0),
+	.cfg_pm_force_state                         (1'd0),
+	.cfg_pm_force_state_en                      (1'd0),
+	.cfg_pm_halt_aspm_l0s                       (1'd0),
+	.cfg_pm_halt_aspm_l1                        (1'd0),
+	.cfg_pm_send_pme_to                         (1'd0),
+	.cfg_pm_wake                                (1'd0),
+	.cfg_trn_pending                            (1'd0),
+	.cfg_turnoff_ok                             (1'd0),
+	.fc_sel                                     (1'd0),
+	.m_axis_rx_tready                           (s7pciephy_rx_datapath_sink_sink_ready),
+	.pci_exp_rxn                                (pcie_rx_n),
+	.pci_exp_rxp                                (pcie_rx_p),
+	.pcie_drp_addr                              (1'd0),
+	.pcie_drp_clk                               (1'd1),
+	.pcie_drp_di                                (1'd0),
+	.pcie_drp_en                                (1'd0),
+	.pcie_drp_we                                (1'd0),
+	.pipe_dclk_in                               (clk125_clk),
+	.pipe_mmcm_lock_in                          (s7pciephy_locked),
+	.pipe_mmcm_rst_n                            (1'd1),
+	.pipe_oobclk_in                             (pclk_clk),
+	.pipe_pclk_in                               (pclk_clk),
+	.pipe_rxoutclk_in                           (1'd0),
+	.pipe_rxusrclk_in                           (pclk_clk),
+	.pipe_userclk1_in                           (userclk1_clk),
+	.pipe_userclk2_in                           (userclk2_clk),
+	.pl_directed_link_auton                     (1'd0),
+	.pl_directed_link_change                    (1'd0),
+	.pl_directed_link_speed                     (1'd0),
+	.pl_directed_link_width                     (1'd0),
+	.pl_downstream_deemph_source                (1'd0),
+	.pl_transmit_hot_rst                        (1'd0),
+	.pl_upstream_prefer_deemph                  (1'd1),
+	.rx_np_ok                                   (1'd1),
+	.rx_np_req                                  (1'd1),
+	.s_axis_tx_tdata                            (s7pciephy_tx_datapath_source_source_payload_dat),
+	.s_axis_tx_tkeep                            (s7pciephy_tx_datapath_source_source_payload_be),
+	.s_axis_tx_tlast                            (s7pciephy_tx_datapath_source_source_last),
+	.s_axis_tx_tuser                            (1'd0),
+	.s_axis_tx_tvalid                           (s7pciephy_tx_datapath_source_source_valid),
+	.sys_clk                                    (s7pciephy_pcie_refclk),
+	.sys_rst_n                                  (s7pciephy_pcie_rst_n),
+	.tx_cfg_gnt                                 (1'd1),
+
+	// Outputs.
+	.cfg_aer_ecrc_check_en                      (s7pciephy16),
+	.cfg_aer_ecrc_gen_en                        (s7pciephy17),
+	.cfg_aer_rooterr_corr_err_received          (s7pciephy41),
+	.cfg_aer_rooterr_corr_err_reporting_en      (s7pciephy38),
+	.cfg_aer_rooterr_fatal_err_received         (s7pciephy43),
+	.cfg_aer_rooterr_fatal_err_reporting_en     (s7pciephy40),
+	.cfg_aer_rooterr_non_fatal_err_received     (s7pciephy42),
+	.cfg_aer_rooterr_non_fatal_err_reporting_en (s7pciephy39),
+	.cfg_bridge_serr_en                         (s7pciephy32),
+	.cfg_bus_number                             (s7pciephy_sig5),
+	.cfg_command                                (s7pciephy_sig3),
+	.cfg_dcommand                               (s7pciephy_sig4),
+	.cfg_dcommand2                              (s7pciephy25),
+	.cfg_device_number                          (s7pciephy_sig6),
+	.cfg_dstatus                                (s7pciephy22),
+	.cfg_err_aer_headerlog_set                  (s7pciephy15),
+	.cfg_err_cpl_rdy                            (s7pciephy14),
+	.cfg_function_number                        (s7pciephy_sig7),
+	.cfg_interrupt_do                           (s7pciephy18),
+	.cfg_interrupt_mmenable                     (s7pciephy19),
+	.cfg_interrupt_msienable                    (s7pciephy_sig1),
+	.cfg_interrupt_msixenable                   (s7pciephy_sig2),
+	.cfg_interrupt_msixfm                       (s7pciephy20),
+	.cfg_interrupt_rdy                          (s7pciephy_msi_cdc_source_source_ready),
+	.cfg_lcommand                               (s7pciephy24),
+	.cfg_lstatus                                (s7pciephy23),
+	.cfg_mgmt_do                                (s7pciephy12),
+	.cfg_mgmt_rd_wr_done                        (s7pciephy13),
+	.cfg_msg_data                               (s7pciephy46),
+	.cfg_msg_received                           (s7pciephy45),
+	.cfg_msg_received_assert_int_a              (s7pciephy54),
+	.cfg_msg_received_assert_int_b              (s7pciephy55),
+	.cfg_msg_received_assert_int_c              (s7pciephy56),
+	.cfg_msg_received_assert_int_d              (s7pciephy57),
+	.cfg_msg_received_deassert_int_a            (s7pciephy58),
+	.cfg_msg_received_deassert_int_b            (s7pciephy59),
+	.cfg_msg_received_deassert_int_c            (s7pciephy60),
+	.cfg_msg_received_deassert_int_d            (s7pciephy61),
+	.cfg_msg_received_err_cor                   (s7pciephy49),
+	.cfg_msg_received_err_fatal                 (s7pciephy51),
+	.cfg_msg_received_err_non_fatal             (s7pciephy50),
+	.cfg_msg_received_pm_as_nak                 (s7pciephy47),
+	.cfg_msg_received_pm_pme                    (s7pciephy52),
+	.cfg_msg_received_pme_to_ack                (s7pciephy53),
+	.cfg_msg_received_setslotpowerlimit         (s7pciephy48),
+	.cfg_pcie_link_state                        (s7pciephy26),
+	.cfg_pmcsr_pme_en                           (s7pciephy28),
+	.cfg_pmcsr_pme_status                       (s7pciephy30),
+	.cfg_pmcsr_powerstate                       (s7pciephy29),
+	.cfg_received_func_lvl_rst                  (s7pciephy31),
+	.cfg_root_control_pme_int_en                (s7pciephy37),
+	.cfg_root_control_syserr_corr_err_en        (s7pciephy34),
+	.cfg_root_control_syserr_fatal_err_en       (s7pciephy36),
+	.cfg_root_control_syserr_non_fatal_err_en   (s7pciephy35),
+	.cfg_slot_control_electromech_il_ctl_pulse  (s7pciephy33),
+	.cfg_status                                 (s7pciephy21),
+	.cfg_to_turnoff                             (s7pciephy27),
+	.cfg_vc_tcvc_map                            (s7pciephy44),
+	.fc_cpld                                    (s7pciephy6),
+	.fc_cplh                                    (s7pciephy7),
+	.fc_npd                                     (s7pciephy8),
+	.fc_nph                                     (s7pciephy9),
+	.fc_pd                                      (s7pciephy10),
+	.fc_ph                                      (s7pciephy11),
+	.m_axis_rx_tdata                            (s7pciephy_rx_datapath_sink_sink_payload_dat),
+	.m_axis_rx_tkeep                            (s7pciephy_rx_datapath_sink_sink_payload_be),
+	.m_axis_rx_tlast                            (s7pciephy_m_axis_rx_tlast),
+	.m_axis_rx_tuser                            (s7pciephy_m_axis_rx_tuser),
+	.m_axis_rx_tvalid                           (s7pciephy_rx_datapath_sink_sink_valid),
+	.pci_exp_txn                                (pcie_tx_n),
+	.pci_exp_txp                                (pcie_tx_p),
+	.pcie_drp_do                                (s7pciephy73),
+	.pcie_drp_rdy                               (s7pciephy72),
+	.pipe_gen3_out                              (s7pciephy1),
+	.pipe_pclk_sel_out                          (s7pciephy_pipe_pclk_sel),
+	.pipe_rxoutclk_out                          (s7pciephy0),
+	.pipe_txoutclk_out                          (s7pciephy_pipe_txoutclk),
+	.pl_directed_change_done                    (s7pciephy70),
+	.pl_initial_link_width                      (s7pciephy69),
+	.pl_lane_reversal_mode                      (s7pciephy62),
+	.pl_link_gen2_cap                           (s7pciephy67),
+	.pl_link_partner_gen2_supported             (s7pciephy68),
+	.pl_link_upcfg_cap                          (s7pciephy66),
+	.pl_ltssm_state                             (s7pciephy_sig10),
+	.pl_phy_lnk_up                              (s7pciephy63),
+	.pl_received_hot_rst                        (s7pciephy71),
+	.pl_rx_pm_state                             (s7pciephy65),
+	.pl_sel_lnk_rate                            (s7pciephy_sig8),
+	.pl_sel_lnk_width                           (s7pciephy_sig9),
+	.pl_tx_pm_state                             (s7pciephy64),
+	.s_axis_tx_tready                           (s7pciephy_tx_datapath_source_source_ready),
+	.tx_buf_av                                  (s7pciephy3),
+	.tx_cfg_req                                 (s7pciephy5),
+	.tx_err_drop                                (s7pciephy4),
+	.user_app_rdy                               (s7pciephy2),
+	.user_clk_out                               (pcie_clk),
+	.user_lnk_up                                (s7pciephy_sig0),
+	.user_reset_out                             (pcie_rst)
 );
 
 //------------------------------------------------------------------------------
@@ -7440,16 +8332,16 @@ reg [3:0] storage_9[0:3];
 reg [3:0] storage_9_dat0;
 reg [3:0] storage_9_dat1;
 always @(posedge sys_clk) begin
-	if (litepciecore_litepcieendpoint_tag_queue_wrport_we)
-		storage_9[litepciecore_litepcieendpoint_tag_queue_wrport_adr] <= litepciecore_litepcieendpoint_tag_queue_wrport_dat_w;
-	storage_9_dat0 <= storage_9[litepciecore_litepcieendpoint_tag_queue_wrport_adr];
+	if (litepcieendpoint_tag_queue_wrport_we)
+		storage_9[litepcieendpoint_tag_queue_wrport_adr] <= litepcieendpoint_tag_queue_wrport_dat_w;
+	storage_9_dat0 <= storage_9[litepcieendpoint_tag_queue_wrport_adr];
 end
 always @(posedge sys_clk) begin
-	if (litepciecore_litepcieendpoint_tag_queue_rdport_re)
-		storage_9_dat1 <= storage_9[litepciecore_litepcieendpoint_tag_queue_rdport_adr];
+	if (litepcieendpoint_tag_queue_rdport_re)
+		storage_9_dat1 <= storage_9[litepcieendpoint_tag_queue_rdport_adr];
 end
-assign litepciecore_litepcieendpoint_tag_queue_wrport_dat_r = storage_9_dat0;
-assign litepciecore_litepcieendpoint_tag_queue_rdport_dat_r = storage_9_dat1;
+assign litepcieendpoint_tag_queue_wrport_dat_r = storage_9_dat0;
+assign litepcieendpoint_tag_queue_rdport_dat_r = storage_9_dat1;
 
 
 //------------------------------------------------------------------------------
@@ -7461,16 +8353,16 @@ reg [19:0] storage_10[0:3];
 reg [19:0] storage_10_dat0;
 reg [19:0] storage_10_dat1;
 always @(posedge sys_clk) begin
-	if (litepciecore_litepcieendpoint_req_queue_wrport_we)
-		storage_10[litepciecore_litepcieendpoint_req_queue_wrport_adr] <= litepciecore_litepcieendpoint_req_queue_wrport_dat_w;
-	storage_10_dat0 <= storage_10[litepciecore_litepcieendpoint_req_queue_wrport_adr];
+	if (litepcieendpoint_req_queue_wrport_we)
+		storage_10[litepcieendpoint_req_queue_wrport_adr] <= litepcieendpoint_req_queue_wrport_dat_w;
+	storage_10_dat0 <= storage_10[litepcieendpoint_req_queue_wrport_adr];
 end
 always @(posedge sys_clk) begin
-	if (litepciecore_litepcieendpoint_req_queue_rdport_re)
-		storage_10_dat1 <= storage_10[litepciecore_litepcieendpoint_req_queue_rdport_adr];
+	if (litepcieendpoint_req_queue_rdport_re)
+		storage_10_dat1 <= storage_10[litepcieendpoint_req_queue_rdport_adr];
 end
-assign litepciecore_litepcieendpoint_req_queue_wrport_dat_r = storage_10_dat0;
-assign litepciecore_litepcieendpoint_req_queue_rdport_dat_r = storage_10_dat1;
+assign litepcieendpoint_req_queue_wrport_dat_r = storage_10_dat0;
+assign litepcieendpoint_req_queue_rdport_dat_r = storage_10_dat1;
 
 
 //------------------------------------------------------------------------------
@@ -7482,16 +8374,16 @@ reg [229:0] storage_11[0:127];
 reg [229:0] storage_11_dat0;
 reg [229:0] storage_11_dat1;
 always @(posedge sys_clk) begin
-	if (litepciecore_litepcieendpoint_syncfifo0_wrport_we)
-		storage_11[litepciecore_litepcieendpoint_syncfifo0_wrport_adr] <= litepciecore_litepcieendpoint_syncfifo0_wrport_dat_w;
-	storage_11_dat0 <= storage_11[litepciecore_litepcieendpoint_syncfifo0_wrport_adr];
+	if (litepcieendpoint_syncfifo0_wrport_we)
+		storage_11[litepcieendpoint_syncfifo0_wrport_adr] <= litepcieendpoint_syncfifo0_wrport_dat_w;
+	storage_11_dat0 <= storage_11[litepcieendpoint_syncfifo0_wrport_adr];
 end
 always @(posedge sys_clk) begin
-	if (litepciecore_litepcieendpoint_syncfifo0_rdport_re)
-		storage_11_dat1 <= storage_11[litepciecore_litepcieendpoint_syncfifo0_rdport_adr];
+	if (litepcieendpoint_syncfifo0_rdport_re)
+		storage_11_dat1 <= storage_11[litepcieendpoint_syncfifo0_rdport_adr];
 end
-assign litepciecore_litepcieendpoint_syncfifo0_wrport_dat_r = storage_11_dat0;
-assign litepciecore_litepcieendpoint_syncfifo0_rdport_dat_r = storage_11_dat1;
+assign litepcieendpoint_syncfifo0_wrport_dat_r = storage_11_dat0;
+assign litepcieendpoint_syncfifo0_rdport_dat_r = storage_11_dat1;
 
 
 //------------------------------------------------------------------------------
@@ -7503,16 +8395,16 @@ reg [229:0] storage_12[0:127];
 reg [229:0] storage_12_dat0;
 reg [229:0] storage_12_dat1;
 always @(posedge sys_clk) begin
-	if (litepciecore_litepcieendpoint_syncfifo1_wrport_we)
-		storage_12[litepciecore_litepcieendpoint_syncfifo1_wrport_adr] <= litepciecore_litepcieendpoint_syncfifo1_wrport_dat_w;
-	storage_12_dat0 <= storage_12[litepciecore_litepcieendpoint_syncfifo1_wrport_adr];
+	if (litepcieendpoint_syncfifo1_wrport_we)
+		storage_12[litepcieendpoint_syncfifo1_wrport_adr] <= litepcieendpoint_syncfifo1_wrport_dat_w;
+	storage_12_dat0 <= storage_12[litepcieendpoint_syncfifo1_wrport_adr];
 end
 always @(posedge sys_clk) begin
-	if (litepciecore_litepcieendpoint_syncfifo1_rdport_re)
-		storage_12_dat1 <= storage_12[litepciecore_litepcieendpoint_syncfifo1_rdport_adr];
+	if (litepcieendpoint_syncfifo1_rdport_re)
+		storage_12_dat1 <= storage_12[litepcieendpoint_syncfifo1_rdport_adr];
 end
-assign litepciecore_litepcieendpoint_syncfifo1_wrport_dat_r = storage_12_dat0;
-assign litepciecore_litepcieendpoint_syncfifo1_rdport_dat_r = storage_12_dat1;
+assign litepcieendpoint_syncfifo1_wrport_dat_r = storage_12_dat0;
+assign litepcieendpoint_syncfifo1_rdport_dat_r = storage_12_dat1;
 
 
 //------------------------------------------------------------------------------
@@ -7524,16 +8416,16 @@ reg [229:0] storage_13[0:127];
 reg [229:0] storage_13_dat0;
 reg [229:0] storage_13_dat1;
 always @(posedge sys_clk) begin
-	if (litepciecore_litepcieendpoint_syncfifo2_wrport_we)
-		storage_13[litepciecore_litepcieendpoint_syncfifo2_wrport_adr] <= litepciecore_litepcieendpoint_syncfifo2_wrport_dat_w;
-	storage_13_dat0 <= storage_13[litepciecore_litepcieendpoint_syncfifo2_wrport_adr];
+	if (litepcieendpoint_syncfifo2_wrport_we)
+		storage_13[litepcieendpoint_syncfifo2_wrport_adr] <= litepcieendpoint_syncfifo2_wrport_dat_w;
+	storage_13_dat0 <= storage_13[litepcieendpoint_syncfifo2_wrport_adr];
 end
 always @(posedge sys_clk) begin
-	if (litepciecore_litepcieendpoint_syncfifo2_rdport_re)
-		storage_13_dat1 <= storage_13[litepciecore_litepcieendpoint_syncfifo2_rdport_adr];
+	if (litepcieendpoint_syncfifo2_rdport_re)
+		storage_13_dat1 <= storage_13[litepcieendpoint_syncfifo2_rdport_adr];
 end
-assign litepciecore_litepcieendpoint_syncfifo2_wrport_dat_r = storage_13_dat0;
-assign litepciecore_litepcieendpoint_syncfifo2_rdport_dat_r = storage_13_dat1;
+assign litepcieendpoint_syncfifo2_wrport_dat_r = storage_13_dat0;
+assign litepcieendpoint_syncfifo2_rdport_dat_r = storage_13_dat1;
 
 
 //------------------------------------------------------------------------------
@@ -7545,152 +8437,380 @@ reg [229:0] storage_14[0:127];
 reg [229:0] storage_14_dat0;
 reg [229:0] storage_14_dat1;
 always @(posedge sys_clk) begin
-	if (litepciecore_litepcieendpoint_syncfifo3_wrport_we)
-		storage_14[litepciecore_litepcieendpoint_syncfifo3_wrport_adr] <= litepciecore_litepcieendpoint_syncfifo3_wrport_dat_w;
-	storage_14_dat0 <= storage_14[litepciecore_litepcieendpoint_syncfifo3_wrport_adr];
+	if (litepcieendpoint_syncfifo3_wrport_we)
+		storage_14[litepcieendpoint_syncfifo3_wrport_adr] <= litepcieendpoint_syncfifo3_wrport_dat_w;
+	storage_14_dat0 <= storage_14[litepcieendpoint_syncfifo3_wrport_adr];
 end
 always @(posedge sys_clk) begin
-	if (litepciecore_litepcieendpoint_syncfifo3_rdport_re)
-		storage_14_dat1 <= storage_14[litepciecore_litepcieendpoint_syncfifo3_rdport_adr];
+	if (litepcieendpoint_syncfifo3_rdport_re)
+		storage_14_dat1 <= storage_14[litepcieendpoint_syncfifo3_rdport_adr];
 end
-assign litepciecore_litepcieendpoint_syncfifo3_wrport_dat_r = storage_14_dat0;
-assign litepciecore_litepcieendpoint_syncfifo3_rdport_dat_r = storage_14_dat1;
+assign litepcieendpoint_syncfifo3_wrport_dat_r = storage_14_dat0;
+assign litepcieendpoint_syncfifo3_rdport_dat_r = storage_14_dat1;
 
 
 (* ars_ff1 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE of FDPE Module.
+//------------------------------------------------------------------------------
 FDPE #(
-	.INIT(1'd1)
+	// Parameters.
+	.INIT (1'd1)
 ) FDPE (
-	.C(from2526333147296_clk),
-	.CE(1'd1),
-	.D(1'd0),
-	.PRE(s7pciephy_tx_datapath_cdc_cd_rst),
-	.Q(rst_meta0)
+	// Inputs.
+	.C   (from221_clk),
+	.CE  (1'd1),
+	.D   (1'd0),
+	.PRE (s7pciephy_tx_datapath_cdc_cd_rst),
+
+	// Outputs.
+	.Q   (xilinxasyncresetsynchronizerimpl0_rst_meta)
 );
 
 (* ars_ff2 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_1 of FDPE Module.
+//------------------------------------------------------------------------------
 FDPE #(
-	.INIT(1'd1)
+	// Parameters.
+	.INIT (1'd1)
 ) FDPE_1 (
-	.C(from2526333147296_clk),
-	.CE(1'd1),
-	.D(rst_meta0),
-	.PRE(s7pciephy_tx_datapath_cdc_cd_rst),
-	.Q(from2526333147296_rst)
+	// Inputs.
+	.C   (from221_clk),
+	.CE  (1'd1),
+	.D   (xilinxasyncresetsynchronizerimpl0_rst_meta),
+	.PRE (s7pciephy_tx_datapath_cdc_cd_rst),
+
+	// Outputs.
+	.Q   (from221_rst)
 );
 
 (* ars_ff1 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_2 of FDPE Module.
+//------------------------------------------------------------------------------
 FDPE #(
-	.INIT(1'd1)
+	// Parameters.
+	.INIT (1'd1)
 ) FDPE_2 (
-	.C(to2526333147296_clk),
-	.CE(1'd1),
-	.D(1'd0),
-	.PRE(s7pciephy_tx_datapath_cdc_cd_rst),
-	.Q(rst_meta1)
+	// Inputs.
+	.C   (to221_clk),
+	.CE  (1'd1),
+	.D   (1'd0),
+	.PRE (s7pciephy_tx_datapath_cdc_cd_rst),
+
+	// Outputs.
+	.Q   (xilinxasyncresetsynchronizerimpl1_rst_meta)
 );
 
 (* ars_ff2 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_3 of FDPE Module.
+//------------------------------------------------------------------------------
 FDPE #(
-	.INIT(1'd1)
+	// Parameters.
+	.INIT (1'd1)
 ) FDPE_3 (
-	.C(to2526333147296_clk),
-	.CE(1'd1),
-	.D(rst_meta1),
-	.PRE(s7pciephy_tx_datapath_cdc_cd_rst),
-	.Q(to2526333147296_rst)
+	// Inputs.
+	.C   (to221_clk),
+	.CE  (1'd1),
+	.D   (xilinxasyncresetsynchronizerimpl1_rst_meta),
+	.PRE (s7pciephy_tx_datapath_cdc_cd_rst),
+
+	// Outputs.
+	.Q   (to221_rst)
 );
 
 (* ars_ff1 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_4 of FDPE Module.
+//------------------------------------------------------------------------------
 FDPE #(
-	.INIT(1'd1)
+	// Parameters.
+	.INIT (1'd1)
 ) FDPE_4 (
-	.C(from2526333901200_clk),
-	.CE(1'd1),
-	.D(1'd0),
-	.PRE(s7pciephy_rx_datapath_cdc_cd_rst),
-	.Q(rst_meta2)
+	// Inputs.
+	.C   (from685_clk),
+	.CE  (1'd1),
+	.D   (1'd0),
+	.PRE (s7pciephy_rx_datapath_cdc_cd_rst),
+
+	// Outputs.
+	.Q   (xilinxasyncresetsynchronizerimpl2_rst_meta)
 );
 
 (* ars_ff2 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_5 of FDPE Module.
+//------------------------------------------------------------------------------
 FDPE #(
-	.INIT(1'd1)
+	// Parameters.
+	.INIT (1'd1)
 ) FDPE_5 (
-	.C(from2526333901200_clk),
-	.CE(1'd1),
-	.D(rst_meta2),
-	.PRE(s7pciephy_rx_datapath_cdc_cd_rst),
-	.Q(from2526333901200_rst)
+	// Inputs.
+	.C   (from685_clk),
+	.CE  (1'd1),
+	.D   (xilinxasyncresetsynchronizerimpl2_rst_meta),
+	.PRE (s7pciephy_rx_datapath_cdc_cd_rst),
+
+	// Outputs.
+	.Q   (from685_rst)
 );
 
 (* ars_ff1 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_6 of FDPE Module.
+//------------------------------------------------------------------------------
 FDPE #(
-	.INIT(1'd1)
+	// Parameters.
+	.INIT (1'd1)
 ) FDPE_6 (
-	.C(to2526333901200_clk),
-	.CE(1'd1),
-	.D(1'd0),
-	.PRE(s7pciephy_rx_datapath_cdc_cd_rst),
-	.Q(rst_meta3)
+	// Inputs.
+	.C   (to685_clk),
+	.CE  (1'd1),
+	.D   (1'd0),
+	.PRE (s7pciephy_rx_datapath_cdc_cd_rst),
+
+	// Outputs.
+	.Q   (xilinxasyncresetsynchronizerimpl3_rst_meta)
 );
 
 (* ars_ff2 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_7 of FDPE Module.
+//------------------------------------------------------------------------------
 FDPE #(
-	.INIT(1'd1)
+	// Parameters.
+	.INIT (1'd1)
 ) FDPE_7 (
-	.C(to2526333901200_clk),
-	.CE(1'd1),
-	.D(rst_meta3),
-	.PRE(s7pciephy_rx_datapath_cdc_cd_rst),
-	.Q(to2526333901200_rst)
+	// Inputs.
+	.C   (to685_clk),
+	.CE  (1'd1),
+	.D   (xilinxasyncresetsynchronizerimpl3_rst_meta),
+	.PRE (s7pciephy_rx_datapath_cdc_cd_rst),
+
+	// Outputs.
+	.Q   (to685_rst)
 );
 
 (* ars_ff1 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_8 of FDPE Module.
+//------------------------------------------------------------------------------
 FDPE #(
-	.INIT(1'd1)
+	// Parameters.
+	.INIT (1'd1)
 ) FDPE_8 (
-	.C(from2526333595040_clk),
-	.CE(1'd1),
-	.D(1'd0),
-	.PRE(s7pciephy_msi_cdc_cd_rst),
-	.Q(rst_meta4)
+	// Inputs.
+	.C   (from876_clk),
+	.CE  (1'd1),
+	.D   (1'd0),
+	.PRE (s7pciephy_msi_cdc_cd_rst),
+
+	// Outputs.
+	.Q   (xilinxasyncresetsynchronizerimpl4_rst_meta)
 );
 
 (* ars_ff2 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_9 of FDPE Module.
+//------------------------------------------------------------------------------
 FDPE #(
-	.INIT(1'd1)
+	// Parameters.
+	.INIT (1'd1)
 ) FDPE_9 (
-	.C(from2526333595040_clk),
-	.CE(1'd1),
-	.D(rst_meta4),
-	.PRE(s7pciephy_msi_cdc_cd_rst),
-	.Q(from2526333595040_rst)
+	// Inputs.
+	.C   (from876_clk),
+	.CE  (1'd1),
+	.D   (xilinxasyncresetsynchronizerimpl4_rst_meta),
+	.PRE (s7pciephy_msi_cdc_cd_rst),
+
+	// Outputs.
+	.Q   (from876_rst)
 );
 
 (* ars_ff1 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_10 of FDPE Module.
+//------------------------------------------------------------------------------
 FDPE #(
-	.INIT(1'd1)
+	// Parameters.
+	.INIT (1'd1)
 ) FDPE_10 (
-	.C(to2526333595040_clk),
-	.CE(1'd1),
-	.D(1'd0),
-	.PRE(s7pciephy_msi_cdc_cd_rst),
-	.Q(rst_meta5)
+	// Inputs.
+	.C   (to876_clk),
+	.CE  (1'd1),
+	.D   (1'd0),
+	.PRE (s7pciephy_msi_cdc_cd_rst),
+
+	// Outputs.
+	.Q   (xilinxasyncresetsynchronizerimpl5_rst_meta)
 );
 
 (* ars_ff2 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_11 of FDPE Module.
+//------------------------------------------------------------------------------
 FDPE #(
-	.INIT(1'd1)
+	// Parameters.
+	.INIT (1'd1)
 ) FDPE_11 (
-	.C(to2526333595040_clk),
-	.CE(1'd1),
-	.D(rst_meta5),
-	.PRE(s7pciephy_msi_cdc_cd_rst),
-	.Q(to2526333595040_rst)
+	// Inputs.
+	.C   (to876_clk),
+	.CE  (1'd1),
+	.D   (xilinxasyncresetsynchronizerimpl5_rst_meta),
+	.PRE (s7pciephy_msi_cdc_cd_rst),
+
+	// Outputs.
+	.Q   (to876_rst)
+);
+
+(* ars_ff1 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_12 of FDPE Module.
+//------------------------------------------------------------------------------
+FDPE #(
+	// Parameters.
+	.INIT (1'd1)
+) FDPE_12 (
+	// Inputs.
+	.C   (clk125_clk),
+	.CE  (1'd1),
+	.D   (1'd0),
+	.PRE (xilinxasyncresetsynchronizerimpl6),
+
+	// Outputs.
+	.Q   (xilinxasyncresetsynchronizerimpl6_rst_meta)
+);
+
+(* ars_ff2 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_13 of FDPE Module.
+//------------------------------------------------------------------------------
+FDPE #(
+	// Parameters.
+	.INIT (1'd1)
+) FDPE_13 (
+	// Inputs.
+	.C   (clk125_clk),
+	.CE  (1'd1),
+	.D   (xilinxasyncresetsynchronizerimpl6_rst_meta),
+	.PRE (xilinxasyncresetsynchronizerimpl6),
+
+	// Outputs.
+	.Q   (clk125_rst)
+);
+
+(* ars_ff1 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_14 of FDPE Module.
+//------------------------------------------------------------------------------
+FDPE #(
+	// Parameters.
+	.INIT (1'd1)
+) FDPE_14 (
+	// Inputs.
+	.C   (clk250_clk),
+	.CE  (1'd1),
+	.D   (1'd0),
+	.PRE (xilinxasyncresetsynchronizerimpl7),
+
+	// Outputs.
+	.Q   (xilinxasyncresetsynchronizerimpl7_rst_meta)
+);
+
+(* ars_ff2 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_15 of FDPE Module.
+//------------------------------------------------------------------------------
+FDPE #(
+	// Parameters.
+	.INIT (1'd1)
+) FDPE_15 (
+	// Inputs.
+	.C   (clk250_clk),
+	.CE  (1'd1),
+	.D   (xilinxasyncresetsynchronizerimpl7_rst_meta),
+	.PRE (xilinxasyncresetsynchronizerimpl7),
+
+	// Outputs.
+	.Q   (clk250_rst)
+);
+
+(* ars_ff1 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_16 of FDPE Module.
+//------------------------------------------------------------------------------
+FDPE #(
+	// Parameters.
+	.INIT (1'd1)
+) FDPE_16 (
+	// Inputs.
+	.C   (userclk1_clk),
+	.CE  (1'd1),
+	.D   (1'd0),
+	.PRE (xilinxasyncresetsynchronizerimpl8),
+
+	// Outputs.
+	.Q   (xilinxasyncresetsynchronizerimpl8_rst_meta)
+);
+
+(* ars_ff2 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_17 of FDPE Module.
+//------------------------------------------------------------------------------
+FDPE #(
+	// Parameters.
+	.INIT (1'd1)
+) FDPE_17 (
+	// Inputs.
+	.C   (userclk1_clk),
+	.CE  (1'd1),
+	.D   (xilinxasyncresetsynchronizerimpl8_rst_meta),
+	.PRE (xilinxasyncresetsynchronizerimpl8),
+
+	// Outputs.
+	.Q   (userclk1_rst)
+);
+
+(* ars_ff1 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_18 of FDPE Module.
+//------------------------------------------------------------------------------
+FDPE #(
+	// Parameters.
+	.INIT (1'd1)
+) FDPE_18 (
+	// Inputs.
+	.C   (userclk2_clk),
+	.CE  (1'd1),
+	.D   (1'd0),
+	.PRE (xilinxasyncresetsynchronizerimpl9),
+
+	// Outputs.
+	.Q   (xilinxasyncresetsynchronizerimpl9_rst_meta)
+);
+
+(* ars_ff2 = "true", async_reg = "true" *)
+//------------------------------------------------------------------------------
+// Instance FDPE_19 of FDPE Module.
+//------------------------------------------------------------------------------
+FDPE #(
+	// Parameters.
+	.INIT (1'd1)
+) FDPE_19 (
+	// Inputs.
+	.C   (userclk2_clk),
+	.CE  (1'd1),
+	.D   (xilinxasyncresetsynchronizerimpl9_rst_meta),
+	.PRE (xilinxasyncresetsynchronizerimpl9),
+
+	// Outputs.
+	.Q   (userclk2_rst)
 );
 
 endmodule
 
 // -----------------------------------------------------------------------------
-//  Auto-Generated by LiteX on 2023-01-12 18:00:51.
+//  Auto-Generated by LiteX on 2024-08-23 09:51:27.
 //------------------------------------------------------------------------------
