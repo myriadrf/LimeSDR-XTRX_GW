@@ -102,7 +102,8 @@ static XGpio xtrx_ctrl;
 #define sbi(p, n) ((p) |= (1UL << (n)))
 #define cbi(p, n) ((p) &= ~(1 << (n)))
 
-#define FW_VER 1 // Initial version
+//#define FW_VER 1 // Initial version
+#define FW_VER 2 // Fix for PLL config. hang when changing from low to high frequency.
 
 // Variables for QSPI config (configuration flash programming)
 unsigned long int last_portion, current_portion, fpga_data, fpga_byte;
@@ -653,7 +654,7 @@ void UpdateMMCM_Config(tXPLL_CFG *pll_cfg)
 
 // Start reconfig and check for lock
 // IMPORTANT : MAKE SURE placeholder FUNCTION WAS RUN BEFORE THIS
-void StartMMCM_Reconfig_DRP(void)
+uint8_t StartMMCM_Reconfig_DRP(void)
 {
 	int timeout;
 	int lock_status;
@@ -667,6 +668,8 @@ void StartMMCM_Reconfig_DRP(void)
 		if (timeout++ > PLLCFG_TIMEOUT)
 			return PHCFG_ERROR;
 	} while (!(lock_status & 0x01));
+
+	return PLLCFG_DONE;
 }
 
 // Change PLL phase using direct drp register writes
@@ -689,6 +692,8 @@ uint8_t AutoUpdatePHCFG_DRP(void)
 	//	int lock_status;
 	uint8_t phase_mux = 0;
 	uint8_t delay_time = 0;
+
+	uint8_t mmcm_cfg_status = 0;
 	/* State machine for VCTCXO tuning */
 	typedef enum state
 	{
@@ -712,7 +717,13 @@ uint8_t AutoUpdatePHCFG_DRP(void)
 	XGpio_DiscreteWrite(&extm_0_axi_sel, 1, pll_ind); // Select PLL AXI slave
 	RdPLLCFG(&pll_cfg);
 	UpdateMMCM_Config(&pll_cfg);
-	StartMMCM_Reconfig_DRP();
+	mmcm_cfg_status = StartMMCM_Reconfig_DRP();
+	// Execute soft reset to CFG take effect if PLL looses lock
+	Xil_Out16(XPAR_EXTM_0_AXI_BASEADDR, 0x000A);
+
+	if (mmcm_cfg_status !=PLLCFG_DONE) {
+		return PHCFG_ERROR;
+	}
 
 	uint16_t max_phase = pll_cfg.CLKOUT1_DIVIDE * 8; // 46*8;//
 	//	uint16_t max_phase = 46*8;//
