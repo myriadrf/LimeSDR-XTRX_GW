@@ -326,8 +326,41 @@ set_property IOSTANDARD LVCMOS25 [get_ports {{lms_diq1[*]} lms_i_txnrx1 lms_io_i
 #set_property IN_TERM UNTUNED_SPLIT_50 [get_ports {lms_diq2[*] lms_i_fclk2 lms_io_iqsel1}]
 #set_property INTERNAL_VREF 0.9         [get_iobanks 34]
 #} else {
-set_property SLEW FAST [get_ports lms_i_fclk1]
-set_property DRIVE 8 [get_ports lms_i_fclk1]
+#set_property SLEW FAST [get_ports lms_i_fclk1]
+#set_property DRIVE 8 [get_ports lms_i_fclk1]
 #}
+
+set_property SLEW SLOW [get_ports lms_diq1[0]]
+set_property SLEW FAST [get_ports lms_diq1[1]]
+set_property SLEW SLOW [get_ports lms_diq1[2]]
+set_property SLEW SLOW [get_ports lms_diq1[3]]
+set_property SLEW SLOW [get_ports lms_diq1[4]]
+set_property SLEW SLOW [get_ports lms_diq1[5]]
+set_property SLEW SLOW [get_ports lms_diq1[6]]
+set_property SLEW FAST [get_ports lms_diq1[7]]
+set_property SLEW FAST [get_ports lms_diq1[8]]
+set_property SLEW SLOW [get_ports lms_diq1[9]]
+set_property SLEW SLOW [get_ports lms_diq1[10]]
+set_property SLEW FAST [get_ports lms_diq1[11]]
+set_property SLEW SLOW [get_ports lms_i_txnrx1]
+set_property SLEW FAST [get_ports lms_io_iqsel1]
+set_property SLEW FAST [get_ports lms_i_fclk1]
+
+
+set_property DRIVE  4 [get_ports lms_diq1[0]]
+set_property DRIVE 16 [get_ports lms_diq1[1]]
+set_property DRIVE  4 [get_ports lms_diq1[2]]
+set_property DRIVE  4 [get_ports lms_diq1[3]]
+set_property DRIVE  4 [get_ports lms_diq1[4]]
+set_property DRIVE  4 [get_ports lms_diq1[5]]
+set_property DRIVE  4 [get_ports lms_diq1[6]]
+set_property DRIVE 16 [get_ports lms_diq1[7]]
+set_property DRIVE 16 [get_ports lms_diq1[8]]
+set_property DRIVE  4 [get_ports lms_diq1[9]]
+set_property DRIVE  4 [get_ports lms_diq1[10]]
+set_property DRIVE 16 [get_ports lms_diq1[11]]
+set_property DRIVE  4 [get_ports lms_i_txnrx1]
+set_property DRIVE 16 [get_ports lms_io_iqsel1]
+set_property DRIVE 16 [get_ports lms_i_fclk1]
 
 
