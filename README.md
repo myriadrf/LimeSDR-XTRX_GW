@@ -1,4 +1,4 @@
-Gateware version 1.17
+Gateware version 1.19
 
 # LimeSDR-XTRX FPGA gateware
 
