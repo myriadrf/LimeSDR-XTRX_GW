@@ -1,0 +1,3 @@
+[submodule "src/hdl/core_usb_uart"]
+	path = src/hdl/core_usb_uart
+	url = git@github.com:vbuitvydas/core_usb_uart.git
