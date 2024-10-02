@@ -72,12 +72,12 @@ begin
 
    inst1_gnss_test : entity work.gnss_uart_test
       generic map (
-         G_CLK_FREQUENCY => 125000000,
+         G_CLK_FREQUENCY => 26000000,
          G_BAUD_RATE     => 9600
       )
       port map (
          CLK     => SYS_CLK,
-         TEST_EN => test_enable(2),
+         TEST_EN => RESET_N,
 
          TEST_COMPLETE  => test_complete(2),
          TEST_PASS_FAIL => test_result(2),
