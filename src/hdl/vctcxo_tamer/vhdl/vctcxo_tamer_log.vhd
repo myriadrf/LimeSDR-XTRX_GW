@@ -30,6 +30,8 @@ entity vctcxo_tamer_log is
       pps_10s_error        : in  std_logic_vector(31 downto 0);
       pps_100s_error_v     : in  std_logic; 
       pps_100s_error       : in  std_logic_vector(31 downto 0);
+
+      pps_100s_count_v     : in  std_logic;
       
       --To uart module
       uart_data_in         : out std_logic_vector(7 downto 0);
@@ -80,6 +82,8 @@ signal crc        : std_logic_vector(7 downto 0);
 
 constant zero_32b_vector : std_logic_vector(31 downto 0) :=x"00000000";
 
+signal pps_100s_count_v_reg : std_logic;
+
 begin
 
 -- Input register for irq
@@ -87,8 +91,10 @@ process (clk, reset_n)
 begin
    if reset_n = '0' then
       irq_reg <= '0'; 
+      pps_100s_count_v_reg <= '0';
    elsif rising_edge(clk) then
-      irq_reg <= irq;     
+      irq_reg <= irq;  
+      pps_100s_count_v_reg <= pps_100s_count_v;   
    end if;
 end process;
 
@@ -96,6 +102,15 @@ process(clk)
 begin
    if (clk'event and clk = '1') then
       if irq = '1' AND irq_reg = '0' then 
+         a_IISTA_START     <= str_to_slv("$");
+         a_IISTA_TID_SID   <= str_to_slv("IIERR");
+         a_IISTA_D0_SEP    <= str_to_slv(",");     
+         a_IISTA_D1_SEP    <= str_to_slv(",");
+         a_IISTA_D2_SEP    <= str_to_slv(",");    
+         a_IISTA_CRC_SEP   <= str_to_slv("*");
+         a_IISTA_CRC       <= str_to_slv("00");
+         a_IISTA_END       <= c_CR & c_LF;
+      elsif pps_100s_count_v = '1' AND pps_100s_count_v_reg = '0' AND current_state = idle then 
          a_IISTA_START     <= str_to_slv("$");
          a_IISTA_TID_SID   <= str_to_slv("IISTA");
          a_IISTA_D0_SEP    <= str_to_slv(",");     
@@ -113,7 +128,7 @@ begin
    if (clk'event and clk = '1') then
       if irq = '1' AND irq_reg = '0' AND pps_1s_error_v = '0'  then 
          a_IISTA_D0 <= conv_slv_to_char(zero_32b_vector);
-      elsif irq = '1' AND irq_reg = '0' AND pps_1s_error_v = '1' then
+      elsif (irq = '1' AND irq_reg = '0' AND pps_1s_error_v = '1') OR (pps_100s_count_v = '1' AND pps_100s_count_v_reg = '0' AND current_state = idle) then
          a_IISTA_D0 <= conv_slv_to_char(pps_1s_error);
       end if;
    end if;
@@ -124,7 +139,7 @@ begin
    if (clk'event and clk = '1') then
       if irq = '1' AND irq_reg = '0' AND (pps_1s_error_v = '1' OR pps_10s_error_v = '0')  then 
          a_IISTA_D1 <= conv_slv_to_char(zero_32b_vector);
-      elsif irq = '1' AND irq_reg = '0' AND pps_10s_error_v = '1' then
+      elsif (irq = '1' AND irq_reg = '0' AND pps_10s_error_v = '1') OR (pps_100s_count_v = '1' AND pps_100s_count_v_reg = '0' AND current_state = idle) then
          a_IISTA_D1 <= conv_slv_to_char(pps_10s_error);
       end if;
    end if;
@@ -135,7 +150,7 @@ begin
    if (clk'event and clk = '1') then
       if irq = '1' AND irq_reg = '0' AND (pps_1s_error_v = '1' OR pps_10s_error_v = '1' OR pps_100s_error_v = '0')  then 
          a_IISTA_D2 <= conv_slv_to_char(zero_32b_vector);
-      elsif irq = '1' AND irq_reg = '0' AND pps_100s_error_v = '1' then
+      elsif (irq = '1' AND irq_reg = '0' AND pps_100s_error_v = '1') OR (pps_100s_count_v = '1' AND pps_100s_count_v_reg = '0' AND current_state = idle) then
          a_IISTA_D2 <= conv_slv_to_char(pps_100s_error);
       end if;
    end if;
@@ -148,82 +163,7 @@ process(reset_n, clk)
       data_reg<=(others=>'0');  
    elsif (clk'event and clk = '1') then
       if current_state = capture_message then 
-         data_reg <= iista_message_reg;
-      --if irq = '1' AND irq_reg = '0' then 
-      --   a_IISTA_START     <= str_to_slv("$");
-      --   a_IISTA_TID_SID   <= str_to_slv("IISTA");
-      --   a_IISTA_D0_SEP    <= str_to_slv(",");     
-      --   a_IISTA_D1_SEP    <= str_to_slv(",");
-      --   a_IISTA_D2_SEP    <= str_to_slv(",");    
-      --   a_IISTA_CRC_SEP   <= str_to_slv("*");
-      --   a_IISTA_CRC       <= str_to_slv("00");
-      --   a_IISTA_END       <= c_CR & c_LF;
---
-      --   if pps_1s_error_v = '1' then 
-      --      a_IISTA_D0 <= bin_to_dec(pps_1s_error);
-      --      a_IISTA_D1 <= bin_to_dec((others=>'0'));
-      --      a_IISTA_D2 <= bin_to_dec((others=>'0'));
-      --   elsif pps_10s_error_v = '1' then 
-      --      a_IISTA_D0 <= bin_to_dec((others=>'0'));
-      --      a_IISTA_D1 <= bin_to_dec(pps_10s_error);
-      --      a_IISTA_D2 <= bin_to_dec((others=>'0'));
-      --   elsif pps_100s_error_v = '1' then 
-      --      a_IISTA_D0 <= bin_to_dec((others=>'0'));
-      --      a_IISTA_D1 <= bin_to_dec((others=>'0'));
-      --      a_IISTA_D2 <= bin_to_dec(pps_10s_error);
-      --   else
-      --      a_IISTA_D0 <= bin_to_dec((others=>'0'));
-      --      a_IISTA_D1 <= bin_to_dec((others=>'0'));
-      --      a_IISTA_D2 <= bin_to_dec((others=>'0'));
-      --   end if; 
-
-
-
-         --if pps_1s_error_v = '1' then 
-         --   data_reg <= str_to_slv("$IISTA") 
-         --               & c_comma 
-         --               & bin_to_dec(pps_1s_error) 
-         --               & c_comma 
-         --               & bin_to_dec((others=>'0'))
-         --               & c_comma 
-         --               & bin_to_dec((others=>'0'))
-         --               & str_to_slv("*00") 
-         --               & c_CR 
-         --               & c_LF;
-         --elsif pps_10s_error_v = '1' then 
-         --   data_reg <= str_to_slv("$IISTA") 
-         --               & c_comma 
-         --               & bin_to_dec((others=>'0')) 
-         --               & c_comma 
-         --               & bin_to_dec(pps_10s_error)
-         --               & c_comma 
-         --               & bin_to_dec((others=>'0'))
-         --               & str_to_slv("*00") 
-         --               & c_CR 
-         --               & c_LF;
-         --elsif pps_100s_error_v = '1' then 
-         --   data_reg <= str_to_slv("$IISTA") 
-         --               & c_comma 
-         --               & bin_to_dec((others=>'0')) 
-         --               & c_comma 
-         --               & bin_to_dec((others=>'0')) 
-         --               & c_comma 
-         --               & bin_to_dec(pps_100s_error)
-         --               & str_to_slv("*00") 
-         --               & c_CR 
-         --               & c_LF;
-         --else 
-         --   data_reg <= str_to_slv("$IISTA") 
-         --               & c_comma 
-         --               & bin_to_dec((others=>'0')) 
-         --               & c_comma 
-         --               & bin_to_dec((others=>'0')) 
-         --               & c_comma 
-         --               & bin_to_dec((others=>'0')) 
-         --               & str_to_slv("*00") 
-         --               & c_CR 
-         --               & c_LF;
-         --end if;     
+         data_reg <= iista_message_reg;   
       elsif shift_en = '1' then
          if ack_cnt = c_crc_pos then
             -- Adding calculated CRC and CR LF characters
@@ -295,7 +235,7 @@ fsm : process(all) begin
 	case current_state is
 	  
 		when idle =>         -- idle state waiting for capture enable
-         if irq='1' AND irq_reg = '0' then 
+         if (irq='1' AND irq_reg = '0') OR (pps_100s_count_v = '1' AND pps_100s_count_v_reg = '0') then 
             next_state <= capture_message;
          else 
             next_state <= idle;

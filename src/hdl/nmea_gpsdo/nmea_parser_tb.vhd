@@ -39,9 +39,13 @@ architecture tb_behave of nmea_parser_tb is
    signal IIENA_SENTENCE_EN  : std_logic_vector(103 downto 0):=str_to_slv("$IIENA,1*57") & x"0D" & x"0A";
    signal IIENA_SENTENCE_DIS  : std_logic_vector(103 downto 0):=str_to_slv("$IIENA,0*56") & x"0D" & x"0A";
 
-   signal IICFG_SENTENCE_1 : std_logic_vector(383 downto 0):=str_to_slv("$IICFG,30720000,1,307200000,3,3072000000,31*74") & x"0D" & x"0A";
-   signal IICFG_SENTENCE_2 : std_logic_vector(391 downto 0):=str_to_slv("$IICFG,30720000,15,307200000,3,3072000000,31*41") & x"0D" & x"0A";
-   signal IICFG_SENTENCE_3 : std_logic_vector(407 downto 0):=str_to_slv("$IICFG,30720000,18,307200000,39,3072000000,315*40") & x"0D" & x"0A";
+   --signal IICFG_SENTENCE_1 : std_logic_vector(383 downto 0):=str_to_slv("$IICFG,30720000,1,307200000,3,3072000000,31*74") & x"0D" & x"0A";
+   --signal IICFG_SENTENCE_2 : std_logic_vector(391 downto 0):=str_to_slv("$IICFG,30720000,15,307200000,3,3072000000,31*41") & x"0D" & x"0A";
+   --signal IICFG_SENTENCE_3 : std_logic_vector(407 downto 0):=str_to_slv("$IICFG,30720000,18,307200000,39,3072000000,315*40") & x"0D" & x"0A";
+
+   signal IICFG_SENTENCE_1 : std_logic_vector(423 downto 0):=str_to_slv("$IICFG,01D4C000,0001,124F8000,0003,B71B0000,001F*4A") & x"0D" & x"0A";
+   signal IICFG_SENTENCE_2 : std_logic_vector(423 downto 0):=str_to_slv("$IICFG,01D4C000,0008,124F8000,0003,B71B0000,001F*43") & x"0D" & x"0A";
+   signal IICFG_SENTENCE_3 : std_logic_vector(423 downto 0):=str_to_slv("$IICFG,01D4C000,0002,124F8000,0004,B71B0000,0040*3D") & x"0D" & x"0A";
 
    signal IIRST_SENTENCE_RST1 : std_logic_vector(103 downto 0):=str_to_slv("$IIRST,1*48") & x"0D" & x"0A";
    signal IIRST_SENTENCE_RST0 : std_logic_vector(103 downto 0):=str_to_slv("$IIRST,0*49") & x"0D" & x"0A";

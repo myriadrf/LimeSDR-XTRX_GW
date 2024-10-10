@@ -589,8 +589,13 @@ begin
    dac_tuned_val  <= mm_dac_tuned_val;
    
    --output ports
-   pps_1s_count_v     <= pps_1s.count_v;
-   pps_10s_count_v    <= pps_10s.count_v;
-   pps_100s_count_v   <= pps_100s.count_v;
+    process( mm_clock )
+    begin
+        if( rising_edge(mm_clock) ) then
+            pps_1s_count_v     <= pps_1s.count_v;
+            pps_10s_count_v    <= pps_10s.count_v;
+            pps_100s_count_v   <= pps_100s.count_v;
+        end if;
+    end process;
 
 end architecture;

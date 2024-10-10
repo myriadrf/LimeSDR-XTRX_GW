@@ -138,6 +138,8 @@ begin
       pps_100s_error_v     => pps_100s_error_v,
       pps_100s_error       => pps_100s_error,  
       
+      pps_100s_count_v     => '0',
+      
       --To uart module
       uart_data_in         => open,
       uart_data_in_stb     => dut0_uart_data_in_stb,

@@ -412,10 +412,10 @@ begin
    if reset_n = '0' then 
       iicfg_valid_int <= '0';
       iicfg_1s_target_int     <=x"3030303030303030";
-      iicfg_1s_tol_int        <=x"3030";
-      iicfg_10s_target_int    <=x"303030303030303030";
-      iicfg_10s_tol_int       <=x"303030";
-      iicfg_100s_target_int   <=x"30303030303030303030";
+      iicfg_1s_tol_int        <=x"30303030";
+      iicfg_10s_target_int    <=x"3030303030303030";
+      iicfg_10s_tol_int       <=x"30303030";
+      iicfg_100s_target_int   <=x"3030303030303030";
       iicfg_100s_tol_int      <=x"30303030";
    elsif rising_edge(clk) then
       --IIENA message valid 
@@ -427,10 +427,10 @@ begin
       
       if data = C_dollar AND data_v = '1' then
          iicfg_1s_target_int     <=x"3030303030303030";
-         iicfg_1s_tol_int        <=x"3030";
-         iicfg_10s_target_int    <=x"303030303030303030";
-         iicfg_10s_tol_int       <=x"303030";
-         iicfg_100s_target_int   <=x"30303030303030303030";
+         iicfg_1s_tol_int        <=x"30303030";
+         iicfg_10s_target_int    <=x"3030303030303030";
+         iicfg_10s_tol_int       <=x"30303030";
+         iicfg_100s_target_int   <=x"3030303030303030";
          iicfg_100s_tol_int      <=x"30303030";
       elsif data /= C_comma AND data/=C_asterisk AND data_v = '1' AND current_state=PARSE_SENTENCE then 
          --d0 field
@@ -578,12 +578,12 @@ begin
    elsif rising_edge(clk) then
 
       if iicfg_valid_int = '1' then 
-         IICFG_1S_TARGET   <= str_to_decimal_slv(iicfg_1s_target_int);
-         IICFG_1S_TOL      <= str_to_decimal_slv(iicfg_1s_tol_int);
-         IICFG_10S_TARGET  <= str_to_decimal_slv(iicfg_10s_target_int);
-         IICFG_10S_TOL     <= str_to_decimal_slv(iicfg_10s_tol_int);
-         IICFG_100S_TARGET <= str_to_decimal_slv(iicfg_100s_target_int);
-         IICFG_100S_TOL    <= str_to_decimal_slv(iicfg_100s_tol_int);
+         IICFG_1S_TARGET   <= ascii_hex_to_std_logic_vector(iicfg_1s_target_int);
+         IICFG_1S_TOL      <= ascii_hex_to_std_logic_vector(x"00000000" & iicfg_1s_tol_int);
+         IICFG_10S_TARGET  <= ascii_hex_to_std_logic_vector(iicfg_10s_target_int);
+         IICFG_10S_TOL     <= ascii_hex_to_std_logic_vector(x"00000000" & iicfg_10s_tol_int);
+         IICFG_100S_TARGET <= ascii_hex_to_std_logic_vector(iicfg_100s_target_int);
+         IICFG_100S_TOL    <= ascii_hex_to_std_logic_vector(x"00000000" & iicfg_100s_tol_int);
       end if;
 
       IICFG_valid <= iicfg_valid_int; 

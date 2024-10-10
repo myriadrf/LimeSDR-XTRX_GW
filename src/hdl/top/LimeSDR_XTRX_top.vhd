@@ -52,7 +52,7 @@ entity LimeSDR_XTRX_top is
       g_PERIPHCFG_START_ADDR  : integer := 192;
       g_MEMCFG_START_ADDR     : integer := 65504;
       -- TX interface 
-      g_TX_N_BUFF             : integer := 2;      -- N 4KB buffers in TX interface (2 OR 4)
+      g_TX_N_BUFF             : integer := 4;      -- N 4KB buffers in TX interface (2 OR 4)
       g_TX_PCT_SIZE           : integer := 4096;   -- TX packet size in bytes
       g_TX_IN_PCT_HDR_SIZE    : integer := 16
    );
@@ -561,65 +561,65 @@ begin
 -- rxtx_top instance.
 -- Handle rx/tx streams, packets
 -- ---------------------------------------------------------------------------- 
---inst3_rxtx_top : entity work.rxtx_top
---generic map(
---   index                   => 1,
---   DEV_FAMILY              => g_DEV_FAMILY,
---   -- TX parameters
---   TX_IQ_WIDTH             => 12,
---   TX_N_BUFF               => g_TX_N_BUFF,              -- 2,4 valid values
---   TX_IN_PCT_SIZE          => g_TX_PCT_SIZE,
---   TX_IN_PCT_HDR_SIZE      => g_TX_IN_PCT_HDR_SIZE,
---   TX_IN_PCT_DATA_W        => c_H2F_S0_0_RWIDTH,      -- 
---   TX_IN_PCT_RDUSEDW_W     => c_H2F_S0_0_RDUSEDW_WIDTH,
---   TX_HIGHSPEED_BUS        => false,
---   
---   -- RX parameters
---   RX_DATABUS_WIDTH        => c_F2H_S0_WWIDTH,
---   RX_IQ_WIDTH             => 12,
---   RX_INVERT_INPUT_CLOCKS  => "ON",
---   RX_PCT_BUFF_WRUSEDW_W   => c_F2H_S0_WRUSEDW_WIDTH --bus width in bits 
---   
---)
---port map(        
---   sys_clk                 => sys_clk,                                     
---   from_fpgacfg            => inst1_from_fpgacfg,
---   to_fpgacfg              => open,  
---   from_memcfg             => inst1_from_memcfg,
---   to_memcfg               => inst1_to_memcfg,
---   -- TX module signals
---   tx_clk                  => inst1_lms1_txpll_c1,      
---   tx_clk_reset_n          => inst1_lms1_txpll_locked,
---   tx_pct_loss_flg         => open,
---   --Tx interface data 
---   tx_smpl_fifo_wrreq      => inst3_tx_samplefifo_wrreq,
---   tx_smpl_fifo_wrfull     => inst3_tx_samplefifo_wrfull,
---   tx_smpl_fifo_wrusedw    => inst3_tx_samplefifo_wrusedw,
---   tx_smpl_fifo_data       => inst3_tx_samplefifo_data,
---   --TX packet FIFO ports
---   tx_in_pct_reset_n_req   => inst0_s0_raclrn,
---   tx_in_pct_rdreq         => inst0_s0_rd,
---   tx_in_pct_data          => inst0_s0_rdata,
---   tx_in_pct_rdempty       => inst0_s0_rempty,
---   tx_in_pct_rdusedw       => inst0_s0_rdusedw,     
---   -- RX path
---   rx_clk                  => inst1_lms1_rxpll_c1,
---   rx_clk_reset_n          => inst1_lms1_rxpll_locked,
---   --RX FIFO for IQ samples   
---   rx_smpl_fifo_wrreq      => inst3_rx_samplefifo_wrreq,
---   rx_smpl_fifo_data       => inst3_rx_samplefifo_data,
---   rx_smpl_fifo_wrfull     => open,
---   --RX Packet FIFO ports
---   rx_pct_fifo_aclrn_req   => inst0_s0_waclrn,
---   rx_pct_fifo_wusedw      => inst0_s0_wrusedw,
---   rx_pct_fifo_wrreq       => inst0_s0_wr,
---   rx_pct_fifo_wdata       => inst0_s0_wdata,
---   -- RX sample nr count enable
---   rx_smpl_nr_cnt_en       => inst3_rx_smpl_cnt_en,
---   
---   ext_rx_en => '0',--dpd_tx_en,   
---   tx_dma_en => inst0_s0_dma_en
---);   
+   inst3_rxtx_top : entity work.rxtx_top
+   generic map(
+      index                   => 1,
+      DEV_FAMILY              => g_DEV_FAMILY,
+      -- TX parameters
+      TX_IQ_WIDTH             => 12,
+      TX_N_BUFF               => g_TX_N_BUFF,              -- 2,4 valid values
+      TX_IN_PCT_SIZE          => g_TX_PCT_SIZE,
+      TX_IN_PCT_HDR_SIZE      => g_TX_IN_PCT_HDR_SIZE,
+      TX_IN_PCT_DATA_W        => c_H2F_S0_0_RWIDTH,      -- 
+      TX_IN_PCT_RDUSEDW_W     => c_H2F_S0_0_RDUSEDW_WIDTH,
+      TX_HIGHSPEED_BUS        => false,
+      
+      -- RX parameters
+      RX_DATABUS_WIDTH        => c_F2H_S0_WWIDTH,
+      RX_IQ_WIDTH             => 12,
+      RX_INVERT_INPUT_CLOCKS  => "ON",
+      RX_PCT_BUFF_WRUSEDW_W   => c_F2H_S0_WRUSEDW_WIDTH --bus width in bits 
+      
+   )
+   port map(        
+      sys_clk                 => sys_clk,                                     
+      from_fpgacfg            => inst1_from_fpgacfg,
+      to_fpgacfg              => open,  
+      from_memcfg             => inst1_from_memcfg,
+      to_memcfg               => inst1_to_memcfg,
+      -- TX module signals
+      tx_clk                  => inst1_lms1_txpll_c1,      
+      tx_clk_reset_n          => inst1_lms1_txpll_locked,
+      tx_pct_loss_flg         => open,
+      --Tx interface data 
+      tx_smpl_fifo_wrreq      => inst3_tx_samplefifo_wrreq,
+      tx_smpl_fifo_wrfull     => inst3_tx_samplefifo_wrfull,
+      tx_smpl_fifo_wrusedw    => inst3_tx_samplefifo_wrusedw,
+      tx_smpl_fifo_data       => inst3_tx_samplefifo_data,
+      --TX packet FIFO ports
+      tx_in_pct_reset_n_req   => inst0_s0_raclrn,
+      tx_in_pct_rdreq         => inst0_s0_rd,
+      tx_in_pct_data          => inst0_s0_rdata,
+      tx_in_pct_rdempty       => inst0_s0_rempty,
+      tx_in_pct_rdusedw       => inst0_s0_rdusedw,     
+      -- RX path
+      rx_clk                  => inst1_lms1_rxpll_c1,
+      rx_clk_reset_n          => inst1_lms1_rxpll_locked,
+      --RX FIFO for IQ samples   
+      rx_smpl_fifo_wrreq      => inst3_rx_samplefifo_wrreq,
+      rx_smpl_fifo_data       => inst3_rx_samplefifo_data,
+      rx_smpl_fifo_wrfull     => open,
+      --RX Packet FIFO ports
+      rx_pct_fifo_aclrn_req   => inst0_s0_waclrn,
+      rx_pct_fifo_wusedw      => inst0_s0_wrusedw,
+      rx_pct_fifo_wrreq       => inst0_s0_wr,
+      rx_pct_fifo_wdata       => inst0_s0_wdata,
+      -- RX sample nr count enable
+      rx_smpl_nr_cnt_en       => inst3_rx_smpl_cnt_en,
+      
+      ext_rx_en => '0',--dpd_tx_en,   
+      tx_dma_en => inst0_s0_dma_en
+   );   
 
 -- ----------------------------------------------------------------------------
 -- lms7002m_top instance.
@@ -697,11 +697,8 @@ begin
    
    
    LMS_RESET <= inst4_lms_reset and inst1_from_fpgacfg.LMS_RST;--inst1_lms_reset_cpu; -- reset is active low, so any module can reset the LMS
-   --en_tcxo    <= inst1_from_fpgacfg.TCXO_EN;--'1'; --tcxo enabled
-   --ext_clk    <= inst1_from_fpgacfg.EXT_CLK;--'0'; --internal clock used
-   
-   en_tcxo    <= '0';--'1'; --tcxo disabled
-   ext_clk    <= '1';--'0'; --external clock used
+   en_tcxo    <= inst1_from_fpgacfg.TCXO_EN;--'1'; --tcxo enabled
+   ext_clk    <= inst1_from_fpgacfg.EXT_CLK;--'0'; --internal clock used
 
    LMS_CORE_LDO_EN <= inst1_from_fpgacfg.CORE_LDO_EN;
    
@@ -738,8 +735,8 @@ begin
    inst6_tst_top : entity work.tst_top
    port map(
       --input ports 
-      sys_clk           => FPGA_CLK,
-      reset_n           => '1',    
+      sys_clk           => sys_clk,
+      reset_n           => global_rst_n,    
       LMS_TX_CLK        => FPGA_CLK,
       
       GNSS_UART_RX      => GNSS_RXD,
@@ -787,146 +784,9 @@ vctcxo_tamer_top_inst : entity work. vctcxo_tamer_top
          USB_CLK  => usb_clk_g,
    
          -- Physical VCXO tamer Interface
-         tune_ref     => PPSI_GPIO1,
+         tune_ref     => pps_internal,
          vctcxo_clock => FPGA_CLK
    );
---    -- ----------------------------------------------------------------------------
---    -- vctcxo_tamer instance.
---    -- ----------------------------------------------------------------------------
---       vctcxo_tamer_inst : entity work.vctcxo_tamer
---       port map(
---          -- Physical Interface
---          tune_ref           => GNSS_1PPS,
---          vctcxo_clock       => FPGA_CLK,
---    
---          -- Avalon-MM Interface
---          mm_clock           => sys_clk, 
---          mm_reset           => '0',
---          mm_rd_req          => '0',
---          mm_wr_req          => '0',
---          mm_addr            => (others=>'0'),
---          mm_wr_data         => (others=>'0'),
---          mm_rd_data         => open,
---          mm_rd_datav        => open,
---          mm_wait_req        => open,
---          -- Avalon Interrupts
---          mm_irq             => open,
---        
---          PPS_1S_ERROR_TOL   => (others=>'0'),
---          PPS_10S_ERROR_TOL  => (others=>'0'),
---          PPS_100S_ERROR_TOL => (others=>'0'),
---        
---          -- Status registers
---          pps_1s_error       => open,
---          pps_10s_error      => open,
---          pps_100s_error     => open,
---          accuracy           => open,
---          state              => open,
---          dac_tuned_val      => open,
---          pps_1s_count_v     => open,
---          pps_10s_count_v    => open,
---          pps_100s_count_v   => open
---        );
---       
---        BUFG_inst : BUFG
---        port map (
---           O => usb_clk_g, -- 1-bit output: Clock output
---           I => USB_CLK  -- 1-bit input: Clock input
---        );
---    
---    
---    usb_serial_inst : usb_serial 
---    generic map(
---        BAUDRATE => 9600
---    )
---    port map(
---        -- Serial
---        uart_rx_o => usb_serial_rx_o,
---        uart_tx_i => usb_serial_tx_i,
---    
---        --ULPI Interface
---        ulpi_reset_o        => USB_NRST,
---        ulpi_data_io        => USB_D,
---        ulpi_stp_o          => USB_STP,
---        ulpi_nxt_i          => USB_NXT,
---        ulpi_dir_i          => USB_DIR,
---        ulpi_clk60_i        => usb_clk_g,
---        reset_out           => usb_reset_out
---    );
---    
---    
---    inst1_uart : entity work.uart
---    generic map
---    (
---       BAUD_RATE       => 9600,
---       CLOCK_FREQUENCY => 60000000
---    )
---    port map
---    (
---       CLOCK                     => usb_clk_g,
---       RESET                     => usb_reset_out,
---       DATA_STREAM_IN            => uart_data_stream_in,
---       DATA_STREAM_IN_STB        => uart_data_stream_in_stb,
---       DATA_STREAM_IN_ACK        => uart_data_stream_in_ack,
---       DATA_STREAM_OUT           => uart_data_stream_out    ,
---       DATA_STREAM_OUT_STB       => uart_data_stream_out_stb,
---       DATA_STREAM_OUT_ACK       => uart_data_stream_out_ack,
---       TX                        => usb_serial_tx_i,                 
---       RX                        => usb_serial_rx_o                 
---    );
---    
---    process(usb_clk_g)
---    begin
---       if (usb_clk_g'event and usb_clk_g = '1') then
---          if uart_data_stream_out_stb = '1' AND uart_data_stream_out_ack = '0' then 
---             uart_data_stream_out_ack <= '1';
---          else 
---             uart_data_stream_out_ack <= '0';
---          end if;
---       end if;
---    end process;
---    
---    process(usb_clk_g, usb_reset_out)
---    begin
---       if usb_reset_out = '1' then 
---          uart_data_stream_in_stb <= '0';
---       elsif (usb_clk_g'event and usb_clk_g = '1') then
---          if fpga_led1_rising = '1' AND uart_data_stream_in_ack = '0' then 
---             uart_data_stream_in_stb <= '1';
---          elsif uart_data_stream_in_ack = '1' then
---             uart_data_stream_in_stb <= '0';
---          else 
---             uart_data_stream_in_stb <= uart_data_stream_in_stb;
---          end if;
---       end if;
---    end process;
---    
---    process (all)
---    begin
---       uart_data_stream_in <= c_ASCII_ARRAY(to_integer(ascii_cnt));
---    end process;
---    
---    nmea_parser_inst : entity work.nmea_parser
---       port map (
---          clk         => usb_clk_g,
---          reset_n     => NOT usb_reset_out,
---          data        => uart_data_stream_out,  --NMEA data character
---          data_v      => uart_data_stream_out_stb AND uart_data_stream_out_ack,  --NMEA data valid
---          
---          --Parsed NMEA sentences (ASCII format)
---    
---          IIENA_valid       => iiena_valid,
---          IIENA_EN          => iiena_en,
---    
---          IICFG_valid       => iicfg_valid,
---          IICFG_1S_TARGET   => open,
---          IICFG_1S_TOL      => iicfg_1s_tol,
---          IICFG_10S_TARGET  => open,
---          IICFG_10S_TOL     => iicfg_10s_tol,
---          IICFG_100S_TARGET => open,
---          IICFG_100S_TOL    => iicfg_100s_tol
---       );
-
 
 -- ----------------------------------------------------------------------------
 -- LED control module
@@ -936,53 +796,9 @@ vctcxo_tamer_top_inst : entity work. vctcxo_tamer_top
    port map(
    CLK1 => FPGA_CLK,
    CLK2 => sys_clk, 
-   LED1 => fpga_led1_int,
+   LED1 => FPGA_LED1,
    LED2 => FPGA_LED2
    );
-
-   FPGA_LED1 <=fpga_led1_int;
-
-   process (usb_clk_g)
-   begin
-      if rising_edge(usb_clk_g) then 
-         fpga_led1_sync_usb_clk <= fpga_led1_sync_usb_clk(0) & fpga_led1_int;
-      end if;
-   end process;
-
-
-
-   process(usb_clk_g)
-   begin 
-      if rising_edge(usb_clk_g) then 
-         fpga_led1_reg <= fpga_led1_sync_usb_clk(1);
-
-         if fpga_led1_reg = '0' AND fpga_led1_sync_usb_clk(1) = '1' then 
-            fpga_led1_rising <= '1';
-         else 
-            fpga_led1_rising <= '0';
-         end if;
-      end if;
-   end process;
-
-   process (usb_clk_g, usb_reset_out)
-   begin
-      if usb_reset_out = '1' then 
-         ascii_cnt <= (others=>'0');
-      elsif rising_edge(usb_clk_g) then 
-         if fpga_led1_rising = '1' then 
-            if ascii_cnt >= 11 then 
-               ascii_cnt <= (others =>'0');
-            else 
-               ascii_cnt <= ascii_cnt + 1;
-            end if;
-         end if;
-      end if;
-   end process;
-
-
-
-
-
 -- ----------------------------------------------------------------------------
 -- GPIOs
 -- 

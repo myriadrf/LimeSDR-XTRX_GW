@@ -60,7 +60,7 @@ architecture arch of nmea_mm_driver is
         INIT_SET_TUNE_MODE,   
         INIT_RESET_COUNTERS,
         INIT_ENABLE_COUNTERS,
-        INIT_ENABLE_ISR,
+        INIT_DISABLE_ISR,
         DISABLE,
         RST_COUNTERS,
         ENABLE_COUNTERS,
@@ -129,11 +129,11 @@ begin
                 mm_wr_req   <= '1';
                 mm_wr_data_int(C_VT_CTRL_VCTCXO_RESET_BIT)  <= '0';
                 mm_addr     <= C_VT_CTRL_ADDR;
-                next_state  <= INIT_ENABLE_ISR;
+                next_state  <= INIT_DISABLE_ISR;
 
-            when INIT_ENABLE_ISR => 
+            when INIT_DISABLE_ISR => 
                 mm_wr_req   <= '1';
-                mm_wr_data_int(C_VT_CTRL_IRQ_EN_BIT)  <= '1';
+                mm_wr_data_int(C_VT_CTRL_IRQ_EN_BIT)  <= '0';
                 mm_addr     <= C_VT_CTRL_ADDR;
                 next_state  <= IDLE;
 
@@ -175,10 +175,6 @@ begin
                 mm_addr     <= C_VT_CTRL_ADDR;
                 mm_wr_data_int(C_VT_CTRL_IRQ_CLR_BIT)  <= '0';
                 next_state <= IDLE;
-
-                
-        
-                
                 
             when DISABLE => 
                 mm_wr_req   <= '1';
@@ -186,7 +182,6 @@ begin
                 mm_addr     <= C_VT_CTRL_ADDR;
                 next_state  <= IDLE;
             
-
             when others=>
                 mm_rd_req   <= '0';
                 mm_wr_req   <= '0';

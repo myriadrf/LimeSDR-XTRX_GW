@@ -26,6 +26,10 @@ package string_pkg is
 function hex_to_slv(h: std_logic_vector)
    return std_logic_vector;
 
+   -- Function to convert 8 ASCII hex characters to a 32-bit std_logic_vector
+function ascii_hex_to_std_logic_vector(ascii_hex : in std_logic_vector(8*8-1 downto 0)) 
+   return std_logic_vector;
+
 function str_to_decimal_slv(input_str : std_logic_vector) 
    return std_logic_vector;
 
@@ -91,21 +95,36 @@ begin
          return x"8";
       when x"39" => 
          return x"9";
-      when x"41" => 
+      when x"41" | x"61" => 
          return x"A";
-      when x"42" => 
+      when x"42" | x"62"=> 
          return x"B";
-      when x"43" => 
+      when x"43" | x"63"=> 
          return x"C";             
-      when x"44" => 
+      when x"44" | x"64"=> 
          return x"D";
-      when x"45" => 
+      when x"45" | x"65"=> 
          return x"E"; 
-      when x"46" => 
+      when x"46" | x"66"=> 
          return x"F";
       when others=> 
          return x"0";
    end case;
+end function;
+
+-- Function to convert 8 ASCII hex characters to a 32-bit std_logic_vector
+function ascii_hex_to_std_logic_vector(ascii_hex : in std_logic_vector(8*8-1 downto 0)) return std_logic_vector is
+   variable result : std_logic_vector(31 downto 0);
+begin
+   result(31 downto 28) := hex_to_slv(ascii_hex(63 downto 56));  -- Most significant ASCII character
+   result(27 downto 24) := hex_to_slv(ascii_hex(55 downto 48));
+   result(23 downto 20) := hex_to_slv(ascii_hex(47 downto 40));
+   result(19 downto 16) := hex_to_slv(ascii_hex(39 downto 32));
+   result(15 downto 12) := hex_to_slv(ascii_hex(31 downto 24));
+   result(11 downto 8)  := hex_to_slv(ascii_hex(23 downto 16));
+   result(7 downto 4)   := hex_to_slv(ascii_hex(15 downto 8));
+   result(3 downto 0)   := hex_to_slv(ascii_hex(7 downto 0));    -- Least significant ASCII character
+   return result;
 end function;
 
 -- Function to convert a std_logic_vector containing ASCII characters representing a decimal number 

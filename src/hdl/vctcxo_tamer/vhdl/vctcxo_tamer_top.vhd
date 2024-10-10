@@ -342,6 +342,8 @@ UART_inst3 : entity work.UART
          pps_10s_error        => pps_10s_error,
          pps_100s_error_v     => pps_100s_error_v,
          pps_100s_error       => pps_100s_error,
+
+         pps_100s_count_v     => pps_100s_count_v,
          
          --To uart module
          uart_data_in         => uart_data_stream_in,
