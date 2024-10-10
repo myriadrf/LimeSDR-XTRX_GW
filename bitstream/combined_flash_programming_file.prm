@@ -9,4 +9,4 @@ End Address        0x003FFFFF
 
 Addr1         Addr2         Date                    File(s)
 0x00000000    0x001954BF    Aug 13 15:10:20 2024    /home/lab/work/LimeSDR-XTRX_GW/bitstream/gold_ram_programming_file.bit
-0x00220000    0x003B5867    Sep 27 15:55:08 2024    /home/lab/work/LimeSDR-XTRX_GW/bitstream/user_ram_programming_file.bit
+0x00220000    0x003B5EA7    Oct 10 15:20:45 2024    /home/lab/work/LimeSDR-XTRX_GW/bitstream/user_ram_programming_file.bit
