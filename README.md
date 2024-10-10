@@ -15,6 +15,12 @@ More information on multiboot functionality can be found below.
 
 The gateware can be built with the free version of the Xilinx Vivado v2022.1 (64-bit).
 
+## Cloning repository
+
+* git clone https://github.com/myriadrf/LimeSDR-XTRX_GW
+* git submodule init
+* git submodule update
+
 ## Project building
 
 * Open Vivado;
