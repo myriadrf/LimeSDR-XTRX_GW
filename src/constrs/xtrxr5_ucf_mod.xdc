@@ -21,6 +21,7 @@ create_clock -period 16.000 -name usb_phy_clk [get_ports USB_CLK]
 create_clock -name cfg_mclk -period 12  [get_nets inst0_xtrx_top/cfg_mclk]
 create_clock -period 8.000 -name sys_clk [get_ports PCI_REF_CLK_p]
 create_clock -period 38.460 -name FPGA_CLK [get_ports FPGA_CLK]
+create_clock -period 100 -name GNSS_1PPS [get_ports GNSS_1PPS]
 # see AR# 63174
 create_generated_clock -name cclk -source [get_pins inst0_xtrx_top/STARTUPE2_inst/USRCCLKO] -combinational [get_pins inst0_xtrx_top/STARTUPE2_inst/USRCCLKO]
 set_clock_latency -min 0.5 [get_clocks cclk]

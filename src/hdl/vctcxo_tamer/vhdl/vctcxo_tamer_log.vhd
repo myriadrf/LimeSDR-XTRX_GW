@@ -270,7 +270,8 @@ begin
    if reset_n = '0' then 
       uart_data_in_stb <= '0';
    elsif (clk'event AND clk='1') then 
-      if current_state = set_stb AND uart_data_in_ack= '0' then 
+      --if current_state = set_stb AND uart_data_in_ack= '0' then 
+      if current_state = set_stb then
          uart_data_in_stb <= '1';
       else 
          uart_data_in_stb <= '0';

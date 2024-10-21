@@ -174,7 +174,7 @@ begin
          mem(15)	<= "0000000000000000"; --  0 free, PERIPH_OUTPUT_VAL_1
          mem(16)	<= "0000000000000000"; --  0 free, Reserved
          mem(17)	<= "0000000000000000"; --  0 free, Reserved
-         mem(18)	<= "0000000000000000"; --  0 free, Reserved
+         mem(18)	<= "0000000000000011"; --  0 free, Reserved
          mem(19)	<= "0000000000000000"; --  0 free, Reserved
          mem(20)	<= "0000000000000000"; --  0 free, Reserved
          mem(21)	<= "0000000000000000"; --  0 free, Reserved
@@ -216,5 +216,9 @@ begin
       from_periphcfg.PERIPH_OUTPUT_VAL_0  <= mem(13) (15 downto 0);
       from_periphcfg.PERIPH_OUTPUT_OVRD_1 <= mem(14) (15 downto 0);
       from_periphcfg.PERIPH_OUTPUT_VAL_1  <= mem(15) (15 downto 0);
+
+      from_periphcfg.PERIPH_EN            <= mem(18) (15 downto 0);
+      from_periphcfg.PERIPH_SEL           <= mem(19) (15 downto 0);
+
 
 end periphcfg_arch;

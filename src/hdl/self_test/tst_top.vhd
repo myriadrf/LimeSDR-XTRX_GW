@@ -24,6 +24,7 @@ entity TST_TOP is
    port (
       -- input ports
       SYS_CLK              : in    std_logic;    --! System clock
+      CLK100               : in    std_logic; 
       RESET_N              : in    std_logic;    --! Reset, active low
 
       LMS_TX_CLK           : in    std_logic;    --! LMS7002 tx clock
@@ -72,12 +73,12 @@ begin
 
    inst1_gnss_test : entity work.gnss_uart_test
       generic map (
-         G_CLK_FREQUENCY => 26000000,
+         G_CLK_FREQUENCY => 100000000,
          G_BAUD_RATE     => 9600
       )
       port map (
-         CLK     => SYS_CLK,
-         TEST_EN => RESET_N,
+         CLK     => CLK100,
+         TEST_EN => test_enable(2),
 
          TEST_COMPLETE  => test_complete(2),
          TEST_PASS_FAIL => test_result(2),

@@ -167,9 +167,11 @@ constant c_F2H_S0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_FPGA2HOST_S0
 constant c_H2F_C0_RDUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_HOST2FPGA_C0_0_SIZE/(c_H2F_C0_RWIDTH/8),true);
 constant c_F2H_C0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_FPGA2HOST_C0_0_SIZE/(c_F2H_C0_WWIDTH/8),true);
 
-signal sys_clk      : std_logic;
-signal global_rst_n : std_logic;
-signal rx_switches  : std_logic_vector(1 downto 0);
+signal sys_clk             : std_logic;
+signal clk100              : std_logic;
+signal usb_clk_mmcm_locked : std_logic;
+signal global_rst_n        : std_logic;
+signal rx_switches         : std_logic_vector(1 downto 0);
 
 --pcie
 
@@ -315,6 +317,17 @@ signal iicfg_100s_tol  : std_logic_vector(31 downto 0);
 --attribute MARK_DEBUG of iicfg_1s_tol   : signal is "TRUE";
 --attribute MARK_DEBUG of iicfg_10s_tol  : signal is "TRUE";
 --attribute MARK_DEBUG of iicfg_100s_tol : signal is "TRUE";
+
+signal vtcxo_data_stream_in      : std_logic_vector(7 downto 0);
+signal vtcxo_data_stream_in_stb  : std_logic;
+signal vtcxo_data_stream_in_ack  : std_logic;
+
+signal vtcxo_data_stream_out     : std_logic_vector(7 downto 0);
+signal vtcxo_data_stream_out_stb : std_logic;
+signal vtcxo_data_stream_out_ack : std_logic;
+
+signal usb_serial_top_UART0_TX   : std_logic;
+signal tst_top_GNSS_UART_TX      : std_logic;
 
 
 component usb_serial is 
@@ -561,65 +574,65 @@ begin
 -- rxtx_top instance.
 -- Handle rx/tx streams, packets
 -- ---------------------------------------------------------------------------- 
-   inst3_rxtx_top : entity work.rxtx_top
-   generic map(
-      index                   => 1,
-      DEV_FAMILY              => g_DEV_FAMILY,
-      -- TX parameters
-      TX_IQ_WIDTH             => 12,
-      TX_N_BUFF               => g_TX_N_BUFF,              -- 2,4 valid values
-      TX_IN_PCT_SIZE          => g_TX_PCT_SIZE,
-      TX_IN_PCT_HDR_SIZE      => g_TX_IN_PCT_HDR_SIZE,
-      TX_IN_PCT_DATA_W        => c_H2F_S0_0_RWIDTH,      -- 
-      TX_IN_PCT_RDUSEDW_W     => c_H2F_S0_0_RDUSEDW_WIDTH,
-      TX_HIGHSPEED_BUS        => false,
-      
-      -- RX parameters
-      RX_DATABUS_WIDTH        => c_F2H_S0_WWIDTH,
-      RX_IQ_WIDTH             => 12,
-      RX_INVERT_INPUT_CLOCKS  => "ON",
-      RX_PCT_BUFF_WRUSEDW_W   => c_F2H_S0_WRUSEDW_WIDTH --bus width in bits 
-      
-   )
-   port map(        
-      sys_clk                 => sys_clk,                                     
-      from_fpgacfg            => inst1_from_fpgacfg,
-      to_fpgacfg              => open,  
-      from_memcfg             => inst1_from_memcfg,
-      to_memcfg               => inst1_to_memcfg,
-      -- TX module signals
-      tx_clk                  => inst1_lms1_txpll_c1,      
-      tx_clk_reset_n          => inst1_lms1_txpll_locked,
-      tx_pct_loss_flg         => open,
-      --Tx interface data 
-      tx_smpl_fifo_wrreq      => inst3_tx_samplefifo_wrreq,
-      tx_smpl_fifo_wrfull     => inst3_tx_samplefifo_wrfull,
-      tx_smpl_fifo_wrusedw    => inst3_tx_samplefifo_wrusedw,
-      tx_smpl_fifo_data       => inst3_tx_samplefifo_data,
-      --TX packet FIFO ports
-      tx_in_pct_reset_n_req   => inst0_s0_raclrn,
-      tx_in_pct_rdreq         => inst0_s0_rd,
-      tx_in_pct_data          => inst0_s0_rdata,
-      tx_in_pct_rdempty       => inst0_s0_rempty,
-      tx_in_pct_rdusedw       => inst0_s0_rdusedw,     
-      -- RX path
-      rx_clk                  => inst1_lms1_rxpll_c1,
-      rx_clk_reset_n          => inst1_lms1_rxpll_locked,
-      --RX FIFO for IQ samples   
-      rx_smpl_fifo_wrreq      => inst3_rx_samplefifo_wrreq,
-      rx_smpl_fifo_data       => inst3_rx_samplefifo_data,
-      rx_smpl_fifo_wrfull     => open,
-      --RX Packet FIFO ports
-      rx_pct_fifo_aclrn_req   => inst0_s0_waclrn,
-      rx_pct_fifo_wusedw      => inst0_s0_wrusedw,
-      rx_pct_fifo_wrreq       => inst0_s0_wr,
-      rx_pct_fifo_wdata       => inst0_s0_wdata,
-      -- RX sample nr count enable
-      rx_smpl_nr_cnt_en       => inst3_rx_smpl_cnt_en,
-      
-      ext_rx_en => '0',--dpd_tx_en,   
-      tx_dma_en => inst0_s0_dma_en
-   );   
+--   inst3_rxtx_top : entity work.rxtx_top
+--   generic map(
+--      index                   => 1,
+--      DEV_FAMILY              => g_DEV_FAMILY,
+--      -- TX parameters
+--      TX_IQ_WIDTH             => 12,
+--      TX_N_BUFF               => g_TX_N_BUFF,              -- 2,4 valid values
+--      TX_IN_PCT_SIZE          => g_TX_PCT_SIZE,
+--      TX_IN_PCT_HDR_SIZE      => g_TX_IN_PCT_HDR_SIZE,
+--      TX_IN_PCT_DATA_W        => c_H2F_S0_0_RWIDTH,      -- 
+--      TX_IN_PCT_RDUSEDW_W     => c_H2F_S0_0_RDUSEDW_WIDTH,
+--      TX_HIGHSPEED_BUS        => false,
+--      
+--      -- RX parameters
+--      RX_DATABUS_WIDTH        => c_F2H_S0_WWIDTH,
+--      RX_IQ_WIDTH             => 12,
+--      RX_INVERT_INPUT_CLOCKS  => "ON",
+--      RX_PCT_BUFF_WRUSEDW_W   => c_F2H_S0_WRUSEDW_WIDTH --bus width in bits 
+--      
+--   )
+--   port map(        
+--      sys_clk                 => sys_clk,                                     
+--      from_fpgacfg            => inst1_from_fpgacfg,
+--      to_fpgacfg              => open,  
+--      from_memcfg             => inst1_from_memcfg,
+--      to_memcfg               => inst1_to_memcfg,
+--      -- TX module signals
+--      tx_clk                  => inst1_lms1_txpll_c1,      
+--      tx_clk_reset_n          => inst1_lms1_txpll_locked,
+--      tx_pct_loss_flg         => open,
+--      --Tx interface data 
+--      tx_smpl_fifo_wrreq      => inst3_tx_samplefifo_wrreq,
+--      tx_smpl_fifo_wrfull     => inst3_tx_samplefifo_wrfull,
+--      tx_smpl_fifo_wrusedw    => inst3_tx_samplefifo_wrusedw,
+--      tx_smpl_fifo_data       => inst3_tx_samplefifo_data,
+--      --TX packet FIFO ports
+--      tx_in_pct_reset_n_req   => inst0_s0_raclrn,
+--      tx_in_pct_rdreq         => inst0_s0_rd,
+--      tx_in_pct_data          => inst0_s0_rdata,
+--      tx_in_pct_rdempty       => inst0_s0_rempty,
+--      tx_in_pct_rdusedw       => inst0_s0_rdusedw,     
+--      -- RX path
+--      rx_clk                  => inst1_lms1_rxpll_c1,
+--      rx_clk_reset_n          => inst1_lms1_rxpll_locked,
+--      --RX FIFO for IQ samples   
+--      rx_smpl_fifo_wrreq      => inst3_rx_samplefifo_wrreq,
+--      rx_smpl_fifo_data       => inst3_rx_samplefifo_data,
+--      rx_smpl_fifo_wrfull     => open,
+--      --RX Packet FIFO ports
+--      rx_pct_fifo_aclrn_req   => inst0_s0_waclrn,
+--      rx_pct_fifo_wusedw      => inst0_s0_wrusedw,
+--      rx_pct_fifo_wrreq       => inst0_s0_wr,
+--      rx_pct_fifo_wdata       => inst0_s0_wdata,
+--      -- RX sample nr count enable
+--      rx_smpl_nr_cnt_en       => inst3_rx_smpl_cnt_en,
+--      
+--      ext_rx_en => '0',--dpd_tx_en,   
+--      tx_dma_en => inst0_s0_dma_en
+--   );   
 
 -- ----------------------------------------------------------------------------
 -- lms7002m_top instance.
@@ -736,19 +749,23 @@ begin
    port map(
       --input ports 
       sys_clk           => sys_clk,
+      CLK100            => clk100,
       reset_n           => global_rst_n,    
       LMS_TX_CLK        => FPGA_CLK,
       
-      GNSS_UART_RX      => GNSS_RXD,
-      GNSS_UART_TX      => GNSS_TXD,
+      --GNSS_UART_RX      => GNSS_RXD,
+      GNSS_UART_RX      => '1',
+      GNSS_UART_TX      => tst_top_GNSS_UART_TX,
    
       -- To configuration memory
       to_tstcfg         => inst1_to_tstcfg,
       from_tstcfg       => inst1_from_tstcfg
    );
    
-   GNSS_HW_S <= '1';
-   GNSS_HW_R <= '1';
+   GNSS_HW_S <= inst1_from_periphcfg.PERIPH_EN(0);
+   --GNSS_HW_S <= '1';
+   --GNSS_HW_R <= '1';
+   GNSS_HW_R <= inst1_from_periphcfg.PERIPH_EN(1);
 
 
   usb_clk_mmcm_inst : entity work.usb_clk_mmcm
@@ -756,7 +773,8 @@ begin
       clk_in1  => sys_clk,
       resetn   => global_rst_n,
       clk_out1 => USB_26M,
-      locked   => open
+      clk_out2 => clk100,
+      locked   => usb_clk_mmcm_locked
    );
    
    BUFG_inst : BUFG
@@ -765,28 +783,58 @@ begin
       I => USB_CLK  -- 1-bit input: Clock input
    );
 
+   usb_serial_top_inst : entity work.usb_serial_top
+      generic map(
+         G_UART_BAUDRATE   => 9600
+     )
+      port map(
+         CLK100         => clk100,
+         RESET_N        => usb_clk_mmcm_locked,
+         --USB to serial ULPI interface
+         USB_NRST       => USB_NRST,
+         USB_D          => USB_D,
+         USB_STP        => USB_STP,
+         USB_NXT        => USB_NXT,
+         USB_DIR        => USB_DIR,
+         USB_CLK        => usb_clk_g,
+         -- UART0 serial    
+         UART0_RX       => GNSS_RXD,
+         UART0_TX       => usb_serial_top_UART0_TX,
+         -- UART1 serial with internal data interface 
+         UART1_DATA_STREAM_IN       => vtcxo_data_stream_out,    
+         UART1_DATA_STREAM_IN_STB   => vtcxo_data_stream_out_stb,
+         UART1_DATA_STREAM_IN_ACK   => vtcxo_data_stream_out_ack,
+         -- UART1 serial with internal data interface 
+         UART1_DATA_STREAM_OUT      => vtcxo_data_stream_in    ,
+         UART1_DATA_STREAM_OUT_STB  => vtcxo_data_stream_in_stb,
+         UART1_DATA_STREAM_OUT_ACK  => vtcxo_data_stream_in_ack
+      );
+
+
+      GNSS_TXD <= usb_serial_top_UART0_TX when inst1_from_periphcfg.PERIPH_SEL(0)='1' else 
+                  tst_top_GNSS_UART_TX;
+
+      -- GNSS_TXD <= tst_top_GNSS_UART_TX;
+
 -- ----------------------------------------------------------------------------
 -- vctcxo_tamer instance.
 -- ----------------------------------------------------------------------------  
-vctcxo_tamer_top_inst : entity work. vctcxo_tamer_top
-      generic map ( 
-         G_UART_BAUD_RATE        => 9600,
-         G_USB_CLK_FREQUENCY     => 60000000,
-         MM_CLOCK_FREQUENCY      => 100000000
-      )
+   vctcxo_tamer_top_inst : entity work. vctcxo_tamer_top
       port map (
-         --USB to serial ULPI interface
-         USB_NRST => USB_NRST,
-         USB_D    => USB_D,
-         USB_STP  => USB_STP,
-         USB_NXT  => USB_NXT,
-         USB_DIR  => USB_DIR,
-         USB_CLK  => usb_clk_g,
-   
          -- Physical VCXO tamer Interface
-         tune_ref     => pps_internal,
-         vctcxo_clock => FPGA_CLK
-   );
+         tune_ref                      => pps_internal,
+         vctcxo_clock                  => FPGA_CLK,
+         CLK100                        => clk100,
+         RESET_N                       => usb_clk_mmcm_locked,
+
+         uart_data_stream_in           => vtcxo_data_stream_in    ,  
+         uart_data_stream_in_stb       => vtcxo_data_stream_in_stb,
+         uart_data_stream_in_ack       => vtcxo_data_stream_in_ack,
+
+         uart_data_stream_out          => vtcxo_data_stream_out    ,
+         uart_data_stream_out_stb      => vtcxo_data_stream_out_stb,
+         uart_data_stream_out_ack      => vtcxo_data_stream_out_ack
+      );
 
 -- ----------------------------------------------------------------------------
 -- LED control module
