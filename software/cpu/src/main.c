@@ -929,6 +929,12 @@ int main()
     // Read DAC value stored in flash storage
 	FlashQspi_ReadPage(&CFG_QSPI, mem_write_offset, page_buffer);
 
+	// Disable Internal reference for DAC
+	i2c_buf[0] = 0x40; // cmd Control reg
+	i2c_buf[1] = 0x10; // Reset=0; PD1=0; PD0=0; REF=1; Gain=0;
+	i2c_buf[2] = 0x0;
+	XIic_Send(XPAR_I2C_CORES_I2C1_BASEADDR, I2C_DAC_ADDR, i2c_buf, 3, XIIC_STOP);
+
 	// Write DAC value stored in flash storage only if it isn't empty (0xFFFF)
 	if ((page_buffer[1] == 0xFF) && (page_buffer[0] == 0xFF)) {
 		// Write Default value
