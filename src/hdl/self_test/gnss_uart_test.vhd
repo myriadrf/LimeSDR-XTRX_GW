@@ -72,7 +72,7 @@ begin
    port map
    (
       CLOCK                     => CLK,
-      RESET                     => not TEST_EN,
+      RESET                     => '0',--not TEST_EN,
       DATA_STREAM_IN            => data_stream_in     ,
       DATA_STREAM_IN_STB        => data_stream_in_stb ,
       DATA_STREAM_IN_ACK        => data_stream_in_ack ,

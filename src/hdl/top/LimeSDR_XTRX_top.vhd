@@ -753,8 +753,7 @@ begin
       reset_n           => global_rst_n,    
       LMS_TX_CLK        => FPGA_CLK,
       
-      --GNSS_UART_RX      => GNSS_RXD,
-      GNSS_UART_RX      => '1',
+      GNSS_UART_RX      => GNSS_RXD,
       GNSS_UART_TX      => tst_top_GNSS_UART_TX,
    
       -- To configuration memory
