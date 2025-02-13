@@ -737,7 +737,7 @@ begin
    
    RX_SW3       <= rx_switches(0);
    RX_SW2       <= rx_switches(1);
-   EN_GPIO      <= '0';
+   EN_GPIO      <= inst1_from_periphcfg.PERIPH_EN(2);
    
    
    
