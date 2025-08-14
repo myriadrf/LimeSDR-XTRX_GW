@@ -7,7 +7,6 @@
 #include "platform.h"
 #include "xil_printf.h"
 #include <xgpio.h>				/* GPIO driver*/
-#include <xiic.h>				/* I2C driver*/
 #include "xspi.h"				/* SPI device driver */
 #include "AXI_to_native_FIFO.h" /* Native FIFO driver*/
 
@@ -849,64 +848,7 @@ int main()
 	XGpio_Initialize(&smpl_cmp_status, XPAR_SMPL_CMP_GPIO_SMPL_CMP_STAT_DEVICE_ID);
 	XGpio_Initialize(&vctcxo_tamer_ctrl, XPAR_VCTCXO_TAMER_CTRL_DEVICE_ID);
 	XGpio_Initialize(&gpio_serial, XPAR_AXI_GPIO_SERIAL_DEVICE_ID);
-
-	// I2C Voltage init
-	//    XPAR_I2C_CORES_I2C1_BASEADDR
-	//    XPAR_I2C_CORES_I2C2_BASEADDR
-
-//    LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR,0x0A,0x4D);
-//    LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR,0x03,0xD2);
-//    LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR,0x0C,0xFC);
-//    LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR,0x05,0xD2);
-//    LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR,0x0E,0x75);
-//    LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR,0x07,0xD2);
-//    LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR,0x10,0xB1);
-//    LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR,0x09,0xD2);
-
-
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x02, 0x88);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x03, 0xD2);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x04, 0x88);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x05, 0xD2);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x06, 0x88);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x07, 0xD2);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x08, 0x88);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x09, 0xD2);
-
-//	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x0A, 0xA2);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x0C, 0xFC);
-//	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x0E, 0xAF);
-//	LP8758_WR_REG(XPAR_I2C_CORES_I2C1_BASEADDR, 0x10, 0xBE);
-
-
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C2_BASEADDR, 0x02, 0x88);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C2_BASEADDR, 0x03, 0xD2);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C2_BASEADDR, 0x04, 0x88);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C2_BASEADDR, 0x05, 0xD2);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C2_BASEADDR, 0x06, 0x88);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C2_BASEADDR, 0x07, 0xD2);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C2_BASEADDR, 0x08, 0x88);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C2_BASEADDR, 0x09, 0xD2);
-
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C2_BASEADDR, 0x0A, 0xA2);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C2_BASEADDR, 0x0C, 0xFC);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C2_BASEADDR, 0x0E, 0xAF);
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C2_BASEADDR, 0x10, 0xBE);
-
-	LP8758_WR_REG(XPAR_I2C_CORES_I2C2_BASEADDR, 0x1A, 0xFF);
-
-
-
 	uint8_t regvals2[2];
-    //Waste time to make sure voltage regulator is done settling
-    //TODO:: use something else to create a delay
-    for (uint8_t i = 1; i<=35; i++)
-    {
-    	LP8758_RD_REG(XPAR_I2C_CORES_I2C2_BASEADDR,i,&regvals2[0]);
-    }
-
-    
-
 	// Init flash SPI
 	Init_flash_qspi(QSPI_DEVICE_ID, &CFG_QSPI, XSP_MASTER_OPTION | XSP_MANUAL_SSELECT_OPTION);
 	// Read status register, control register
@@ -920,36 +862,8 @@ int main()
 	FlashQspi_CMD_ReadRDSR(&CFG_QSPI,&regvals2[0]);
 	FlashQspi_CMD_ReadRDCR(&CFG_QSPI,&regvals2[1]);
 
-	// Write config to DAC
-//	i2c_buf[0] = 0x04; // cmd
-//	i2c_buf[1] = 0x01; // msb data
-//	i2c_buf[2] = 0x01; // lsb data
-//	XIic_Send(XPAR_I2C_CORES_I2C1_BASEADDR, I2C_DAC_ADDR, i2c_buf, 3, XIIC_STOP);
-    uint8_t i2c_buf[3];
     // Read DAC value stored in flash storage
 	FlashQspi_ReadPage(&CFG_QSPI, mem_write_offset, page_buffer);
-
-	// Disable Internal reference for DAC
-	i2c_buf[0] = 0x40; // cmd Control reg
-	i2c_buf[1] = 0x10; // Reset=0; PD1=0; PD0=0; REF=1; Gain=0;
-	i2c_buf[2] = 0x0;
-	XIic_Send(XPAR_I2C_CORES_I2C1_BASEADDR, I2C_DAC_ADDR, i2c_buf, 3, XIIC_STOP);
-
-	// Write DAC value stored in flash storage only if it isn't empty (0xFFFF)
-	if ((page_buffer[1] == 0xFF) && (page_buffer[0] == 0xFF)) {
-		// Write Default value
-		dac_val = DAC_DEFF_VAL;
-		i2c_buf[0] = 0x30; // cmd
-		i2c_buf[1] = (dac_val >> 8) & 0xFF;
-		i2c_buf[2] = dac_val & 0xFF;
-	} else {
-		// Write DAC value from FLASH
-		dac_val = ((uint16_t)page_buffer[1])<<8 | ((uint16_t)page_buffer[0]);
-		i2c_buf[0] = 0x30; // cmd
-		i2c_buf[1] = page_buffer[1];
-		i2c_buf[2] = page_buffer[0];
-	}
-	XIic_Send(XPAR_I2C_CORES_I2C1_BASEADDR, I2C_DAC_ADDR, i2c_buf, 3, XIIC_STOP);
 
 	// Initialize variables to detect PLL phase change and PLL config update request
 	phcfg_start_old = 0;
@@ -1363,40 +1277,6 @@ int main()
 				{
 					switch (LMS_Ctrl_Packet_Rx->Data_field[0 + (block)]) // ch
 					{
-					case 0:				   // dac val
-						XIic_Recv(XPAR_I2C_CORES_I2C1_BASEADDR, I2C_DAC_ADDR, i2c_buf, 2, XIIC_STOP);
-						LMS_Ctrl_Packet_Tx->Data_field[0 + (block * 4)] = LMS_Ctrl_Packet_Rx->Data_field[block]; // ch
-						LMS_Ctrl_Packet_Tx->Data_field[1 + (block * 4)] = 0x00;									 // RAW //unit, power
-						LMS_Ctrl_Packet_Tx->Data_field[2 + (block * 4)] = i2c_buf[0];							 // unsigned val, MSB byte
-						LMS_Ctrl_Packet_Tx->Data_field[3 + (block * 4)] = i2c_buf[1];							 // unsigned val, LSB byte
-						// Storing volatile DAC value
-						dac_val = ((uint16_t)i2c_buf[0])<<8 | ((uint16_t)i2c_buf[1]);
-
-						break;
-
-					case 1: // temperature
-//						i2c_buf[0] = 1;
-//						i2c_buf[1] = 0x60;
-//						i2c_buf[2] = 0xA0;
-						// TMP1075 sensor performs periodical temperature readings by default
-						// we only need to read the most recent value
-						i2c_buf[0]=0;
-						XIic_Send(XPAR_I2C_CORES_I2C1_BASEADDR,I2C_TERMO_ADDR,i2c_buf,1,XIIC_REPEATED_START);
-						XIic_Recv(XPAR_I2C_CORES_I2C1_BASEADDR,I2C_TERMO_ADDR,i2c_buf,2,XIIC_STOP);
-
-						LMS_Ctrl_Packet_Tx->Data_field[0 + (block * 4)] = LMS_Ctrl_Packet_Rx->Data_field[block]; //ch
-						LMS_Ctrl_Packet_Tx->Data_field[1 + (block * 4)] = 0x50; //0.1C //unit, power
-
-						int16_t converted_value = i2c_buf[1] | (i2c_buf[0] << 8);
-
-						converted_value = converted_value >> 4;
-						converted_value = converted_value * 10;
-						converted_value = converted_value >> 4;
-
-						LMS_Ctrl_Packet_Tx->Data_field[2 + (block * 4)] = (uint8_t)((converted_value >> 8) & 0xFF);//signed val, MSB byte
-						LMS_Ctrl_Packet_Tx->Data_field[3 + (block * 4)] = (uint8_t)(converted_value & 0xFF);//signed val, LSB byte
-
-						break;
 					default:
 						cmd_errors++;
 						break;
@@ -1422,13 +1302,9 @@ int main()
 					case 0:														  // TCXO DAC
 						if (LMS_Ctrl_Packet_Rx->Data_field[1 + (block * 4)] == 0) // RAW units?
 						{
-							i2c_buf[0] = 0x30;											  // addr
-							i2c_buf[1] = LMS_Ctrl_Packet_Rx->Data_field[2 + (block * 4)]; // MSB
-							i2c_buf[2] = LMS_Ctrl_Packet_Rx->Data_field[3 + (block * 4)]; // LSB
-							// Storing volatile DAC value
-							dac_val = ((uint16_t)i2c_buf[1])<<8 | ((uint16_t)i2c_buf[2]);
-							// Writing to DAC
-							XIic_Send(XPAR_I2C_CORES_I2C1_BASEADDR, I2C_DAC_ADDR, i2c_buf, 3, XIIC_STOP);
+							//TODO: Implement SPI XODAC write maybe?
+							//      return error for now
+							cmd_errors++;
 						}
 						else
 							cmd_errors++;
