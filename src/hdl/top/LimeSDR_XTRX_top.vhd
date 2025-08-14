@@ -63,8 +63,10 @@ entity LimeSDR_XTRX_top is
    PCI_EXP_RXP      : in   std_logic_vector(1 downto 0);
    PCI_EXP_RXN      : in   std_logic_vector(1 downto 0);
    --pseudo - GPIO
-   FPGA_LED1        : out  std_logic;
-   FPGA_LED2        : out  std_logic;
+   --     NOT IMPLEMENTED start
+   FPGA_LED_R       : out  std_logic;
+   FPGA_LED_G       : out  std_logic;
+   --     NOT IMPLEMENTED end
    OPTION           : in   std_logic;
    PCI_REF_CLK_p    : in   std_logic;
    PCI_REF_CLK_n    : in   std_logic;
@@ -92,60 +94,77 @@ entity LimeSDR_XTRX_top is
    LMS_EN_IQSEL2    : in    std_logic;
    LMS_DIQ2_D       : in    std_logic_vector(11 downto 0);
    --AUX
-   EN_TCXO          : out   std_logic;
-   EXT_CLK          : out   std_logic;      
-   EN_GPIO          : out   std_logic;           
    FPGA_CLK         : in    std_logic;
-   BOM_VER          : in    std_logic_vector(2 downto 0);
-   HW_VER           : in    std_logic_vector(2 downto 0);
-   --GPS
-   GNSS_1PPS        : in    std_logic;
-   GNSS_TXD         : out   std_logic;
-   GNSS_RXD         : in    std_logic;
-   GNSS_HW_S        : out   std_logic; --FIX
-   GNSS_HW_R        : out   std_logic; --FIX
-   GNSS_FIX         : in    std_logic; --FIX
+   BOM_VER          : in    std_logic_vector(3 downto 0);
+   HW_VER           : in    std_logic_vector(3 downto 0);
+       --Placeholder inout direction
+       --     NOT IMPLEMENTED start
+   GNSS_EXTINT      : inout std_logic;
+   GNSS_RESET       : inout std_logic;
+   GNSS_UART_TX     : inout std_logic;
+   GNSS_UART_RX     : inout std_logic;
+   GNSS_DDC_SCL     : inout std_logic;
+   GNSS_DDC_SDA     : inout std_logic;
+   GNSS_TPULSE      : inout std_logic;
    --GPIO
-   PPSI_GPIO1       : inout std_logic;   
-   PPSO_GPIO2       : inout std_logic;
-   TDD_GPIO3_P      : inout std_logic;
-   TDD_GPIO3_N      : inout std_logic;
-   LED_WWAN_GPIO5   : inout std_logic;
-   LED_WLAN_GPIO6   : inout std_logic;
-   LED_WPAN_GPIO7   : inout std_logic;
-   GPIO8            : inout std_logic;
-   GPIO9_P          : inout std_logic;
-   GPIO9_N          : inout std_logic;
-   GPIO11_P         : inout std_logic;
-   GPIO11_N         : inout std_logic;
-   GPIO13           : inout std_logic;
-   --I2C BUS1 (3v3: TMP108, LTC26x6, LP8758 [FPGA])
-   FPGA_I2C1_SDA    : inout std_logic;
-   FPGA_I2C1_SCL    : inout std_logic;
-   --I2C BUS2 (vio: LP8758 [LMS])
+   FPGA_GPIO        : inout std_logic_vector(3 downto 0);
+   PPSI_GPIO1       : inout std_logic;
+   --I2C BUS (Slave)
    FPGA_I2C_SDA     : inout std_logic;
    FPGA_I2C_SCL     : inout std_logic;
    --TX/RX SWITCH
-   TX_SW            : out   std_logic; 
-   RX_SW3           : out   std_logic;
-   RX_SW2           : out   std_logic;
+   FPGA_RF_SW_TDD   : out   std_logic;
+   --M2 signals
+       --Placeholder inout direction
+   M2_DEVSLP        : inout std_logic;
+   M2_COEX1         : inout std_logic;
+   M2_COEX2         : inout std_logic;
+   M2_COEX3         : inout std_logic;
+   M2_W_DISABLE_2   : inout std_logic;
+   M2_DPR           : inout std_logic;
+   M2_RESET         : inout std_logic;
+   M2_FCP_OFF       : inout std_logic;
+
+    --Placeholder inout direction
+   RX1_RF_SCLK      : inout std_logic;
+   RX1_RF_SDATA     : inout std_logic;
+   TRX1_RF_SCLK     : inout std_logic;
+   TRX1_RF_SDATA    : inout std_logic;
+   TRX1_ANT_SCLK    : inout std_logic;
+   TRX1_ANT_SDATA   : inout std_logic;
+   RX2_RF_SCLK      : inout std_logic;
+   RX2_RF_SDATA     : inout std_logic;
+   TRX2_RF_SCLK     : inout std_logic;
+   TRX2_RF_SDATA    : inout std_logic;
+   TRX2_ANT_SCLK    : inout std_logic;
+   TRX2_ANT_SDATA   : inout std_logic;
+       --NOT IMPLEMENTED END
    --FLASH & BOOT
    FPGA_CFG_D       : inout std_logic_vector(3 downto 0);    
    FPGA_CFG_CS      : out   std_logic;
-   --SIM
-   SIM_MOD          : out   std_logic;
-   SIM_ENA          : out   std_logic;
-   SIM_CLK          : out   std_logic;
-   SIM_RST          : out   std_logic;
-   SIM_DIO          : inout std_logic;
-   --USB2 PHY
-   USB_D            : inout std_logic_vector(7 downto 0);
-   USB_CLK          : in    std_logic;
-   USB_NRST         : out   std_logic;
-   USB_26M          : out   std_logic;
-   USB_DIR          : in    std_logic;
-   USB_STP          : inout std_logic;
-   USB_NXT          : in    std_logic
+       -- NOT IMPLEMENTED START
+   --XODAC SPI
+   FPGA_SPI1_SCLK   : out   std_logic;
+   FPGA_SPI1_MOSI   : out   std_logic;
+   FPGA_SPI1_DAC_SS : out   std_logic;
+   --RPI related
+    --Placeholder inout direction
+   RPI_SYNC_OUT     : inout std_logic;
+   RPI_SPI1_SCLK    : inout std_logic;
+   RPI_SPI1_MOSI    : inout std_logic;
+   RPI_SPI1_MISO    : inout std_logic;
+   RPI_SYNC_SS1     : inout std_logic;
+   RPI_SYNC_SS2     : inout std_logic;
+
+   RPI_UART4_RX     : inout std_logic;
+   RPI_UART4_TX     : inout std_logic;
+
+   --Misc
+   FPGA_SYNC_OUT1   : out   std_logic;
+   FPGA_SYNC_OUT2   : out   std_logic;
+       --Placeholder inout direction
+   FPGA_DSW_BIT2    : inout std_logic
+        -- NOT IMPLEMENTED END
    );
 end entity LimeSDR_XTRX_top;
 
@@ -169,9 +188,8 @@ constant c_F2H_C0_WRUSEDW_WIDTH  : integer := FIFO_WORDS_TO_Nbits(g_FPGA2HOST_C0
 
 signal sys_clk             : std_logic;
 signal clk100              : std_logic;
-signal usb_clk_mmcm_locked : std_logic;
+signal clk100_mmcm_locked  : std_logic;
 signal global_rst_n        : std_logic;
-signal rx_switches         : std_logic_vector(1 downto 0);
 
 --pcie
 
@@ -258,9 +276,6 @@ signal      inst4_lms_reset                 : std_logic;
 
 signal      pps_internal                    : std_logic;
 
-signal      usb_serial_rx_o : std_logic;
-signal      usb_serial_tx_i : std_logic;
-
 signal uart_data_stream_in       : std_logic_vector(7 downto 0);
 signal uart_data_stream_in_stb   : std_logic;
 signal uart_data_stream_in_ack   : std_logic;
@@ -274,8 +289,6 @@ signal uart_data_stream_out_ack  : std_logic;
 --attribute KEEP of uart_data_stream_out: signal is "TRUE";
 --attribute KEEP of uart_data_stream_out_stb: signal is "TRUE";
 --attribute KEEP of uart_data_stream_out_ack: signal is "TRUE";
-
-signal usb_clk_g : std_logic;
 
 --attribute MARK_DEBUG : string;
 --attribute MARK_DEBUG of uart_data_stream_out: signal is "TRUE";
@@ -292,16 +305,11 @@ signal fpga_led1_int    : std_logic;
 signal fpga_led1_reg    : std_logic;
 signal fpga_led1_rising : std_logic;
 
-signal fpga_led1_sync_usb_clk : std_logic_vector(1 downto 0);
-
 type t_ARRAY_10x8b is array (0 to 11) of std_logic_vector(7 downto 0);
 
 constant c_ASCII_ARRAY : t_ARRAY_10x8b := (x"30", x"31", x"32", x"33", x"34", x"35", x"36", x"37", x"38", x"39", x"0D", x"0A");
 
 signal ascii_cnt : unsigned(3 downto 0);
-
-signal usb_reset_out : std_logic;
---attribute MARK_DEBUG of usb_reset_out: signal is "TRUE";
 
 signal iiena_valid   : std_logic;
 signal iiena_en      : std_logic_vector(7 downto 0);
@@ -326,29 +334,7 @@ signal vtcxo_data_stream_out     : std_logic_vector(7 downto 0);
 signal vtcxo_data_stream_out_stb : std_logic;
 signal vtcxo_data_stream_out_ack : std_logic;
 
-signal usb_serial_top_UART0_TX   : std_logic;
 signal tst_top_GNSS_UART_TX      : std_logic;
-
-
-component usb_serial is 
-generic (
-    BAUDRATE         : integer := 9600
-);
-port(
-    -- Serial
-    uart_rx_o : out std_logic;
-    uart_tx_i : in  std_logic;
-
-    --ULPI Interface
-    ulpi_reset_o        : out std_logic;
-    ulpi_data_io        : inout std_logic_vector(7 downto 0);
-    ulpi_stp_o          : out std_logic;
-    ulpi_nxt_i          : in std_logic;
-    ulpi_dir_i          : in std_logic;
-    ulpi_clk60_i        : in std_logic;
-    reset_out           : out std_logic
-);
-end component;
 
 
 begin
@@ -464,10 +450,8 @@ begin
       fpga_cfg_qspi_MISO         => FPGA_CFG_D(1),--FPGA_CFG_MISO,
       fpga_cfg_qspi_SS_n         => FPGA_CFG_CS,--FPGA_CFG_CS,     
       -- I2C
-      i2c_1_scl                  => FPGA_I2C1_SCL,
-      i2c_1_sda                  => FPGA_I2C1_SDA,
-      i2c_2_scl                  => FPGA_I2C_SCL,
-      i2c_2_sda                  => FPGA_I2C_SDA,
+      i2c_1_scl                  => FPGA_I2C_SCL,
+      i2c_1_sda                  => FPGA_I2C_SDA,
       -- Genral purpose I/O
       gpi                        => "00000000",--"0000" & FPGA_SW,
       gpo                        => open,--inst0_gpo, 
@@ -506,8 +490,8 @@ begin
    );
    
    -- Connect HW_VER and BOM_VER to fpgacfg registers
-   inst1_to_fpgacfg.HW_VER    <= '0' & HW_VER;
-   inst1_to_fpgacfg.BOM_VER   <= '0' & BOM_VER; 
+   inst1_to_fpgacfg.HW_VER    <= HW_VER;
+   inst1_to_fpgacfg.BOM_VER   <= BOM_VER;
    inst1_to_fpgacfg.PWR_SRC   <= '0';
    
    inst1_spi_0_MISO  <= FPGA_SPI_MISO;
@@ -710,8 +694,8 @@ begin
    
    
    LMS_RESET <= inst4_lms_reset and inst1_from_fpgacfg.LMS_RST;--inst1_lms_reset_cpu; -- reset is active low, so any module can reset the LMS
-   en_tcxo    <= inst1_from_fpgacfg.TCXO_EN;--'1'; --tcxo enabled
-   ext_clk    <= inst1_from_fpgacfg.EXT_CLK;--'0'; --internal clock used
+   -- en_tcxo    <= inst1_from_fpgacfg.TCXO_EN;--'1'; --tcxo enabled
+   -- ext_clk    <= inst1_from_fpgacfg.EXT_CLK;--'0'; --internal clock used
 
    LMS_CORE_LDO_EN <= inst1_from_fpgacfg.CORE_LDO_EN;
    
@@ -719,25 +703,24 @@ begin
 -- tdd_control instance.
 -- Simple module for TDD signal control
 -- ----------------------------------------------------------------------------    
-    inst5_tdd_control : entity work.tdd_control
-      port map (
-                MANUAL_VALUE       => inst1_from_fpgacfg.tdd_manual,
-                AUTO_ENABLE        => inst1_from_fpgacfg.tdd_auto_en,
-                AUTO_IN            => inst4_txant_en,
-                AUTO_INVERT        => inst1_from_fpgacfg.tdd_invert,
-                --
-                RX_RF_SW_IN        => inst1_from_fpgacfg.rx_rf_sw,
-                TX_RF_SW_IN        => inst1_from_fpgacfg.tx_rf_sw,
-                RF_SW_AUTO_ENANBLE => inst1_from_fpgacfg.rf_sw_auto_en,
-                --
-                TDD_OUT            => TDD_GPIO3_N, --This GPIO is used for TDD control
-                RX_RF_SW_OUT       => rx_switches,
-                TX_RF_SW_OUT       => TX_SW
-   );
-   
-   RX_SW3       <= rx_switches(0);
-   RX_SW2       <= rx_switches(1);
-   EN_GPIO      <= inst1_from_periphcfg.PERIPH_EN(2);
+--     inst5_tdd_control : entity work.tdd_control
+--       port map (
+--                 MANUAL_VALUE       => inst1_from_fpgacfg.tdd_manual,
+--                 AUTO_ENABLE        => inst1_from_fpgacfg.tdd_auto_en,
+--                 AUTO_IN            => inst4_txant_en,
+--                 AUTO_INVERT        => inst1_from_fpgacfg.tdd_invert,
+--                 --
+--                 RX_RF_SW_IN        => inst1_from_fpgacfg.rx_rf_sw,
+--                 TX_RF_SW_IN        => inst1_from_fpgacfg.tx_rf_sw,
+--                 RF_SW_AUTO_ENANBLE => inst1_from_fpgacfg.rf_sw_auto_en,
+--                 --
+--                 TDD_OUT            => TDD_GPIO3_N, --This GPIO is used for TDD control
+--                 RX_RF_SW_OUT       => rx_switches,
+--                 TX_RF_SW_OUT       => TX_SW
+--    );
+--
+--    RX_SW3       <= rx_switches(0);
+--    RX_SW2       <= rx_switches(1);
    
    
    
@@ -745,74 +728,35 @@ begin
 -- tst_top instance.
 -- Clock test logic
 -- ----------------------------------------------------------------------------
-   inst6_tst_top : entity work.tst_top
-   port map(
-      --input ports 
-      sys_clk           => sys_clk,
-      CLK100            => clk100,
-      reset_n           => global_rst_n,    
-      LMS_TX_CLK        => FPGA_CLK,
-      
-      GNSS_UART_RX      => GNSS_RXD,
-      GNSS_UART_TX      => tst_top_GNSS_UART_TX,
+--    inst6_tst_top : entity work.tst_top
+--    port map(
+--       --input ports
+--       sys_clk           => sys_clk,
+--       CLK100            => clk100,
+--       reset_n           => global_rst_n,
+--       LMS_TX_CLK        => FPGA_CLK,
+--
+--       GNSS_UART_RX      => GNSS_RXD,
+--       GNSS_UART_TX      => tst_top_GNSS_UART_TX,
+--
+--       -- To configuration memory
+--       to_tstcfg         => inst1_to_tstcfg,
+--       from_tstcfg       => inst1_from_tstcfg
+--    );
    
-      -- To configuration memory
-      to_tstcfg         => inst1_to_tstcfg,
-      from_tstcfg       => inst1_from_tstcfg
-   );
-   
-   GNSS_HW_S <= inst1_from_periphcfg.PERIPH_EN(0);
+--   GNSS_HW_S <= inst1_from_periphcfg.PERIPH_EN(0);
    --GNSS_HW_S <= '1';
    --GNSS_HW_R <= '1';
-   GNSS_HW_R <= inst1_from_periphcfg.PERIPH_EN(1);
+   -- GNSS_HW_R <= inst1_from_periphcfg.PERIPH_EN(1);
 
-
-  usb_clk_mmcm_inst : entity work.usb_clk_mmcm
+  clk100_gen_mmcm_inst : entity work.clk100_gen_mmcm
    port map (
       clk_in1  => sys_clk,
-      resetn   => global_rst_n,
-      clk_out1 => USB_26M,
-      clk_out2 => clk100,
-      locked   => usb_clk_mmcm_locked
+      reset    => not global_rst_n,
+      clk_out1 => clk100,
+      locked   => clk100_mmcm_locked
    );
    
-   BUFG_inst : BUFG
-   port map (
-      O => usb_clk_g, -- 1-bit output: Clock output
-      I => USB_CLK  -- 1-bit input: Clock input
-   );
-
-   usb_serial_top_inst : entity work.usb_serial_top
-      generic map(
-         G_UART_BAUDRATE   => 9600
-     )
-      port map(
-         CLK100         => clk100,
-         RESET_N        => usb_clk_mmcm_locked,
-         --USB to serial ULPI interface
-         USB_NRST       => USB_NRST,
-         USB_D          => USB_D,
-         USB_STP        => USB_STP,
-         USB_NXT        => USB_NXT,
-         USB_DIR        => USB_DIR,
-         USB_CLK        => usb_clk_g,
-         -- UART0 serial    
-         UART0_RX       => GNSS_RXD,
-         UART0_TX       => usb_serial_top_UART0_TX,
-         -- UART1 serial with internal data interface 
-         UART1_DATA_STREAM_IN       => vtcxo_data_stream_out,    
-         UART1_DATA_STREAM_IN_STB   => vtcxo_data_stream_out_stb,
-         UART1_DATA_STREAM_IN_ACK   => vtcxo_data_stream_out_ack,
-         -- UART1 serial with internal data interface 
-         UART1_DATA_STREAM_OUT      => vtcxo_data_stream_in    ,
-         UART1_DATA_STREAM_OUT_STB  => vtcxo_data_stream_in_stb,
-         UART1_DATA_STREAM_OUT_ACK  => vtcxo_data_stream_in_ack
-      );
-
-
-      GNSS_TXD <= usb_serial_top_UART0_TX when inst1_from_periphcfg.PERIPH_SEL(0)='1' else 
-                  tst_top_GNSS_UART_TX;
-
       -- GNSS_TXD <= tst_top_GNSS_UART_TX;
 
 -- ----------------------------------------------------------------------------
@@ -824,7 +768,7 @@ begin
          tune_ref                      => pps_internal,
          vctcxo_clock                  => FPGA_CLK,
          CLK100                        => clk100,
-         RESET_N                       => usb_clk_mmcm_locked,
+         RESET_N                       => clk100_mmcm_locked,
 
          uart_data_stream_in           => vtcxo_data_stream_in    ,  
          uart_data_stream_in_stb       => vtcxo_data_stream_in_stb,
@@ -839,25 +783,25 @@ begin
 -- LED control module
 -- 
 -- ---------------------------------------------------------------------------- 
-   inst7_led_ctrl : entity work.led_ctrl
-   port map(
-   CLK1 => FPGA_CLK,
-   CLK2 => sys_clk, 
-   LED1 => FPGA_LED1,
-   LED2 => FPGA_LED2
-   );
+--    inst7_led_ctrl : entity work.led_ctrl
+--    port map(PPSO_GPIO2
+--    CLK1 => FPGA_CLK,
+--    CLK2 => sys_clk,
+--    LED1 => open,--FPGA_LED1,
+--    LED2 => open --FPGA_LED2
+--    );
 -- ----------------------------------------------------------------------------
 -- GPIOs
 -- 
 -- ----------------------------------------------------------------------------
 -- PPSO_GPIO2 is overriden by user and set to High Z by default. 
 -- To pass trough GNSS_1PPS: set 0x00C0(1) to '0'.
-   PPSO_GPIO2 <=  pps_internal                           when inst1_from_periphcfg.BOARD_GPIO_OVRD(1) = '0' else  
-                  inst1_from_periphcfg.BOARD_GPIO_VAL(1) when inst1_from_periphcfg.BOARD_GPIO_DIR(1)= '1' else 
-                  'Z';
+--    PPSO_GPIO2 <=  pps_internal                           when inst1_from_periphcfg.BOARD_GPIO_OVRD(1) = '0' else
+--                   inst1_from_periphcfg.BOARD_GPIO_VAL(1) when inst1_from_periphcfg.BOARD_GPIO_DIR(1)= '1' else
+--                   'Z';
                
 -- Option to select pps between GPS and externaly connected PPS
-   pps_internal <= PPSI_GPIO1 when inst1_from_periphcfg.PERIPH_INPUT_SEL_0(1 downto 0) = "01" else GNSS_1PPS;
+--    pps_internal <= PPSI_GPIO1 when inst1_from_periphcfg.PERIPH_INPUT_SEL_0(1 downto 0) = "01" else GNSS_1PPS;
 
 
 end architecture Structural;

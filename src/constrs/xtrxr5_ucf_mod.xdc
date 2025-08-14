@@ -17,7 +17,6 @@ set_false_path -from [get_ports PERST]
 
 
 # CLOCKS
-create_clock -period 16.000 -name usb_phy_clk [get_ports USB_CLK]
 create_clock -name cfg_mclk -period 12  [get_nets inst0_xtrx_top/cfg_mclk]
 create_clock -period 8.000 -name sys_clk [get_ports PCI_REF_CLK_p]
 create_clock -period 38.460 -name FPGA_CLK [get_ports FPGA_CLK]
@@ -62,148 +61,130 @@ set_property PACKAGE_PIN B6 [get_ports PCI_EXP_RXP[0]]
 set_property PACKAGE_PIN A2 [get_ports PCI_EXP_TXN[0]]
 set_property PACKAGE_PIN B2 [get_ports PCI_EXP_TXP[0]]
 
-set_property PACKAGE_PIN V7 [get_ports PCIE_RESERVED]
-set_property IOSTANDARD LVCMOS33 [get_ports PCIE_RESERVED]
-
-set_property PACKAGE_PIN W3 [get_ports PCIE_W_DISABLE2]
-set_property IOSTANDARD LVCMOS33 [get_ports PCIE_W_DISABLE2]
-
-
 ##########################################################
-# USB PHY (1.8-3.3V) (BANK 16)
+# GPS module (BANK16)
 ##########################################################
-set_property IOSTANDARD LVCMOS33 [get_ports {{USB_D[*]} USB_CLK USB_DIR USB_STP USB_NXT}]
+set_property IOSTANDARD LVCMOS33 [get_ports GNSS_EXTINT ]
+set_property IOSTANDARD LVCMOS33 [get_ports GNSS_RESET  ]
+set_property IOSTANDARD LVCMOS33 [get_ports GNSS_UART_TX]
+set_property IOSTANDARD LVCMOS33 [get_ports GNSS_UART_RX]
+set_property IOSTANDARD LVCMOS33 [get_ports GNSS_DDC_SCL]
+set_property IOSTANDARD LVCMOS33 [get_ports GNSS_DDC_SDA]
+set_property IOSTANDARD LVCMOS33 [get_ports GNSS_TPULSE ]
 
-set_property PACKAGE_PIN A14 [get_ports {USB_D[6]}]
-set_property PACKAGE_PIN A15 [get_ports {USB_D[5]}]
-set_property PACKAGE_PIN C15 [get_ports {USB_D[7]}]
-set_property PACKAGE_PIN B15 [get_ports {USB_D[4]}]
-set_property PACKAGE_PIN A16 [get_ports {USB_D[3]}]
-set_property PACKAGE_PIN A17 [get_ports {USB_D[1]}]
-set_property PACKAGE_PIN C16 [get_ports USB_CLK]
-set_property PACKAGE_PIN B16 [get_ports {USB_D[2]}]
-set_property PACKAGE_PIN C17 [get_ports USB_STP]
-set_property PACKAGE_PIN B17 [get_ports {USB_D[0]}]
-set_property PACKAGE_PIN B18 [get_ports USB_DIR]
-set_property PACKAGE_PIN A18 [get_ports USB_NXT]
-
-# (BANK14)
-set_property IOSTANDARD LVCMOS33 [get_ports USB_NRST]
-set_property IOSTANDARD LVCMOS33 [get_ports USB_26M]
-
-set_property PACKAGE_PIN M18 [get_ports USB_NRST]
-set_property PACKAGE_PIN E19 [get_ports USB_26M]
-
-set_property PULLUP true [get_ports USB_STP]
-set_property PULLDOWN true [get_ports USB_NRST]
-
-
-##########################################################
-# GPS module (BANK35)
-##########################################################
-set_property IOSTANDARD LVCMOS33 [get_ports GNSS_1PPS]
-set_property IOSTANDARD LVCMOS33 [get_ports GNSS_TXD]
-set_property IOSTANDARD LVCMOS33 [get_ports GNSS_RXD]
-
-set_property PULLDOWN true [get_ports GNSS_1PPS]
-set_property PULLUP true [get_ports GNSS_TXD]
-set_property PULLUP true [get_ports GNSS_RXD]
-
-set_property PACKAGE_PIN P3 [get_ports GNSS_1PPS]
-set_property PACKAGE_PIN N2 [get_ports GNSS_TXD]
-set_property PACKAGE_PIN L1 [get_ports GNSS_RXD]
-
-
-##########################################################
-# GPIO (BANK35)
-##########################################################
-# gpio1  - 1pps_i (sync in)
-# gpio2  - 1pps_o (sync out)
-# gpio3  - TDD_P
-# gpio4  - TDD_N
-# gpio5  - LED_WWAN
-# gpio6  - LED_WLAN
-# gpio7  - LED_WPAN
-# gpio8  - general (smb_data)
-# gpio9  - G9_P
-# gpio10 - G9_N
-# gpio11 - G11_P
-# gpio12 - G11_N
-
-
-set_property IOSTANDARD LVCMOS33 [get_ports PPSI_GPIO1 ]
-set_property IOSTANDARD LVCMOS33 [get_ports PPSO_GPIO2 ]
-set_property IOSTANDARD LVCMOS33 [get_ports TDD_GPIO3_P ]
-set_property IOSTANDARD LVCMOS33 [get_ports TDD_GPIO3_N ]
-set_property IOSTANDARD LVCMOS33 [get_ports LED_WWAN_GPIO5 ]
-set_property IOSTANDARD LVCMOS33 [get_ports LED_WLAN_GPIO6 ]
-set_property IOSTANDARD LVCMOS33 [get_ports LED_WPAN_GPIO7 ]
-set_property IOSTANDARD LVCMOS33 [get_ports GPIO8 ]
-set_property IOSTANDARD LVCMOS33 [get_ports GPIO9_P ]
-set_property IOSTANDARD LVCMOS33 [get_ports GPIO9_N ]
-set_property IOSTANDARD LVCMOS33 [get_ports GPIO11_P ]
-set_property IOSTANDARD LVCMOS33 [get_ports GPIO11_N ]
-
-
-
-set_property PACKAGE_PIN M3 [get_ports PPSI_GPIO1]
-set_property PACKAGE_PIN L3 [get_ports PPSO_GPIO2]
-set_property PACKAGE_PIN H2 [get_ports TDD_GPIO3_P]
-set_property PACKAGE_PIN J2 [get_ports TDD_GPIO3_N]
-set_property PACKAGE_PIN G3 [get_ports LED_WWAN_GPIO5]
-set_property PACKAGE_PIN M2 [get_ports LED_WLAN_GPIO6]
-set_property PACKAGE_PIN G2 [get_ports LED_WPAN_GPIO7]
-set_property PACKAGE_PIN N3 [get_ports GPIO8]
-set_property PACKAGE_PIN H1 [get_ports GPIO9_P]
-set_property PACKAGE_PIN J1 [get_ports GPIO9_N]
-set_property PACKAGE_PIN K2 [get_ports GPIO11_P]
-set_property PACKAGE_PIN L2 [get_ports GPIO11_N]
+set_property PACKAGE_PIN A14 [get_ports GNSS_EXTINT ]
+set_property PACKAGE_PIN A15 [get_ports GNSS_RESET  ]
+set_property PACKAGE_PIN C15 [get_ports GNSS_UART_TX]
+set_property PACKAGE_PIN B15 [get_ports GNSS_UART_RX]
+set_property PACKAGE_PIN A16 [get_ports GNSS_DDC_SCL]
+set_property PACKAGE_PIN A17 [get_ports GNSS_DDC_SDA]
+set_property PACKAGE_PIN C16 [get_ports GNSS_TPULSE ]
 
 ##########################################################
 # MISC
 ##########################################################
-
+set_property PACKAGE_PIN T17 [get_ports FPGA_SYNC_OUT1]
+set_property PACKAGE_PIN U18 [get_ports FPGA_SYNC_OUT2]
 set_property PACKAGE_PIN J18 [get_ports BOM_VER[0]]
 set_property PACKAGE_PIN T18 [get_ports BOM_VER[1]]
 set_property PACKAGE_PIN V14 [get_ports BOM_VER[2]]
+set_property PACKAGE_PIN V7  [get_ports BOM_VER[3]]
 set_property PACKAGE_PIN V13 [get_ports HW_VER[0]]
-set_property PACKAGE_PIN P18 [get_ports HW_VER[1]]
+set_property PACKAGE_PIN E19 [get_ports HW_VER[1]]
 set_property PACKAGE_PIN K18 [get_ports HW_VER[2]]
+set_property PACKAGE_PIN D17 [get_ports HW_VER[3]]
+set_property PACKAGE_PIN L18 [get_ports FPGA_GPIO[0]]
+set_property PACKAGE_PIN N18 [get_ports FPGA_GPIO[1]]
+set_property PACKAGE_PIN V19 [get_ports FPGA_GPIO[2]]
+set_property PACKAGE_PIN V17 [get_ports FPGA_GPIO[3]]
+set_property PACKAGE_PIN W3  [get_ports FPGA_DSW_BIT2]
 
+
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_SYNC_OUT1]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_SYNC_OUT2]
 set_property IOSTANDARD LVCMOS33 [get_ports BOM_VER[0]]
 set_property IOSTANDARD LVCMOS33 [get_ports BOM_VER[1]]
 set_property IOSTANDARD LVCMOS33 [get_ports BOM_VER[2]]
+set_property IOSTANDARD LVCMOS33 [get_ports BOM_VER[3]]
 set_property IOSTANDARD LVCMOS33 [get_ports HW_VER[0]]
 set_property IOSTANDARD LVCMOS33 [get_ports HW_VER[1]]
 set_property IOSTANDARD LVCMOS33 [get_ports HW_VER[2]]
+set_property IOSTANDARD LVCMOS33 [get_ports HW_VER[3]]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_GPIO[0]]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_GPIO[1]]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_GPIO[2]]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_GPIO[3]]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_DSW_BIT2]
 
 ##########################################################
-# SKY13330 & SKY13384 switches (3.3V devided to 2.5V)
+# XO DAC SPI
 ##########################################################
-set_property IOSTANDARD LVCMOS33 [get_ports TX_SW]
-set_property IOSTANDARD LVCMOS33 [get_ports RX_SW3]
-set_property IOSTANDARD LVCMOS33 [get_ports RX_SW2]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_SPI1_SCLK]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_SPI1_MOSI]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_SPI1_DAC_SS]
 
-set_property PACKAGE_PIN P1 [get_ports TX_SW]
-set_property PACKAGE_PIN K3 [get_ports RX_SW3]
-set_property PACKAGE_PIN J3 [get_ports RX_SW2]
-
-set_property PULLUP true [get_ports TX_SW]
-set_property PULLUP true [get_ports RX_SW3]
-set_property PULLUP true [get_ports RX_SW2]
+set_property PACKAGE_PIN R2 [get_ports FPGA_SPI1_SCLK]
+set_property PACKAGE_PIN T2 [get_ports FPGA_SPI1_MOSI]
+set_property PACKAGE_PIN R3 [get_ports FPGA_SPI1_DAC_SS]
 
 ##########################################################
-# BANK35 I2C BUS #1 (3.3V)
+# TDD Switch
 ##########################################################
-set_property IOSTANDARD LVCMOS33 [get_ports FPGA_I2C1_SDA]
-set_property IOSTANDARD LVCMOS33 [get_ports FPGA_I2C1_SCL]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_RF_SW_TDD]
 
-set_property PULLUP true [get_ports FPGA_I2C1_SDA]
-set_property PULLUP true [get_ports FPGA_I2C1_SCL]
+set_property PACKAGE_PIN U15 [get_ports FPGA_RF_SW_TDD]
 
-set_property PACKAGE_PIN N1 [get_ports FPGA_I2C1_SDA]
-set_property PACKAGE_PIN M1 [get_ports FPGA_I2C1_SCL]
+##########################################################
+# RF Control
+##########################################################
+set_property IOSTANDARD LVCMOS18 [get_ports RX1_RF_SCLK   ]
+set_property IOSTANDARD LVCMOS18 [get_ports RX1_RF_SDATA  ]
+set_property IOSTANDARD LVCMOS18 [get_ports TRX1_RF_SCLK  ]
+set_property IOSTANDARD LVCMOS18 [get_ports TRX1_RF_SDATA ]
+set_property IOSTANDARD LVCMOS18 [get_ports TRX1_ANT_SCLK ]
+set_property IOSTANDARD LVCMOS18 [get_ports TRX1_ANT_SDATA]
+set_property IOSTANDARD LVCMOS18 [get_ports RX2_RF_SCLK   ]
+set_property IOSTANDARD LVCMOS18 [get_ports RX2_RF_SDATA  ]
+set_property IOSTANDARD LVCMOS18 [get_ports TRX2_RF_SCLK  ]
+set_property IOSTANDARD LVCMOS18 [get_ports TRX2_RF_SDATA ]
+set_property IOSTANDARD LVCMOS18 [get_ports TRX2_ANT_SCLK ]
+set_property IOSTANDARD LVCMOS18 [get_ports TRX2_ANT_SDATA]
 
+set_property PACKAGE_PIN G3 [get_ports RX1_RF_SCLK   ]
+set_property PACKAGE_PIN G2 [get_ports RX1_RF_SDATA  ]
+set_property PACKAGE_PIN H2 [get_ports TRX1_RF_SCLK  ]
+set_property PACKAGE_PIN J2 [get_ports TRX1_RF_SDATA ]
+set_property PACKAGE_PIN H1 [get_ports TRX1_ANT_SCLK ]
+set_property PACKAGE_PIN J1 [get_ports TRX1_ANT_SDATA]
+set_property PACKAGE_PIN K2 [get_ports RX2_RF_SCLK   ]
+set_property PACKAGE_PIN L2 [get_ports RX2_RF_SDATA  ]
+set_property PACKAGE_PIN L1 [get_ports TRX2_RF_SCLK  ]
+set_property PACKAGE_PIN J3 [get_ports TRX2_RF_SDATA ]
+set_property PACKAGE_PIN K3 [get_ports TRX2_ANT_SCLK ]
+set_property PACKAGE_PIN L3 [get_ports TRX2_ANT_SDATA]
+
+
+##########################################################
+# M.2 Signals
+##########################################################
+set_property IOSTANDARD LVCMOS18 [get_ports M2_DEVSLP     ]
+set_property IOSTANDARD LVCMOS18 [get_ports M2_COEX1      ]
+set_property IOSTANDARD LVCMOS18 [get_ports M2_COEX2      ]
+set_property IOSTANDARD LVCMOS18 [get_ports M2_COEX3      ]
+set_property IOSTANDARD LVCMOS18 [get_ports M2_W_DISABLE_2]
+set_property IOSTANDARD LVCMOS18 [get_ports M2_DPR        ]
+set_property IOSTANDARD LVCMOS18 [get_ports M2_RESET      ]
+set_property IOSTANDARD LVCMOS18 [get_ports M2_FCP_OFF    ]
+
+
+set_property PACKAGE_PIN M3 [get_ports M2_DEVSLP     ]
+set_property PACKAGE_PIN M2 [get_ports M2_COEX1      ]
+set_property PACKAGE_PIN M1 [get_ports M2_COEX2      ]
+set_property PACKAGE_PIN N2 [get_ports M2_COEX3      ]
+set_property PACKAGE_PIN N1 [get_ports M2_W_DISABLE_2]
+set_property PACKAGE_PIN N3 [get_ports M2_DPR        ]
+set_property PACKAGE_PIN P3 [get_ports M2_RESET      ]
+set_property PACKAGE_PIN P1 [get_ports M2_FCP_OFF    ]
 
 ##########################################################
 # FPGA FLASH N25Q256 (1.8-3.3V) BANK14
@@ -219,57 +200,48 @@ set_property PACKAGE_PIN K19 [get_ports FPGA_CFG_CS]
 
 # AUX signals
 set_property IOSTANDARD LVCMOS33 [get_ports FPGA_CLK]
-set_property IOSTANDARD LVCMOS33 [get_ports EN_TCXO]
-set_property IOSTANDARD LVCMOS33 [get_ports EXT_CLK]
-set_property IOSTANDARD LVCMOS33 [get_ports FPGA_LED1]
-set_property IOSTANDARD LVCMOS33 [get_ports GPIO13]
-set_property IOSTANDARD LVCMOS33 [get_ports GNSS_HW_S]
-set_property IOSTANDARD LVCMOS33 [get_ports GNSS_HW_R]
-set_property IOSTANDARD LVCMOS33 [get_ports GNSS_FIX]
-set_property IOSTANDARD LVCMOS33 [get_ports FPGA_LED2]
-set_property IOSTANDARD LVCMOS33 [get_ports EN_GPIO]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_LED_R]
+set_property IOSTANDARD LVCMOS33 [get_ports FPGA_LED_G]
 
 set_property PACKAGE_PIN N17 [get_ports FPGA_CLK]
-set_property PACKAGE_PIN R19 [get_ports EN_TCXO]
-set_property PACKAGE_PIN V17 [get_ports EXT_CLK]
-set_property PACKAGE_PIN N18 [get_ports FPGA_LED1]
-set_property PACKAGE_PIN T17 [get_ports GPIO13]
-set_property PACKAGE_PIN L18 [get_ports GNSS_HW_S]
-set_property PACKAGE_PIN U18 [get_ports GNSS_HW_R]
-set_property PACKAGE_PIN R18 [get_ports GNSS_FIX]
-set_property PACKAGE_PIN V19 [get_ports FPGA_LED2]
-set_property PACKAGE_PIN D17 [get_ports EN_GPIO]
+set_property PACKAGE_PIN R18 [get_ports FPGA_LED_R]
+set_property PACKAGE_PIN U14 [get_ports FPGA_LED_G]
 
 
 set_property PULLDOWN true [get_ports FPGA_CLK]
-set_property PULLUP true [get_ports EN_TCXO]
-set_property PULLDOWN true [get_ports EXT_CLK]
+
+######################################################
+# RPI Related
+######################################################
+set_property IOSTANDARD LVCMOS33 [get_ports RPI_SYNC_OUT ]
+set_property IOSTANDARD LVCMOS33 [get_ports RPI_SPI1_SCLK]
+set_property IOSTANDARD LVCMOS33 [get_ports RPI_SPI1_MOSI]
+set_property IOSTANDARD LVCMOS33 [get_ports RPI_SPI1_MISO]
+set_property IOSTANDARD LVCMOS33 [get_ports RPI_SYNC_SS1 ]
+set_property IOSTANDARD LVCMOS33 [get_ports RPI_SYNC_SS2 ]
+set_property IOSTANDARD LVCMOS33 [get_ports RPI_UART4_RX ]
+set_property IOSTANDARD LVCMOS33 [get_ports RPI_UART4_TX ]
 
 
+set_property PACKAGE_PIN P18 [get_ports RPI_SYNC_OUT ]
+set_property PACKAGE_PIN B16 [get_ports RPI_SPI1_SCLK]
+set_property PACKAGE_PIN C17 [get_ports RPI_SPI1_MOSI]
+set_property PACKAGE_PIN B17 [get_ports RPI_SPI1_MISO]
+set_property PACKAGE_PIN B18 [get_ports RPI_SYNC_SS1 ]
+set_property PACKAGE_PIN A18 [get_ports RPI_SYNC_SS2 ]
+set_property PACKAGE_PIN T1  [get_ports RPI_UART4_RX ]
+set_property PACKAGE_PIN U1  [get_ports RPI_UART4_TX ]
 
-# I2C BUS #2
+
+# I2C BUS (Slave)
 set_property IOSTANDARD LVCMOS33 [get_ports FPGA_I2C_SDA]
 set_property IOSTANDARD LVCMOS33 [get_ports FPGA_I2C_SCL]
 
-set_property PACKAGE_PIN U15 [get_ports FPGA_I2C_SDA]
-set_property PACKAGE_PIN U14 [get_ports FPGA_I2C_SCL]
+set_property PACKAGE_PIN M18 [get_ports FPGA_I2C_SDA]
+set_property PACKAGE_PIN R19 [get_ports FPGA_I2C_SCL]
 
 set_property PULLUP true [get_ports FPGA_I2C_SDA]
 set_property PULLUP true [get_ports FPGA_I2C_SCL]
-
-
-# SIM card (1.8V) BANK 34
-set_property IOSTANDARD LVCMOS33 [get_ports SIM_MOD]
-set_property IOSTANDARD LVCMOS33 [get_ports SIM_ENA]
-set_property IOSTANDARD LVCMOS33 [get_ports SIM_CLK]
-set_property IOSTANDARD LVCMOS33 [get_ports SIM_RST]
-set_property IOSTANDARD LVCMOS33 [get_ports SIM_DIO]
-
-set_property PACKAGE_PIN R3 [get_ports SIM_MOD]
-set_property PACKAGE_PIN U1 [get_ports SIM_ENA]
-set_property PACKAGE_PIN T1 [get_ports SIM_CLK]
-set_property PACKAGE_PIN R2 [get_ports SIM_RST]
-set_property PACKAGE_PIN T2 [get_ports SIM_DIO]
 
 ######################################################
 # LMS7002M Pinout

@@ -61,13 +61,9 @@ entity CPU_TOP is
       SPI_0_SS_N            : out   std_logic_vector(1 downto 0);                     --! Slave Select, active low [0] - internal registers, [1] - LMS7002 @end
 
       ---- I2C
-      --! @virtualbus I2C_1 @dir out I2C interface 1, used for Temperature sensor, XO DAC, Switching voltage regulator 1 (IC22) 
+      --! @virtualbus I2C_1 @dir out I2C interface 1 (Slave) 
       I2C_1_SCL             : inout std_logic;                                        --! Clock signal
       I2C_1_SDA             : inout std_logic;                                        --! Data signal @end
-
-      --! @virtualbus I2C_2 @dir out I2C interface 2, used for Switching voltage regulator 2 (IC31)
-      I2C_2_SCL             : inout std_logic;                                        --! Clock signal
-      I2C_2_SDA             : inout std_logic;                                        --! Data signal @end
 
       ---- Configuration Flash SPI
       --! @virtualbus FPGA_CFG @dir out SPI interface for configuration flash
@@ -146,10 +142,6 @@ architecture ARCH of CPU_TOP is
    signal inst0_i2c_1_scl_t              : std_logic;
    signal inst0_i2c_1_sda_o              : std_logic;
    signal inst0_i2c_1_sda_t              : std_logic;
-   signal inst0_i2c_2_scl_o              : std_logic;
-   signal inst0_i2c_2_scl_t              : std_logic;
-   signal inst0_i2c_2_sda_o              : std_logic;
-   signal inst0_i2c_2_sda_t              : std_logic;
 
    signal inst0_fpga_spi0_miso           : std_logic;
    signal inst0_dac_spi1_ss_n            : std_logic;
@@ -210,12 +202,6 @@ architecture ARCH of CPU_TOP is
          I2C_1_SDA_I                : in    std_logic;
          I2C_1_SDA_O                : out   std_logic;
          I2C_1_SDA_T                : out   std_logic;
-         I2C_2_SCL_I                : in    std_logic;
-         I2C_2_SCL_O                : out   std_logic;
-         I2C_2_SCL_T                : out   std_logic;
-         I2C_2_SDA_I                : in    std_logic;
-         I2C_2_SDA_O                : out   std_logic;
-         I2C_2_SDA_T                : out   std_logic;
          SERIAL_IN_tri_i            : in    std_logic_vector(31 downto 0);
          PLL_LOCKED_TRI_I           : in    std_logic_vector(1 downto 0):="11";
          PLL_RST_TRI_O              : out   std_logic_vector( 1 downto 0);
@@ -344,13 +330,6 @@ begin
          I2C_1_SDA_I => I2C_1_SDA,
          I2C_1_SDA_O => inst0_i2c_1_sda_o,
          I2C_1_SDA_T => inst0_i2c_1_sda_t,
-         --
-         I2C_2_SCL_I => I2C_2_SCL,
-         I2C_2_SCL_O => inst0_i2c_2_scl_o,
-         I2C_2_SCL_T => inst0_i2c_2_scl_t,
-         I2C_2_SDA_I => I2C_2_SDA,
-         I2C_2_SDA_O => inst0_i2c_2_sda_o,
-         I2C_2_SDA_T => inst0_i2c_2_sda_t,
          --
          SERIAL_IN_tri_i   => efuseusr,
          --
@@ -487,10 +466,6 @@ begin
    I2C_1_SCL <= inst0_i2c_1_scl_o when inst0_i2c_1_scl_t = '0' else
                 'Z';
    I2C_1_SDA <= inst0_i2c_1_sda_o when inst0_i2c_1_sda_t = '0' else
-                'Z';
-   I2C_2_SCL <= inst0_i2c_2_scl_o when inst0_i2c_2_scl_t = '0' else
-                'Z';
-   I2C_2_SDA <= inst0_i2c_2_sda_o when inst0_i2c_2_sda_t = '0' else
                 'Z';
 
    vctcxo_tamer_0_ctrl_export(0) <= vctcxo_tune_en_sync;
