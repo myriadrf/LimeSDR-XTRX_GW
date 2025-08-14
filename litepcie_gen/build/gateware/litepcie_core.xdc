@@ -17,28 +17,16 @@ set_property LOC X [get_ports {pcie_clk_p}]
 set_property LOC X [get_ports {pcie_clk_n}]
 
 # pcie:0.rx_p
-set_property LOC X [get_ports {pcie_rx_p[0]}]
-
-# pcie:0.rx_p
-set_property LOC X [get_ports {pcie_rx_p[1]}]
+set_property LOC X [get_ports {pcie_rx_p}]
 
 # pcie:0.rx_n
-set_property LOC X [get_ports {pcie_rx_n[0]}]
-
-# pcie:0.rx_n
-set_property LOC X [get_ports {pcie_rx_n[1]}]
+set_property LOC X [get_ports {pcie_rx_n}]
 
 # pcie:0.tx_p
-set_property LOC X [get_ports {pcie_tx_p[0]}]
-
-# pcie:0.tx_p
-set_property LOC X [get_ports {pcie_tx_p[1]}]
+set_property LOC X [get_ports {pcie_tx_p}]
 
 # pcie:0.tx_n
-set_property LOC X [get_ports {pcie_tx_n[0]}]
-
-# pcie:0.tx_n
-set_property LOC X [get_ports {pcie_tx_n[1]}]
+set_property LOC X [get_ports {pcie_tx_n}]
 
 # cntrl:0.reader_data
 set_property LOC X [get_ports {cntrl_reader_data[0]}]
@@ -3121,797 +3109,803 @@ set_property LOC X [get_ports {cntrl_writer_valid}]
 # cntrl:0.enable
 set_property LOC X [get_ports {cntrl_enable}]
 
-# dma_writer:0.valid
-set_property LOC X [get_ports {dma_writer0_valid}]
+# dma0_status:0.writer_enable
+set_property LOC X [get_ports {dma0_status_writer_enable}]
 
-# dma_writer:0.ready
-set_property LOC X [get_ports {dma_writer0_ready}]
+# dma0_status:0.reader_enable
+set_property LOC X [get_ports {dma0_status_reader_enable}]
 
-# dma_writer:0.last
-set_property LOC X [get_ports {dma_writer0_last}]
+# dma0_writer_axi:0.tvalid
+set_property LOC X [get_ports {dma0_writer_axi_tvalid}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[0]}]
+# dma0_writer_axi:0.tready
+set_property LOC X [get_ports {dma0_writer_axi_tready}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[1]}]
+# dma0_writer_axi:0.tlast
+set_property LOC X [get_ports {dma0_writer_axi_tlast}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[2]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[0]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[3]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[1]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[4]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[2]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[5]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[3]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[6]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[4]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[7]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[5]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[8]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[6]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[9]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[7]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[10]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[8]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[11]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[9]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[12]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[10]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[13]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[11]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[14]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[12]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[15]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[13]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[16]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[14]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[17]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[15]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[18]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[16]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[19]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[17]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[20]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[18]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[21]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[19]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[22]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[20]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[23]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[21]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[24]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[22]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[25]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[23]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[26]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[24]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[27]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[25]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[28]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[26]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[29]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[27]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[30]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[28]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[31]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[29]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[32]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[30]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[33]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[31]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[34]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[32]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[35]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[33]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[36]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[34]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[37]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[35]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[38]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[36]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[39]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[37]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[40]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[38]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[41]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[39]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[42]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[40]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[43]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[41]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[44]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[42]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[45]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[43]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[46]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[44]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[47]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[45]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[48]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[46]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[49]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[47]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[50]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[48]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[51]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[49]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[52]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[50]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[53]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[51]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[54]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[52]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[55]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[53]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[56]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[54]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[57]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[55]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[58]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[56]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[59]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[57]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[60]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[58]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[61]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[59]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[62]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[60]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[63]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[61]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[64]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[62]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[65]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[63]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[66]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[64]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[67]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[65]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[68]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[66]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[69]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[67]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[70]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[68]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[71]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[69]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[72]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[70]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[73]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[71]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[74]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[72]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[75]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[73]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[76]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[74]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[77]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[75]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[78]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[76]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[79]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[77]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[80]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[78]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[81]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[79]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[82]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[80]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[83]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[81]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[84]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[82]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[85]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[83]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[86]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[84]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[87]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[85]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[88]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[86]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[89]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[87]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[90]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[88]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[91]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[89]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[92]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[90]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[93]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[91]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[94]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[92]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[95]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[93]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[96]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[94]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[97]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[95]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[98]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[96]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[99]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[97]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[100]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[98]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[101]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[99]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[102]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[100]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[103]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[101]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[104]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[102]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[105]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[103]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[106]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[104]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[107]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[105]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[108]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[106]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[109]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[107]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[110]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[108]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[111]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[109]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[112]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[110]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[113]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[111]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[114]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[112]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[115]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[113]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[116]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[114]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[117]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[115]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[118]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[116]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[119]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[117]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[120]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[118]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[121]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[119]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[122]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[120]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[123]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[121]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[124]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[122]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[125]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[123]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[126]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[124]}]
 
-# dma_writer:0.data
-set_property LOC X [get_ports {dma_writer0_data[127]}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[125]}]
 
-# dma_writer:0.enable
-set_property LOC X [get_ports {dma_writer0_enable}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[126]}]
 
-# dma_reader:0.valid
-set_property LOC X [get_ports {dma_reader0_valid}]
+# dma0_writer_axi:0.tdata
+set_property LOC X [get_ports {dma0_writer_axi_tdata[127]}]
 
-# dma_reader:0.ready
-set_property LOC X [get_ports {dma_reader0_ready}]
+# dma0_writer_axi:0.tuser
+set_property LOC X [get_ports {dma0_writer_axi_tuser}]
 
-# dma_reader:0.last
-set_property LOC X [get_ports {dma_reader0_last}]
+# dma0_reader_axi:0.tvalid
+set_property LOC X [get_ports {dma0_reader_axi_tvalid}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[0]}]
+# dma0_reader_axi:0.tready
+set_property LOC X [get_ports {dma0_reader_axi_tready}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[1]}]
+# dma0_reader_axi:0.tlast
+set_property LOC X [get_ports {dma0_reader_axi_tlast}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[2]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[0]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[3]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[1]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[4]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[2]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[5]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[3]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[6]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[4]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[7]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[5]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[8]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[6]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[9]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[7]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[10]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[8]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[11]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[9]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[12]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[10]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[13]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[11]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[14]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[12]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[15]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[13]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[16]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[14]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[17]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[15]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[18]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[16]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[19]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[17]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[20]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[18]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[21]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[19]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[22]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[20]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[23]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[21]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[24]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[22]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[25]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[23]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[26]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[24]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[27]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[25]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[28]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[26]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[29]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[27]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[30]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[28]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[31]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[29]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[32]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[30]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[33]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[31]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[34]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[32]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[35]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[33]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[36]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[34]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[37]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[35]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[38]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[36]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[39]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[37]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[40]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[38]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[41]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[39]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[42]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[40]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[43]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[41]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[44]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[42]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[45]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[43]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[46]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[44]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[47]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[45]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[48]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[46]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[49]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[47]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[50]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[48]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[51]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[49]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[52]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[50]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[53]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[51]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[54]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[52]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[55]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[53]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[56]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[54]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[57]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[55]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[58]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[56]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[59]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[57]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[60]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[58]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[61]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[59]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[62]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[60]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[63]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[61]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[64]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[62]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[65]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[63]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[66]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[64]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[67]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[65]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[68]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[66]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[69]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[67]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[70]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[68]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[71]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[69]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[72]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[70]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[73]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[71]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[74]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[72]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[75]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[73]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[76]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[74]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[77]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[75]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[78]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[76]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[79]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[77]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[80]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[78]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[81]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[79]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[82]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[80]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[83]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[81]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[84]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[82]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[85]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[83]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[86]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[84]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[87]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[85]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[88]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[86]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[89]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[87]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[90]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[88]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[91]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[89]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[92]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[90]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[93]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[91]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[94]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[92]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[95]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[93]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[96]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[94]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[97]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[95]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[98]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[96]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[99]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[97]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[100]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[98]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[101]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[99]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[102]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[100]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[103]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[101]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[104]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[102]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[105]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[103]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[106]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[104]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[107]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[105]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[108]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[106]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[109]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[107]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[110]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[108]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[111]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[109]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[112]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[110]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[113]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[111]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[114]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[112]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[115]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[113]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[116]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[114]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[117]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[115]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[118]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[116]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[119]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[117]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[120]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[118]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[121]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[119]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[122]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[120]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[123]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[121]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[124]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[122]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[125]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[123]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[126]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[124]}]
 
-# dma_reader:0.data
-set_property LOC X [get_ports {dma_reader0_data[127]}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[125]}]
 
-# dma_reader:0.enable
-set_property LOC X [get_ports {dma_reader0_enable}]
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[126]}]
+
+# dma0_reader_axi:0.tdata
+set_property LOC X [get_ports {dma0_reader_axi_tdata[127]}]
+
+# dma0_reader_axi:0.tuser
+set_property LOC X [get_ports {dma0_reader_axi_tuser}]
 
 # msi_irqs:0
 set_property LOC X [get_ports {msi_irqs[0]}]

@@ -1,12 +1,15 @@
 
 # Create Project
 
-create_project -force -name litepcie_core -part xc7a
+set_part xc7a
 set_msg_config -id {Common 17-55} -new_severity {Warning}
+
+# Add project commands
+
 
 # Add Sources
 
-read_verilog {D:\work_dir\LimeSDR-XTRX\pcie_msi_test\LimeSDR-XTRX_GW\litepcie_gen\build\gateware\litepcie_core.v}
+read_verilog {/home/ts/Work/LimeSDR-XTRX_GW/litepcie_gen/build/gateware/litepcie_core.v}
 
 # Add EDIFs
 
@@ -28,20 +31,20 @@ CONFIG.Bar0_Scale {Megabytes} \
 CONFIG.Bar0_Size {1} \
 CONFIG.Buf_Opt_BMA {True} \
 CONFIG.Component_Name {pcie} \
-CONFIG.Device_ID {7022} \
-CONFIG.IntX_Generation {False} \
+CONFIG.Device_ID {7021} \
 CONFIG.Interface_Width {64_bit} \
-CONFIG.Legacy_Interrupt {None} \
-CONFIG.Multiple_Message_Capable {1_vector} \
 CONFIG.Link_Speed {5.0_GT/s} \
-CONFIG.MSI_64b {False} \
 CONFIG.Max_Payload_Size {512_bytes} \
-CONFIG.Maximum_Link_Width {X2} \
+CONFIG.Maximum_Link_Width {X1} \
 CONFIG.PCIe_Blk_Locn {X0Y0} \
 CONFIG.Ref_Clk_Freq {100_MHz} \
 CONFIG.Trans_Buf_Pipeline {None} \
 CONFIG.Trgt_Link_Speed {4'h2} \
 CONFIG.User_Clk_Freq {125} \
+CONFIG.Legacy_Interrupt {None} \
+CONFIG.IntX_Generation {False} \
+CONFIG.MSI_64b {False} \
+CONFIG.Multiple_Message_Capable {1_vector} \
 ] $obj
 synth_ip $obj
 
@@ -54,6 +57,10 @@ synth_design -directive default -top litepcie_core -part xc7a
 report_timing_summary -file litepcie_core_timing_synth.rpt
 report_utilization -hierarchical -file litepcie_core_utilization_hierarchical_synth.rpt
 report_utilization -file litepcie_core_utilization_synth.rpt
+write_checkpoint -force litepcie_core_synth.dcp
+
+# Add pre-optimize commands
+
 
 # Optimize design
 
@@ -75,6 +82,7 @@ report_utilization -file litepcie_core_utilization_place.rpt
 report_io -file litepcie_core_io.rpt
 report_control_sets -verbose -file litepcie_core_control_sets.rpt
 report_clock_utilization -file litepcie_core_clock_utilization.rpt
+write_checkpoint -force litepcie_core_place.dcp
 
 # Add pre-routing commands
 

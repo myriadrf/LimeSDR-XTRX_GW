@@ -49,10 +49,10 @@ entity pcie_top is
       pcie_perstn          : in  std_logic;     --! PCIe fundamental reset
       pcie_refclk_p        : in  std_logic;     --! PCIe reference clock 
       pcie_refclk_n        : in  std_logic;     --! PCIe reference clock  
-      pcie_rx_p            : in  std_logic_vector(1 downto 0); --! PCIe receiver 
-      pcie_rx_n            : in  std_logic_vector(1 downto 0); --! PCIe receiver
-      pcie_tx_p            : out std_logic_vector(1 downto 0); --! PCIe transmitter
-      pcie_tx_n            : out std_logic_vector(1 downto 0); --! PCIe transmitter
+      pcie_rx_p            : in  std_logic_vector(0 downto 0); --! PCIe receiver 
+      pcie_rx_n            : in  std_logic_vector(0 downto 0); --! PCIe receiver
+      pcie_tx_p            : out std_logic_vector(0 downto 0); --! PCIe transmitter
+      pcie_tx_n            : out std_logic_vector(0 downto 0); --! PCIe transmitter
       -- FIFO buffers
       H2F_S0_sel           : in std_logic;   --! Stream select: 0 - S0_0, 1 - S0_1 
       H2F_S0_dma_en        : out std_logic;  --! Host->FPGA stream ready
