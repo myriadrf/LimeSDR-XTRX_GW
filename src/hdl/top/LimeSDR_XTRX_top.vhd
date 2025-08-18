@@ -153,8 +153,8 @@ entity LimeSDR_XTRX_top is
    RPI_SPI1_SCLK    : inout std_logic;
    RPI_SPI1_MOSI    : inout std_logic;
    RPI_SPI1_MISO    : inout std_logic;
-   RPI_SYNC_SS1     : inout std_logic;
-   RPI_SYNC_SS2     : inout std_logic;
+   RPI_SPI1_SS1     : inout std_logic;
+   RPI_SPI1_SS2     : inout std_logic;
 
    RPI_UART4_RX     : inout std_logic;
    RPI_UART4_TX     : inout std_logic;
