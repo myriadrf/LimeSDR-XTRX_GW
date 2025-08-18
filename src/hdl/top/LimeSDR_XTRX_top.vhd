@@ -63,11 +63,8 @@ entity LimeSDR_XTRX_top is
    PCI_EXP_RXP      : in   std_logic_vector(0 downto 0);
    PCI_EXP_RXN      : in   std_logic_vector(0 downto 0);
    --pseudo - GPIO
-   --     NOT IMPLEMENTED start
    FPGA_LED_R       : out  std_logic;
-   FPGA_LED_G       : out  std_logic;
-   --     NOT IMPLEMENTED end
-   OPTION           : in   std_logic;
+   FPGA_LED_G       : out  std_logic; --unused
    PCI_REF_CLK_p    : in   std_logic;
    PCI_REF_CLK_n    : in   std_logic;
    PERST            : in   std_logic;
@@ -97,74 +94,67 @@ entity LimeSDR_XTRX_top is
    FPGA_CLK         : in    std_logic;
    BOM_VER          : in    std_logic_vector(3 downto 0);
    HW_VER           : in    std_logic_vector(3 downto 0);
-       --Placeholder inout direction
-       --     NOT IMPLEMENTED start
-   GNSS_EXTINT      : inout std_logic;
-   GNSS_RESET       : inout std_logic;
-   GNSS_UART_TX     : inout std_logic;
-   GNSS_UART_RX     : inout std_logic;
-   GNSS_DDC_SCL     : inout std_logic;
-   GNSS_DDC_SDA     : inout std_logic;
-   GNSS_TPULSE      : inout std_logic;
+   GNSS_EXTINT      : out   std_logic;
+   GNSS_RESET       : out   std_logic;
+   GNSS_UART_TX     : in    std_logic;
+   GNSS_UART_RX     : out   std_logic;
+   GNSS_DDC_SCL     : out   std_logic; --gnss config --uninmplemented
+   GNSS_DDC_SDA     : out   std_logic; --gnss config --uninmplemented
+   GNSS_TPULSE      : in    std_logic;
    --GPIO
-   FPGA_GPIO        : inout std_logic_vector(3 downto 0);
-   PPSI_GPIO1       : inout std_logic;
+   FPGA_GPIO        : inout std_logic_vector(3 downto 0); --left for future use
    --I2C BUS (Slave)
    FPGA_I2C_SDA     : inout std_logic;
    FPGA_I2C_SCL     : inout std_logic;
    --TX/RX SWITCH
    FPGA_RF_SW_TDD   : out   std_logic;
    --M2 signals
-       --Placeholder inout direction
-   M2_DEVSLP        : inout std_logic;
+   M2_DEVSLP        : out   std_logic;
    M2_COEX1         : inout std_logic;
    M2_COEX2         : inout std_logic;
    M2_COEX3         : inout std_logic;
-   M2_W_DISABLE_2   : inout std_logic;
-   M2_DPR           : inout std_logic;
-   M2_RESET         : inout std_logic;
-   M2_FCP_OFF       : inout std_logic;
+   M2_W_DISABLE_2   : out   std_logic;
+   M2_DPR           : out   std_logic;
+   M2_RESET         : out   std_logic;
+   M2_FCP_OFF       : out   std_logic;
 
     --Placeholder inout direction
-   RX1_RF_SCLK      : inout std_logic;
-   RX1_RF_SDATA     : inout std_logic;
-   TRX1_RF_SCLK     : inout std_logic;
-   TRX1_RF_SDATA    : inout std_logic;
-   TRX1_ANT_SCLK    : inout std_logic;
-   TRX1_ANT_SDATA   : inout std_logic;
-   RX2_RF_SCLK      : inout std_logic;
-   RX2_RF_SDATA     : inout std_logic;
-   TRX2_RF_SCLK     : inout std_logic;
-   TRX2_RF_SDATA    : inout std_logic;
-   TRX2_ANT_SCLK    : inout std_logic;
-   TRX2_ANT_SDATA   : inout std_logic;
-       --NOT IMPLEMENTED END
+   RX1_RF_SCLK      : inout std_logic; --uninmplemented
+   RX1_RF_SDATA     : inout std_logic; --uninmplemented
+   TRX1_RF_SCLK     : inout std_logic; --uninmplemented
+   TRX1_RF_SDATA    : inout std_logic; --uninmplemented
+   TRX1_ANT_SCLK    : inout std_logic; --uninmplemented
+   TRX1_ANT_SDATA   : inout std_logic; --uninmplemented
+   RX2_RF_SCLK      : inout std_logic; --uninmplemented
+   RX2_RF_SDATA     : inout std_logic; --uninmplemented
+   TRX2_RF_SCLK     : inout std_logic; --uninmplemented
+   TRX2_RF_SDATA    : inout std_logic; --uninmplemented
+   TRX2_ANT_SCLK    : inout std_logic; --uninmplemented
+   TRX2_ANT_SDATA   : inout std_logic; --uninmplemented
    --FLASH & BOOT
    FPGA_CFG_D       : inout std_logic_vector(3 downto 0);    
    FPGA_CFG_CS      : out   std_logic;
-       -- NOT IMPLEMENTED START
    --XODAC SPI
    FPGA_SPI1_SCLK   : out   std_logic;
    FPGA_SPI1_MOSI   : out   std_logic;
    FPGA_SPI1_DAC_SS : out   std_logic;
    --RPI related
-    --Placeholder inout direction
-   RPI_SYNC_OUT     : inout std_logic;
-   RPI_SPI1_SCLK    : inout std_logic;
-   RPI_SPI1_MOSI    : inout std_logic;
-   RPI_SPI1_MISO    : inout std_logic;
-   RPI_SPI1_SS1     : inout std_logic;
-   RPI_SPI1_SS2     : inout std_logic;
+   RPI_SYNC_OUT     : in    std_logic;
+   --RPI spi (fpga as slave)
+   RPI_SPI1_SCLK    : in    std_logic;
+   RPI_SPI1_MOSI    : in    std_logic;
+   RPI_SPI1_MISO    : out   std_logic; --uninmplemented
+   RPI_SPI1_SS1     : in    std_logic; --FPGA --uninmplemented
+   RPI_SPI1_SS2     : in    std_logic; --XO DAC
 
-   RPI_UART4_RX     : inout std_logic;
-   RPI_UART4_TX     : inout std_logic;
+   RPI_UART4_RX     : out   std_logic;
+   RPI_UART4_TX     : in    std_logic;
 
    --Misc
    FPGA_SYNC_OUT1   : out   std_logic;
    FPGA_SYNC_OUT2   : out   std_logic;
        --Placeholder inout direction
-   FPGA_DSW_BIT2    : inout std_logic
-        -- NOT IMPLEMENTED END
+   FPGA_DSW_BIT2    : in    std_logic --input unused
    );
 end entity LimeSDR_XTRX_top;
 
@@ -450,8 +440,8 @@ begin
       fpga_cfg_qspi_MISO         => FPGA_CFG_D(1),--FPGA_CFG_MISO,
       fpga_cfg_qspi_SS_n         => FPGA_CFG_CS,--FPGA_CFG_CS,     
       -- I2C
-      i2c_1_scl                  => FPGA_I2C_SCL,
-      i2c_1_sda                  => FPGA_I2C_SDA,
+      i2c_1_scl                  => open, -- add FPGA_I2C_SCL if I2C is required, n/c for now
+      i2c_1_sda                  => open, -- add FPGA_I2C_SDA if I2C is required, n/c for now
       -- Genral purpose I/O
       gpi                        => "00000000",--"0000" & FPGA_SW,
       gpo                        => open,--inst0_gpo, 
@@ -699,25 +689,25 @@ begin
 
    LMS_CORE_LDO_EN <= inst1_from_fpgacfg.CORE_LDO_EN;
    
--- ----------------------------------------------------------------------------
--- tdd_control instance.
--- Simple module for TDD signal control
--- ----------------------------------------------------------------------------    
---     inst5_tdd_control : entity work.tdd_control
---       port map (
---                 MANUAL_VALUE       => inst1_from_fpgacfg.tdd_manual,
---                 AUTO_ENABLE        => inst1_from_fpgacfg.tdd_auto_en,
---                 AUTO_IN            => inst4_txant_en,
---                 AUTO_INVERT        => inst1_from_fpgacfg.tdd_invert,
---                 --
---                 RX_RF_SW_IN        => inst1_from_fpgacfg.rx_rf_sw,
---                 TX_RF_SW_IN        => inst1_from_fpgacfg.tx_rf_sw,
---                 RF_SW_AUTO_ENANBLE => inst1_from_fpgacfg.rf_sw_auto_en,
---                 --
---                 TDD_OUT            => TDD_GPIO3_N, --This GPIO is used for TDD control
---                 RX_RF_SW_OUT       => rx_switches,
---                 TX_RF_SW_OUT       => TX_SW
---    );
+----------------------------------------------------------------------------
+--tdd_control instance.
+--Simple module for TDD signal control
+----------------------------------------------------------------------------
+    inst5_tdd_control : entity work.tdd_control
+      port map (
+                MANUAL_VALUE       => inst1_from_fpgacfg.tdd_manual,
+                AUTO_ENABLE        => inst1_from_fpgacfg.tdd_auto_en,
+                AUTO_IN            => inst4_txant_en,
+                AUTO_INVERT        => inst1_from_fpgacfg.tdd_invert,
+                --
+                RX_RF_SW_IN        => inst1_from_fpgacfg.rx_rf_sw,
+                TX_RF_SW_IN        => inst1_from_fpgacfg.tx_rf_sw,
+                RF_SW_AUTO_ENANBLE => inst1_from_fpgacfg.rf_sw_auto_en,
+                --
+                TDD_OUT            => FPGA_RF_SW_TDD,
+                RX_RF_SW_OUT       => open,
+                TX_RF_SW_OUT       => open
+   );
 --
 --    RX_SW3       <= rx_switches(0);
 --    RX_SW2       <= rx_switches(1);
@@ -783,13 +773,13 @@ begin
 -- LED control module
 -- 
 -- ---------------------------------------------------------------------------- 
---    inst7_led_ctrl : entity work.led_ctrl
---    port map(PPSO_GPIO2
---    CLK1 => FPGA_CLK,
---    CLK2 => sys_clk,
---    LED1 => open,--FPGA_LED1,
---    LED2 => open --FPGA_LED2
---    );
+   inst7_led_ctrl : entity work.led_ctrl
+   port map(
+   CLK1 => FPGA_CLK,
+   CLK2 => sys_clk,
+   LED1 => open,--FPGA_LED1,
+   LED2 => FPGA_LED_R --FPGA_LED2
+   );
 -- ----------------------------------------------------------------------------
 -- GPIOs
 -- 
@@ -801,7 +791,38 @@ begin
 --                   'Z';
                
 -- Option to select pps between GPS and externaly connected PPS
---    pps_internal <= PPSI_GPIO1 when inst1_from_periphcfg.PERIPH_INPUT_SEL_0(1 downto 0) = "01" else GNSS_1PPS;
+   pps_internal <= RPI_SYNC_OUT when inst1_from_periphcfg.PERIPH_INPUT_SEL_0(1 downto 0) = "01" else GNSS_TPULSE;
+
+
+    GNSS_EXTINT <= '0'; --unused, active high, set to low
+    GNSS_RESET  <= '1'; --unused, active low, set to high
+    --using pps_internal would enable raspberry syncin to be raspberry syncout
+    --enough control of sync signals is available to raspberry via switches
+    --thus just passing through gnss_tpulse to sync_out here
+    FPGA_SYNC_OUT1 <= GNSS_TPULSE;
+    FPGA_SYNC_OUT2 <= GNSS_TPULSE;
+
+    M2_DEVSLP      <= '0'; --unused, active high, set to low
+    M2_COEX1       <= 'Z'; --unused inout, set high impedance
+    M2_COEX2       <= 'Z'; --unused inout, set high impedance
+    M2_COEX3       <= 'Z'; --unused inout, set high impedance
+    M2_W_DISABLE_2 <= '1'; --unused, active low, set to high
+    M2_DPR         <= '0'; --unused, active high, set to low
+    M2_RESET       <= '1'; --unused, active low, set to high
+    M2_FCP_OFF     <= '1'; --unused, active low, set to high
+
+    --Passthrough GNSS UART to Raspberry
+    RPI_UART4_RX   <= GNSS_UART_TX;
+    GNSS_UART_RX   <= RPI_UART4_TX;
+
+    FPGA_I2C_SCL   <= 'Z'; --Remove these assignments if I2C is required
+    FPGA_I2C_SDA   <= 'Z'; --Remove these assignments if I2C is required
+
+    --Passthrough Raspberry SPI to XO DAC SPI when appropriate slave select is active
+    FPGA_SPI1_SCLK   <= RPI_SPI1_SCLK when RPI_SPI1_SS2 = '0' else '0';
+    FPGA_SPI1_MOSI   <= RPI_SPI1_MOSI when RPI_SPI1_SS2 = '0' else '0';
+    FPGA_SPI1_DAC_SS <= RPI_SPI1_SS2;
+
 
 
 end architecture Structural;
