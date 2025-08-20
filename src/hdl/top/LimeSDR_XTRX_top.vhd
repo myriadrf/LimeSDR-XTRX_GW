@@ -58,10 +58,10 @@ entity LimeSDR_XTRX_top is
    );
    port (
    --PCIe ports
-   PCI_EXP_TXP      : out  std_logic_vector(0 downto 0);
-   PCI_EXP_TXN      : out  std_logic_vector(0 downto 0);
-   PCI_EXP_RXP      : in   std_logic_vector(0 downto 0);
-   PCI_EXP_RXN      : in   std_logic_vector(0 downto 0);
+   PCI_EXP_TXP      : out  std_logic_vector(1 downto 0);
+   PCI_EXP_TXN      : out  std_logic_vector(1 downto 0);
+   PCI_EXP_RXP      : in   std_logic_vector(1 downto 0);
+   PCI_EXP_RXN      : in   std_logic_vector(1 downto 0);
    --pseudo - GPIO
    FPGA_LED_R       : out  std_logic;
    FPGA_LED_G       : out  std_logic; --unused
