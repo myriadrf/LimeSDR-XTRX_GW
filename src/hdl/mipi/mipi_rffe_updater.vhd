@@ -151,9 +151,11 @@ begin
 
         case current_state is
             when reset_state =>
-                comm_frame_next <= (others => '0');
-                data_frame_next <= (others => '0');
-                mode_next       <= C_MODE_IDLE;
+                comm_frame_next   <= (others => '0');
+                data_frame_next   <= (others => '0');
+                test_done_next    <= '0';
+                interface_ok_next <= "00";
+                mode_next         <= C_MODE_IDLE;
                 data_in_changed_rst_next <= '0';
                 next_state <= test;
                 --
