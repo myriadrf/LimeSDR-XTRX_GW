@@ -219,6 +219,13 @@ begin
 
       from_periphcfg.PERIPH_EN            <= mem(18) (15 downto 0);
       from_periphcfg.PERIPH_SEL           <= mem(19) (15 downto 0);
+      
+      from_periphcfg.RX1_SW               <= mem(20) (7  downto 0);
+      from_periphcfg.TRX1_SW              <= mem(20) (15 downto 8);
+      from_periphcfg.TRX1_ANT_SW          <= mem(21) (7  downto 0);
+      from_periphcfg.RX2_SW               <= mem(22) (7  downto 0);
+      from_periphcfg.TRX2_SW              <= mem(22) (15 downto 8);
+      from_periphcfg.TRX2_ANT_SW          <= mem(23) (7  downto 0);
 
 
 end periphcfg_arch;

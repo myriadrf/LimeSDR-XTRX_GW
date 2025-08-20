@@ -30,6 +30,12 @@ package periphcfg_pkg is
       PERIPH_OUTPUT_VAL_1  : std_logic_vector(15 downto 0); 
       PERIPH_EN            : std_logic_vector(15 downto 0);
       PERIPH_SEL           : std_logic_vector(15 downto 0);
+      RX1_SW               : std_logic_vector(7 downto 0);
+      TRX1_SW              : std_logic_vector(7 downto 0);
+      TRX1_ANT_SW          : std_logic_vector(7 downto 0);
+      RX2_SW               : std_logic_vector(7 downto 0);
+      TRX2_SW              : std_logic_vector(7 downto 0);
+      TRX2_ANT_SW          : std_logic_vector(7 downto 0);
    end record t_FROM_PERIPHCFG;
   
    -- Inputs to the .

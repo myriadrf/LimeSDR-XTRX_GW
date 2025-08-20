@@ -119,17 +119,17 @@ entity LimeSDR_XTRX_top is
    M2_FCP_OFF       : out   std_logic;
 
     --Placeholder inout direction
-   RX1_RF_SCLK      : inout std_logic; --uninmplemented
+   RX1_RF_SCLK      : out   std_logic; --uninmplemented
    RX1_RF_SDATA     : inout std_logic; --uninmplemented
-   TRX1_RF_SCLK     : inout std_logic; --uninmplemented
+   TRX1_RF_SCLK     : out   std_logic; --uninmplemented
    TRX1_RF_SDATA    : inout std_logic; --uninmplemented
-   TRX1_ANT_SCLK    : inout std_logic; --uninmplemented
+   TRX1_ANT_SCLK    : out   std_logic; --uninmplemented
    TRX1_ANT_SDATA   : inout std_logic; --uninmplemented
-   RX2_RF_SCLK      : inout std_logic; --uninmplemented
+   RX2_RF_SCLK      : out   std_logic; --uninmplemented
    RX2_RF_SDATA     : inout std_logic; --uninmplemented
-   TRX2_RF_SCLK     : inout std_logic; --uninmplemented
+   TRX2_RF_SCLK     : out   std_logic; --uninmplemented
    TRX2_RF_SDATA    : inout std_logic; --uninmplemented
-   TRX2_ANT_SCLK    : inout std_logic; --uninmplemented
+   TRX2_ANT_SCLK    : out   std_logic; --uninmplemented
    TRX2_ANT_SDATA   : inout std_logic; --uninmplemented
    --FLASH & BOOT
    FPGA_CFG_D       : inout std_logic_vector(3 downto 0);    
@@ -273,6 +273,20 @@ signal uart_data_stream_in_ack   : std_logic;
 signal uart_data_stream_out      : std_logic_vector(7 downto 0);
 signal uart_data_stream_out_stb  : std_logic;
 signal uart_data_stream_out_ack  : std_logic;
+
+signal rx1_interface_ok               : std_logic_vector(1 downto 0);
+signal rx1_test_done                  : std_logic;
+signal trx1_interface_ok              : std_logic_vector(1 downto 0);
+signal trx1_test_done                 : std_logic;
+signal trx1_ant_interface_ok          : std_logic_vector(1 downto 0);
+signal trx1_ant_test_done             : std_logic;
+
+signal rx2_interface_ok               : std_logic_vector(1 downto 0);
+signal rx2_test_done                  : std_logic;
+signal trx2_interface_ok              : std_logic_vector(1 downto 0);
+signal trx2_test_done                 : std_logic;
+signal trx2_ant_interface_ok          : std_logic_vector(1 downto 0);
+signal trx2_ant_test_done             : std_logic;
 
 
 --attribute KEEP : string;
@@ -752,7 +766,7 @@ begin
 -- ----------------------------------------------------------------------------
 -- vctcxo_tamer instance.
 -- ----------------------------------------------------------------------------  
-   vctcxo_tamer_top_inst : entity work. vctcxo_tamer_top
+   vctcxo_tamer_top_inst : entity work.vctcxo_tamer_top
       port map (
          -- Physical VCXO tamer Interface
          tune_ref                      => pps_internal,
@@ -822,6 +836,91 @@ begin
     FPGA_SPI1_SCLK   <= RPI_SPI1_SCLK when RPI_SPI1_SS2 = '0' else '0';
     FPGA_SPI1_MOSI   <= RPI_SPI1_MOSI when RPI_SPI1_SS2 = '0' else '0';
     FPGA_SPI1_DAC_SS <= RPI_SPI1_SS2;
+    
+--    mipi_phy_inst: entity work.mipi_rffe_master_phy
+--      port map (
+--         CLK_100             => clk100             ,
+--         RESET_N             => global_rst_n             ,
+--         MODE                => "00"                ,
+--         COMMAND_FRAME       => "010101010101"      ,
+--         DATA_FRAME          => "11110000"          ,
+--         -- Output signals   
+--         STATUS              => open                ,  
+--         RECEIVED_DATA_FRAME => open                ,
+--         -- Phy Ports        
+--         SCLK                => RX1_RF_SCLK                 ,
+--         SDATA               => RX1_RF_SDATA                
+--      );
+
+      -- inst1_from_periphcfg
+
+-- signal rx1_interface_ok              
+-- signal rx1_test_done                 
+-- signal trx1_interface_ok             
+-- signal trx1_test_done                
+-- signal trx1_ant_interface_ok         
+-- signal trx1_ant_test_done            
+
+-- signal rx2_interface_ok              
+-- signal rx2_test_done                 
+-- signal trx2_interface_ok             
+-- signal trx2_test_done                
+-- signal trx2_ant_interface_ok         
+-- signal trx2_ant_test_done            
+
+      rx1_mipi_updater_inst: entity work.mipi_rffe_updater
+      generic map(
+         G_SLAVE_ADDR => "1010",
+         G_TEST_ADDR  => 5x"1E",
+         G_TEST_VAL   => 8x"A5",
+         G_TARGET_ADDR => "00000"
+      )
+      port map(
+         CLK => clk100,
+         RESET_N => global_rst_n and inst1_from_fpgacfg.tx_rf_sw,
+         INTERFACE_OK => rx1_interface_ok,
+         TEST_DONE => rx1_test_done,
+         DATA_IN => inst1_from_periphcfg.RX1_SW,
+
+         SCLK => RX1_RF_SCLK,
+         SDATA => RX1_RF_SDATA
+      );
+
+      trx1_mipi_updater_inst: entity work.mipi_rffe_updater
+      generic map(
+         G_SLAVE_ADDR => "1010",
+         G_TEST_ADDR  => 5x"1E",
+         G_TEST_VAL   => 8x"A5",
+         G_TARGET_ADDR => "00000"
+      )
+      port map(
+         CLK => clk100,
+         RESET_N => global_rst_n,
+         INTERFACE_OK => trx1_interface_ok,
+         TEST_DONE => trx1_test_done,
+         DATA_IN => inst1_from_periphcfg.TRX1_SW,
+
+         SCLK => TRX1_RF_SCLK,
+         SDATA => TRX1_RF_SDATA
+      );
+
+      trx1_ant_mipi_updater_inst: entity work.mipi_rffe_updater
+      generic map(
+         G_SLAVE_ADDR => "1010",
+         G_TEST_ADDR  => 5x"1E",
+         G_TEST_VAL   => 8x"A5",
+         G_TARGET_ADDR => "00000"
+      )
+      port map(
+         CLK => clk100,
+         RESET_N => global_rst_n,
+         INTERFACE_OK => trx1_ant_interface_ok,
+         TEST_DONE => trx1_ant_test_done,
+         DATA_IN => inst1_from_periphcfg.TRX1_ANT_SW,
+
+         SCLK => TRX1_ANT_SCLK,
+         SDATA => TRX1_ANT_SDATA
+      );
 
 
 
