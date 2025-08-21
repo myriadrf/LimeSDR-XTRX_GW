@@ -181,6 +181,11 @@ signal clk100              : std_logic;
 signal clk100_mmcm_locked  : std_logic;
 signal global_rst_n        : std_logic;
 
+signal fpga_spi1_dac_ss_vector : std_logic_vector(0 downto 0);
+signal fpga_spi1_mosi_sig : std_logic;
+signal fpga_spi1_sclk_sig : std_logic;
+
+
 --pcie
 
      --Control endpoint FIFO (Host->FPGA)
@@ -449,6 +454,11 @@ begin
       spi_0_MOSI                 => inst1_spi_0_MOSI,
       spi_0_SCLK                 => inst1_spi_0_SCLK,
       spi_0_SS_n                 => inst1_spi_0_SS_n,
+      -- SPI 1
+      spi_1_MISO                 => '0',
+      spi_1_MOSI                 => fpga_spi1_mosi_sig,
+      spi_1_SCLK                 => fpga_spi1_sclk_sig,
+      spi_1_SS_n                 => fpga_spi1_dac_ss_vector,
       -- Config QSPI
       fpga_cfg_qspi_MOSI         => FPGA_CFG_D(0),--FPGA_CFG_MOSI,
       fpga_cfg_qspi_MISO         => FPGA_CFG_D(1),--FPGA_CFG_MISO,
@@ -832,10 +842,11 @@ begin
     FPGA_I2C_SCL   <= 'Z'; --Remove these assignments if I2C is required
     FPGA_I2C_SDA   <= 'Z'; --Remove these assignments if I2C is required
 
+    ----Passthrough removed
     --Passthrough Raspberry SPI to XO DAC SPI when appropriate slave select is active
-    FPGA_SPI1_SCLK   <= RPI_SPI1_SCLK when RPI_SPI1_SS2 = '0' else '0';
-    FPGA_SPI1_MOSI   <= RPI_SPI1_MOSI when RPI_SPI1_SS2 = '0' else '0';
-    FPGA_SPI1_DAC_SS <= RPI_SPI1_SS2;
+    --FPGA_SPI1_SCLK   <= RPI_SPI1_SCLK when RPI_SPI1_SS2 = '0' else '0';
+    --FPGA_SPI1_MOSI   <= RPI_SPI1_MOSI when RPI_SPI1_SS2 = '0' else '0';
+    --FPGA_SPI1_DAC_SS <= RPI_SPI1_SS2;
 
     -- 1
       rx1_mipi_updater_inst: entity work.mipi_rffe_updater
@@ -946,7 +957,14 @@ begin
          SCLK => TRX2_ANT_SCLK,
          SDATA => TRX2_ANT_SDATA
       );
+      
+      FPGA_SPI1_DAC_SS <= fpga_spi1_dac_ss_vector(0);
+      FPGA_SPI1_MOSI   <= fpga_spi1_mosi_sig;
+      FPGA_SPI1_SCLK   <= fpga_spi1_sclk_sig;
 
+      FPGA_GPIO(0) <= fpga_spi1_dac_ss_vector(0);    
+      FPGA_GPIO(1) <= fpga_spi1_mosi_sig;            
+      FPGA_GPIO(2) <= fpga_spi1_sclk_sig;            
 
 
 end architecture Structural;

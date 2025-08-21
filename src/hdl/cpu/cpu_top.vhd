@@ -59,6 +59,11 @@ entity CPU_TOP is
       SPI_0_MOSI            : out   std_logic;                                        --! Master Out Slave In
       SPI_0_SCLK            : out   std_logic;                                        --! Clock output
       SPI_0_SS_N            : out   std_logic_vector(1 downto 0);                     --! Slave Select, active low [0] - internal registers, [1] - LMS7002 @end
+      --! @virtualbus SPI_1 @dir out SPI interface 0, used for XODAC
+      SPI_1_MISO            : in    std_logic;                                        --! Master In Slave Out
+      SPI_1_MOSI            : out   std_logic;                                        --! Master Out Slave In
+      SPI_1_SCLK            : out   std_logic;                                        --! Clock output
+      SPI_1_SS_N            : out   std_logic_vector(0 downto 0);                     --! Slave Select, active low [0] - XODAC
 
       ---- I2C
       --! @virtualbus I2C_1 @dir out I2C interface 1 (Slave) 
@@ -220,6 +225,19 @@ architecture ARCH of CPU_TOP is
          SPI_0_SS_I                 : in    std_logic_vector( 1 downto 0);
          SPI_0_SS_O                 : out   std_logic_vector( 1 downto 0);
          SPI_0_SS_T                 : out   std_logic;
+--
+         SPI_1_IO0_I                : in    std_logic;
+         SPI_1_IO0_O                : out   std_logic;
+         SPI_1_IO0_T                : out   std_logic;
+         SPI_1_IO1_I                : in    std_logic;
+         SPI_1_IO1_O                : out   std_logic;
+         SPI_1_IO1_T                : out   std_logic;
+         SPI_1_SCK_I                : in    std_logic;
+         SPI_1_SCK_O                : out   std_logic;
+         SPI_1_SCK_T                : out   std_logic;
+         SPI_1_SS_I                 : in    std_logic_vector( 0 downto 0);
+         SPI_1_SS_O                 : out   std_logic_vector( 0 downto 0);
+         SPI_1_SS_T                 : out   std_logic;
          FPGA_CFG_QSPI_IO0_I        : in    std_logic;
          FPGA_CFG_QSPI_IO0_O        : out   std_logic;
          FPGA_CFG_QSPI_IO0_T        : out   std_logic;
@@ -349,6 +367,19 @@ begin
          SPI_0_SS_I        => (others=>'0'),
          SPI_0_SS_O        => inst0_spi_0_ss_n,
          SPI_0_SS_T        => open,
+         
+         SPI_1_IO0_I       => '0',
+         SPI_1_IO0_O       => SPI_1_MOSI,
+         SPI_1_IO0_T       => open,
+         SPI_1_IO1_I       => SPI_1_MISO,
+         SPI_1_IO1_O       => open,
+         SPI_1_IO1_T       => open,
+         SPI_1_SCK_I       => '0',
+         SPI_1_SCK_O       => SPI_1_SCLK,
+         SPI_1_SCK_T       => open,
+         SPI_1_SS_I        => (others=>'0'),
+         SPI_1_SS_O        => SPI_1_SS_N,
+         SPI_1_SS_T        => open,
 
          UART_0_RXD => '0',
          UART_0_TXD => open,

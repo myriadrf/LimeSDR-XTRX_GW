@@ -26,8 +26,8 @@
  * xparameters.h file. They are defined here such that a user can easily
  * change all the needed parameters in one place.
  */
-#define SPI0_DEVICE_ID XPAR_SPI_0_DEVICE_ID
-#define SPI1_DEVICE_ID XPAR_SPI_1_DEVICE_ID
+#define SPI0_DEVICE_ID XPAR_SPI_CORES_SPI0_DEVICE_ID
+#define SPI1_DEVICE_ID XPAR_SPI_CORES_SPI1_DEVICE_ID
 #define QSPI_DEVICE_ID XPAR_SPI_CORES_SPI1_FLASH_DEVICE_ID
 
 /*
@@ -213,6 +213,7 @@ void Control_SPI1_DAC (unsigned char oe, uint16_t *data, unsigned char dev_num) 
 	unsigned char DAC_data[3];
 
 	Init_SPI(SPI1_DEVICE_ID, &Spi1, XSP_MASTER_OPTION | XSP_CLK_PHASE_1_OPTION | XSP_MANUAL_SSELECT_OPTION);
+//	Init_SPI(SPI1_DEVICE_ID, &Spi1, XSP_MASTER_OPTION | XSP_CLK_ACTIVE_LOW_OPTION | XSP_MANUAL_SSELECT_OPTION);
 	spirez = XSpi_SetSlaveSelect(&Spi1, dev_num);
 
 
@@ -910,8 +911,16 @@ int main()
 	pllrst_start = 0;
 
 	Init_SPI(SPI0_DEVICE_ID, &Spi0, XSP_MASTER_OPTION | XSP_MANUAL_SSELECT_OPTION);
-	Init_SPI(SPI1_DEVICE_ID, &Spi1, XSP_MASTER_OPTION | XSP_MANUAL_SSELECT_OPTION | XSP_CLK_ACTIVE_LOW_OPTION);
+//	Init_SPI(SPI1_DEVICE_ID, &Spi1, XSP_MASTER_OPTION | XSP_MANUAL_SSELECT_OPTION | XSP_CLK_ACTIVE_LOW_OPTION);
 
+	// Write DAC value stored in flash storage only if it isn't empty (0xFFFF)
+	if ((page_buffer[1] == 0xFF) && (page_buffer[0] == 0xFF)) {
+		// Write Default value
+		dac_val = DAC_DEFF_VAL;
+	} else {
+		// Write DAC value from FLASH
+		dac_val = ((uint16_t)page_buffer[1])<<8 | ((uint16_t)page_buffer[0]);
+	}
 	Control_SPI1_DAC(1, &dac_val, SPI1_XODAC_SS);
 
 	// Default config
@@ -1322,6 +1331,12 @@ int main()
 							LMS_Ctrl_Packet_Tx->Data_field[2 + (block * 4)] = (dac_val >> 8) & 0xFF; //unsigned val, MSB byte
 							LMS_Ctrl_Packet_Tx->Data_field[3 + (block * 4)] = dac_val & 0xFF; //unsigned val, LSB byte
 							break;
+						case 1://temperature (dummy)
+							LMS_Ctrl_Packet_Tx->Data_field[0 + (block * 4)] = LMS_Ctrl_Packet_Rx->Data_field[block]; //ch
+							LMS_Ctrl_Packet_Tx->Data_field[1 + (block * 4)] = 0x50; //0.1C //unit, power
+							LMS_Ctrl_Packet_Tx->Data_field[2 + (block * 4)] = 0xDEAD; //unsigned val, MSB byte
+							LMS_Ctrl_Packet_Tx->Data_field[3 + (block * 4)] = 0xBEEF; //unsigned val, LSB byte
+							break;
 					default:
 						cmd_errors++;
 						break;
@@ -1335,7 +1350,6 @@ int main()
 				break;
 
 				// COMMAND ANALOG VALUE WRITE
-
 			case CMD_ANALOG_VAL_WR:
 				if (Check_many_blocks(4))
 					break;
@@ -1347,8 +1361,9 @@ int main()
 					case 0:														  // TCXO DAC
 						if (LMS_Ctrl_Packet_Rx->Data_field[1 + (block * 4)] == 0) // RAW units?
 						{
-							//Store new value and then update
-							dac_val = (LMS_Ctrl_Packet_Rx->Data_field[2 + (block * 4)] << 8 ) + LMS_Ctrl_Packet_Rx->Data_field[3 + (block * 4)];
+							// Storing volatile DAC value
+							dac_val = ((uint16_t)LMS_Ctrl_Packet_Rx->Data_field[2 + (block * 4)])<<8 | ((uint16_t)LMS_Ctrl_Packet_Rx->Data_field[3 + (block * 4)]);
+							// Writing to DAC
 							Control_SPI1_DAC(1, &dac_val, SPI1_XODAC_SS);
 						}
 						else
@@ -1364,7 +1379,6 @@ int main()
 				else
 					LMS_Ctrl_Packet_Tx->Header.Status = STATUS_COMPLETED_CMD;
 				break;
-
 
 			case CMD_MEMORY_WR:
 				// Since the XTRX board does not have an eeprom to store permanent VCTCXO DAC value
