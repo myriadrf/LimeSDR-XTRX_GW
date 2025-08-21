@@ -27,6 +27,7 @@
  * change all the needed parameters in one place.
  */
 #define SPI0_DEVICE_ID XPAR_SPI_0_DEVICE_ID
+#define SPI1_DEVICE_ID XPAR_SPI_1_DEVICE_ID
 #define QSPI_DEVICE_ID XPAR_SPI_CORES_SPI1_FLASH_DEVICE_ID
 
 /*
@@ -36,6 +37,7 @@
  */
 #define SPI0_FPGA_SS 0x01
 #define SPI0_LMS7002M_1_SS 0x02
+#define SPI1_XODAC_SS 0x01
 
 #define BRD_SPI_REG_LMS1_LMS2_CTRL 0x13
 #define LMS1_SS 0
@@ -102,6 +104,7 @@ volatile unsigned char tmprd_serial[32] = {0};
  * but should at least be static so they are zeroed.
  */
 static XSpi Spi0;
+static XSpi Spi1;
 static XSpi CFG_QSPI;
 static XGpio gpio, pll_rst, pllcfg_cmd, pllcfg_stat, extm_0_axi_sel, smpl_cmp_en, smpl_cmp_status, gpio_serial;
 
@@ -201,6 +204,39 @@ void getFifoData(uint8_t *buf, uint8_t k)
 	{
 		dest[cnt] = AXI_TO_NATIVE_FIFO_mReadReg(XPAR_AXI_TO_NATIVE_FIFO_0_S00_AXI_BASEADDR, AXI_TO_NATIVE_FIFO_S00_AXI_SLV_REG1_OFFSET);
 	};
+}
+
+//general function for spi2dac ctrl
+void Control_SPI1_DAC (unsigned char oe, uint16_t *data, unsigned char dev_num) //controls DAC (AD5662)
+{
+	volatile int spirez;
+	unsigned char DAC_data[3];
+
+	Init_SPI(SPI1_DEVICE_ID, &Spi1, XSP_MASTER_OPTION | XSP_CLK_PHASE_1_OPTION | XSP_MANUAL_SSELECT_OPTION);
+	spirez = XSpi_SetSlaveSelect(&Spi1, dev_num);
+
+
+
+	if (oe == 0) //set DAC out to three-state
+	{
+		DAC_data[0] = 0x03; //POWER-DOWN MODE = THREE-STATE (PD[1:0]([17:16]) = 11)
+		DAC_data[1] = 0x00;
+		DAC_data[2] = 0x00; //LSB data
+
+		//spirez = alt_avalon_spi_command(DAC_SPI1_BASE, SPI_NR_TCXO_DAC, 3, DAC_data, 0, NULL, 0);
+		spirez = XSpi_Transfer(&Spi1, DAC_data, NULL,3);
+
+	}
+	else //enable DAC output, set new val
+	{
+		DAC_data[0] = 0; //POWER-DOWN MODE = NORMAL OPERATION PD[1:0]([17:16]) = 00)
+		DAC_data[1] = ((*data) >>8) & 0xFF;
+		DAC_data[2] = ((*data) >>0) & 0xFF;
+
+		//spirez = alt_avalon_spi_command(DAC_SPI1_BASE, SPI_NR_TCXO_DAC, 3, DAC_data, 0, NULL, 0);
+		spirez = XSpi_Transfer(&Spi1, DAC_data, NULL,3);
+	}
+	spirez = XSpi_SetSlaveSelect(&Spi1, 0);
 }
 
 /**
@@ -874,6 +910,9 @@ int main()
 	pllrst_start = 0;
 
 	Init_SPI(SPI0_DEVICE_ID, &Spi0, XSP_MASTER_OPTION | XSP_MANUAL_SSELECT_OPTION);
+	Init_SPI(SPI1_DEVICE_ID, &Spi1, XSP_MASTER_OPTION | XSP_MANUAL_SSELECT_OPTION | XSP_CLK_ACTIVE_LOW_OPTION);
+
+	Control_SPI1_DAC(1, &dac_val, SPI1_XODAC_SS);
 
 	// Default config
 
@@ -1277,6 +1316,12 @@ int main()
 				{
 					switch (LMS_Ctrl_Packet_Rx->Data_field[0 + (block)]) // ch
 					{
+						case 0://dac val
+							LMS_Ctrl_Packet_Tx->Data_field[0 + (block * 4)] = LMS_Ctrl_Packet_Rx->Data_field[block]; //ch
+							LMS_Ctrl_Packet_Tx->Data_field[1 + (block * 4)] = 0x00; //RAW //unit, power
+							LMS_Ctrl_Packet_Tx->Data_field[2 + (block * 4)] = (dac_val >> 8) & 0xFF; //unsigned val, MSB byte
+							LMS_Ctrl_Packet_Tx->Data_field[3 + (block * 4)] = dac_val & 0xFF; //unsigned val, LSB byte
+							break;
 					default:
 						cmd_errors++;
 						break;
@@ -1302,9 +1347,9 @@ int main()
 					case 0:														  // TCXO DAC
 						if (LMS_Ctrl_Packet_Rx->Data_field[1 + (block * 4)] == 0) // RAW units?
 						{
-							//TODO: Implement SPI XODAC write maybe?
-							//      return error for now
-							cmd_errors++;
+							//Store new value and then update
+							dac_val = (LMS_Ctrl_Packet_Rx->Data_field[2 + (block * 4)] << 8 ) + LMS_Ctrl_Packet_Rx->Data_field[3 + (block * 4)];
+							Control_SPI1_DAC(1, &dac_val, SPI1_XODAC_SS);
 						}
 						else
 							cmd_errors++;
