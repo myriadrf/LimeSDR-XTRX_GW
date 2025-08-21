@@ -836,38 +836,8 @@ begin
     FPGA_SPI1_SCLK   <= RPI_SPI1_SCLK when RPI_SPI1_SS2 = '0' else '0';
     FPGA_SPI1_MOSI   <= RPI_SPI1_MOSI when RPI_SPI1_SS2 = '0' else '0';
     FPGA_SPI1_DAC_SS <= RPI_SPI1_SS2;
-    
---    mipi_phy_inst: entity work.mipi_rffe_master_phy
---      port map (
---         CLK_100             => clk100             ,
---         RESET_N             => global_rst_n             ,
---         MODE                => "00"                ,
---         COMMAND_FRAME       => "010101010101"      ,
---         DATA_FRAME          => "11110000"          ,
---         -- Output signals   
---         STATUS              => open                ,  
---         RECEIVED_DATA_FRAME => open                ,
---         -- Phy Ports        
---         SCLK                => RX1_RF_SCLK                 ,
---         SDATA               => RX1_RF_SDATA                
---      );
 
-      -- inst1_from_periphcfg
-
--- signal rx1_interface_ok              
--- signal rx1_test_done                 
--- signal trx1_interface_ok             
--- signal trx1_test_done                
--- signal trx1_ant_interface_ok         
--- signal trx1_ant_test_done            
-
--- signal rx2_interface_ok              
--- signal rx2_test_done                 
--- signal trx2_interface_ok             
--- signal trx2_test_done                
--- signal trx2_ant_interface_ok         
--- signal trx2_ant_test_done            
-
+    -- 1
       rx1_mipi_updater_inst: entity work.mipi_rffe_updater
       generic map(
          G_SLAVE_ADDR => "1010",
@@ -877,7 +847,7 @@ begin
       )
       port map(
          CLK => clk100,
-         RESET_N => global_rst_n and inst1_from_fpgacfg.tx_rf_sw,
+         RESET_N => global_rst_n,
          INTERFACE_OK => rx1_interface_ok,
          TEST_DONE => rx1_test_done,
          DATA_IN => inst1_from_periphcfg.RX1_SW,
@@ -920,6 +890,61 @@ begin
 
          SCLK => TRX1_ANT_SCLK,
          SDATA => TRX1_ANT_SDATA
+      );
+
+    -- 2
+      rx2_mipi_updater_inst: entity work.mipi_rffe_updater
+      generic map(
+         G_SLAVE_ADDR => "1010",
+         G_TEST_ADDR  => 5x"1E",
+         G_TEST_VAL   => 8x"A5",
+         G_TARGET_ADDR => "00000"
+      )
+      port map(
+         CLK => clk100,
+         RESET_N => global_rst_n,
+         INTERFACE_OK => rx2_interface_ok,
+         TEST_DONE => rx2_test_done,
+         DATA_IN => inst1_from_periphcfg.RX2_SW,
+
+         SCLK => RX2_RF_SCLK,
+         SDATA => RX2_RF_SDATA
+      );
+
+      trx2_mipi_updater_inst: entity work.mipi_rffe_updater
+      generic map(
+         G_SLAVE_ADDR => "1010",
+         G_TEST_ADDR  => 5x"1E",
+         G_TEST_VAL   => 8x"A5",
+         G_TARGET_ADDR => "00000"
+      )
+      port map(
+         CLK => clk100,
+         RESET_N => global_rst_n,
+         INTERFACE_OK => trx2_interface_ok,
+         TEST_DONE => trx2_test_done,
+         DATA_IN => inst1_from_periphcfg.TRX2_SW,
+
+         SCLK => TRX2_RF_SCLK,
+         SDATA => TRX2_RF_SDATA
+      );
+
+      trx2_ant_mipi_updater_inst: entity work.mipi_rffe_updater
+      generic map(
+         G_SLAVE_ADDR => "1010",
+         G_TEST_ADDR  => 5x"1E",
+         G_TEST_VAL   => 8x"A5",
+         G_TARGET_ADDR => "00000"
+      )
+      port map(
+         CLK => clk100,
+         RESET_N => global_rst_n,
+         INTERFACE_OK => trx2_ant_interface_ok,
+         TEST_DONE => trx2_ant_test_done,
+         DATA_IN => inst1_from_periphcfg.TRX2_ANT_SW,
+
+         SCLK => TRX2_ANT_SCLK,
+         SDATA => TRX2_ANT_SDATA
       );
 
 
