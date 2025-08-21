@@ -78,11 +78,11 @@ architecture Behavioral of mipi_rffe_updater is
     constant C_MODE_WRITE  : std_logic_vector(1 downto 0) := "01"; 
     constant C_MODE_IDLE   : std_logic_vector(1 downto 0) := "11"; 
     
-    attribute MARK_DEBUG : string;
-    attribute MARK_DEBUG of current_state: signal is "TRUE";
-    attribute MARK_DEBUG of INTERFACE_OK: signal is "TRUE";
-    attribute MARK_DEBUG of TEST_DONE: signal is "TRUE";
-    attribute MARK_DEBUG of RESET_N: signal is "TRUE";
+--    attribute MARK_DEBUG : string;
+--    attribute MARK_DEBUG of current_state: signal is "TRUE";
+--    attribute MARK_DEBUG of INTERFACE_OK: signal is "TRUE";
+--    attribute MARK_DEBUG of TEST_DONE: signal is "TRUE";
+--    attribute MARK_DEBUG of RESET_N: signal is "TRUE";
     
 begin
 

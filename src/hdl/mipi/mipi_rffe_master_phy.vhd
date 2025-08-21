@@ -77,14 +77,14 @@ signal sdata_oe , sdata_oe_next  : STD_LOGIC;
 signal sdata_out, sdata_out_next : STD_LOGIC;
 
 
-attribute MARK_DEBUG : string;
-attribute MARK_DEBUG of sdata_oe: signal is "TRUE";
-attribute MARK_DEBUG of sdata_out: signal is "TRUE";
-attribute MARK_DEBUG of SDATA: signal is "TRUE";
-attribute MARK_DEBUG of comm_clk: signal is "TRUE";
-attribute MARK_DEBUG of counter: signal is "TRUE";
-attribute MARK_DEBUG of current_state: signal is "TRUE";
-attribute MARK_DEBUG of parity_bit: signal is "TRUE";
+--attribute MARK_DEBUG : string;
+--attribute MARK_DEBUG of sdata_oe: signal is "TRUE";
+--attribute MARK_DEBUG of sdata_out: signal is "TRUE";
+--attribute MARK_DEBUG of SDATA: signal is "TRUE";
+--attribute MARK_DEBUG of comm_clk: signal is "TRUE";
+--attribute MARK_DEBUG of counter: signal is "TRUE";
+--attribute MARK_DEBUG of current_state: signal is "TRUE";
+--attribute MARK_DEBUG of parity_bit: signal is "TRUE";
 				
 				
 begin
