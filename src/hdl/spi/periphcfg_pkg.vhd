@@ -43,6 +43,12 @@ package periphcfg_pkg is
       BOARD_GPIO_RD        : std_logic_vector(15 downto 0);
       PERIPH_INPUT_RD_0    : std_logic_vector(15 downto 0);
       PERIPH_INPUT_RD_1    : std_logic_vector(15 downto 0);
+      RX1_SW               : std_logic_vector(7 downto 0);
+      TRX1_SW              : std_logic_vector(7 downto 0);
+      TRX1_ANT_SW          : std_logic_vector(7 downto 0);
+      RX2_SW               : std_logic_vector(7 downto 0);
+      TRX2_SW              : std_logic_vector(7 downto 0);
+      TRX2_ANT_SW          : std_logic_vector(7 downto 0);
    end record t_TO_PERIPHCFG;
    
 

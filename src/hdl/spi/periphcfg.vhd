@@ -135,6 +135,10 @@ begin
                when "00010" => dout_reg <= to_periphcfg.BOARD_GPIO_RD;
                when "01000" => dout_reg <= to_periphcfg.PERIPH_INPUT_RD_0;
                when "01001" => dout_reg <= to_periphcfg.PERIPH_INPUT_RD_1;
+               when 5d"20"  => dout_reg <= to_periphcfg.TRX1_SW & to_periphcfg.RX1_SW     ;
+               when 5d"21"  => dout_reg <= 8d"0" & to_periphcfg.TRX1_ANT_SW;
+               when 5d"22"  => dout_reg <= to_periphcfg.TRX2_SW & to_periphcfg.RX2_SW     ;
+               when 5d"23"  => dout_reg <= 8d"0" & to_periphcfg.TRX2_ANT_SW;
                when others  => dout_reg <= mem(to_integer(unsigned(inst_reg(4 downto 0))));
             end case;
          end if;      

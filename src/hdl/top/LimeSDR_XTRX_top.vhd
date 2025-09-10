@@ -119,18 +119,18 @@ entity LimeSDR_XTRX_top is
    M2_FCP_OFF       : out   std_logic;
 
     --Placeholder inout direction
-   RX1_RF_SCLK      : out   std_logic; --uninmplemented
-   RX1_RF_SDATA     : inout std_logic; --uninmplemented
-   TRX1_RF_SCLK     : out   std_logic; --uninmplemented
-   TRX1_RF_SDATA    : inout std_logic; --uninmplemented
-   TRX1_ANT_SCLK    : out   std_logic; --uninmplemented
-   TRX1_ANT_SDATA   : inout std_logic; --uninmplemented
-   RX2_RF_SCLK      : out   std_logic; --uninmplemented
-   RX2_RF_SDATA     : inout std_logic; --uninmplemented
-   TRX2_RF_SCLK     : out   std_logic; --uninmplemented
-   TRX2_RF_SDATA    : inout std_logic; --uninmplemented
-   TRX2_ANT_SCLK    : out   std_logic; --uninmplemented
-   TRX2_ANT_SDATA   : inout std_logic; --uninmplemented
+   RX1_RF_SCLK      : out   std_logic; 
+   RX1_RF_SDATA     : inout std_logic; 
+   TRX1_RF_SCLK     : out   std_logic; 
+   TRX1_RF_SDATA    : inout std_logic; 
+   TRX1_ANT_SCLK    : out   std_logic; 
+   TRX1_ANT_SDATA   : inout std_logic; 
+   RX2_RF_SCLK      : out   std_logic; 
+   RX2_RF_SDATA     : inout std_logic; 
+   TRX2_RF_SCLK     : out   std_logic; 
+   TRX2_RF_SDATA    : inout std_logic; 
+   TRX2_ANT_SCLK    : out   std_logic; 
+   TRX2_ANT_SDATA   : inout std_logic; 
    --FLASH & BOOT
    FPGA_CFG_D       : inout std_logic_vector(3 downto 0);    
    FPGA_CFG_CS      : out   std_logic;
@@ -292,7 +292,6 @@ signal trx2_interface_ok              : std_logic_vector(1 downto 0);
 signal trx2_test_done                 : std_logic;
 signal trx2_ant_interface_ok          : std_logic_vector(1 downto 0);
 signal trx2_ant_test_done             : std_logic;
-
 
 --attribute KEEP : string;
 --attribute KEEP of uart_data_stream_out: signal is "TRUE";
@@ -732,7 +731,7 @@ begin
                 RX_RF_SW_OUT       => open,
                 TX_RF_SW_OUT       => open
    );
---
+
 --    RX_SW3       <= rx_switches(0);
 --    RX_SW2       <= rx_switches(1);
    
@@ -851,38 +850,50 @@ begin
     -- 1
       rx1_mipi_updater_inst: entity work.mipi_rffe_updater
       generic map(
-         G_SLAVE_ADDR => "1010",
-         G_TEST_ADDR  => 5x"1E",
-         G_TEST_VAL   => 8x"A5",
-         G_TARGET_ADDR => "00000"
+         G_SLAVE_ADDR               => "1010",
+         G_TEST_ADDR                => 5x"1E",
+         G_TEST_VAL                 => 8x"A5",
+         G_TARGET_ADDR              => "00000",
+         G_DISABLE_TRIGGERS         => "001",
+         G_TRIGGER                  => "000",
+         G_STATUS_REG_READBACK_ADDR => 8x"24",
+         G_STATUS_READBACK_ENABLED  => '1'
       )
       port map(
-         CLK => clk100,
-         RESET_N => global_rst_n,
+         CLK          => clk100,
+         RESET_N      => global_rst_n,
          INTERFACE_OK => rx1_interface_ok,
-         TEST_DONE => rx1_test_done,
-         DATA_IN => inst1_from_periphcfg.RX1_SW,
+         TEST_DONE    => rx1_test_done,
+         DATA_IN      => inst1_from_periphcfg.RX1_SW,
+         DATA_OUT     => inst1_to_periphcfg.RX1_SW,
 
-         SCLK => RX1_RF_SCLK,
-         SDATA => RX1_RF_SDATA
+         SCLK         => RX1_RF_SCLK,
+         SDATA        => RX1_RF_SDATA,
+         DEBUG_SDATA  => open
       );
 
       trx1_mipi_updater_inst: entity work.mipi_rffe_updater
       generic map(
-         G_SLAVE_ADDR => "1010",
-         G_TEST_ADDR  => 5x"1E",
-         G_TEST_VAL   => 8x"A5",
-         G_TARGET_ADDR => "00000"
+         G_SLAVE_ADDR               => "1010",
+         G_TEST_ADDR                => 5x"1E",
+         G_TEST_VAL                 => 8x"A5",
+         G_TARGET_ADDR              => "00000",
+         G_DISABLE_TRIGGERS         => "001",
+         G_TRIGGER                  => "000",
+         G_STATUS_REG_READBACK_ADDR => 8x"24",
+         G_STATUS_READBACK_ENABLED  => '1'
       )
       port map(
-         CLK => clk100,
-         RESET_N => global_rst_n,
+         CLK          => clk100,
+         RESET_N      => global_rst_n,
          INTERFACE_OK => trx1_interface_ok,
-         TEST_DONE => trx1_test_done,
-         DATA_IN => inst1_from_periphcfg.TRX1_SW,
+         TEST_DONE    => trx1_test_done,
+         DATA_IN      => inst1_from_periphcfg.TRX1_SW,
+         DATA_OUT     => inst1_to_periphcfg.TRX1_SW,
 
-         SCLK => TRX1_RF_SCLK,
-         SDATA => TRX1_RF_SDATA
+         SCLK         => TRX1_RF_SCLK,
+         SDATA        => TRX1_RF_SDATA,
+         DEBUG_SDATA  => open
       );
 
       trx1_ant_mipi_updater_inst: entity work.mipi_rffe_updater
@@ -890,17 +901,21 @@ begin
          G_SLAVE_ADDR => "1010",
          G_TEST_ADDR  => 5x"1E",
          G_TEST_VAL   => 8x"A5",
-         G_TARGET_ADDR => "00000"
+         G_TARGET_ADDR => "00000",
+         G_DISABLE_TRIGGERS => "001",
+         G_TRIGGER          => "000"
       )
       port map(
-         CLK => clk100,
-         RESET_N => global_rst_n,
+         CLK          => clk100,
+         RESET_N      => global_rst_n,
          INTERFACE_OK => trx1_ant_interface_ok,
-         TEST_DONE => trx1_ant_test_done,
-         DATA_IN => inst1_from_periphcfg.TRX1_ANT_SW,
+         TEST_DONE    => trx1_ant_test_done,
+         DATA_IN      => inst1_from_periphcfg.TRX1_ANT_SW,
+         DATA_OUT     => inst1_to_periphcfg.TRX1_ANT_SW,
 
-         SCLK => TRX1_ANT_SCLK,
-         SDATA => TRX1_ANT_SDATA
+         SCLK         => TRX1_ANT_SCLK,
+         SDATA        => TRX1_ANT_SDATA,
+         DEBUG_SDATA  => open
       );
 
     -- 2
@@ -909,17 +924,21 @@ begin
          G_SLAVE_ADDR => "1010",
          G_TEST_ADDR  => 5x"1E",
          G_TEST_VAL   => 8x"A5",
-         G_TARGET_ADDR => "00000"
+         G_TARGET_ADDR => "00000",
+         G_DISABLE_TRIGGERS => "001",
+         G_TRIGGER          => "000"
       )
       port map(
-         CLK => clk100,
-         RESET_N => global_rst_n,
+         CLK          => clk100,
+         RESET_N      => global_rst_n,
          INTERFACE_OK => rx2_interface_ok,
-         TEST_DONE => rx2_test_done,
-         DATA_IN => inst1_from_periphcfg.RX2_SW,
+         TEST_DONE    => rx2_test_done,
+         DATA_IN      => inst1_from_periphcfg.RX2_SW,
+         DATA_OUT     => inst1_to_periphcfg.RX2_SW,
 
-         SCLK => RX2_RF_SCLK,
-         SDATA => RX2_RF_SDATA
+         SCLK         => RX2_RF_SCLK,
+         SDATA        => RX2_RF_SDATA,
+         DEBUG_SDATA  => open
       );
 
       trx2_mipi_updater_inst: entity work.mipi_rffe_updater
@@ -927,17 +946,21 @@ begin
          G_SLAVE_ADDR => "1010",
          G_TEST_ADDR  => 5x"1E",
          G_TEST_VAL   => 8x"A5",
-         G_TARGET_ADDR => "00000"
+         G_TARGET_ADDR => "00000",
+         G_DISABLE_TRIGGERS => "001",
+         G_TRIGGER          => "000"
       )
       port map(
-         CLK => clk100,
-         RESET_N => global_rst_n,
+         CLK          => clk100,
+         RESET_N      => global_rst_n,
          INTERFACE_OK => trx2_interface_ok,
-         TEST_DONE => trx2_test_done,
-         DATA_IN => inst1_from_periphcfg.TRX2_SW,
+         TEST_DONE    => trx2_test_done,
+         DATA_IN      => inst1_from_periphcfg.TRX2_SW,
+         DATA_OUT     => inst1_to_periphcfg.TRX2_SW,
 
-         SCLK => TRX2_RF_SCLK,
-         SDATA => TRX2_RF_SDATA
+         SCLK         => TRX2_RF_SCLK,
+         SDATA        => TRX2_RF_SDATA,
+         DEBUG_SDATA  => open
       );
 
       trx2_ant_mipi_updater_inst: entity work.mipi_rffe_updater
@@ -945,26 +968,26 @@ begin
          G_SLAVE_ADDR => "1010",
          G_TEST_ADDR  => 5x"1E",
          G_TEST_VAL   => 8x"A5",
-         G_TARGET_ADDR => "00000"
+         G_TARGET_ADDR => "00000",
+         G_DISABLE_TRIGGERS => "001",
+         G_TRIGGER          => "000"
       )
       port map(
-         CLK => clk100,
-         RESET_N => global_rst_n,
+         CLK          => clk100,
+         RESET_N      => global_rst_n,
          INTERFACE_OK => trx2_ant_interface_ok,
-         TEST_DONE => trx2_ant_test_done,
-         DATA_IN => inst1_from_periphcfg.TRX2_ANT_SW,
+         TEST_DONE    => trx2_ant_test_done,
+         DATA_IN      => inst1_from_periphcfg.TRX2_ANT_SW,
+         DATA_OUT     => inst1_to_periphcfg.TRX2_ANT_SW,
 
-         SCLK => TRX2_ANT_SCLK,
-         SDATA => TRX2_ANT_SDATA
+         SCLK         => TRX2_ANT_SCLK,
+         SDATA        => TRX2_ANT_SDATA,
+         DEBUG_SDATA  => open
       );
       
       FPGA_SPI1_DAC_SS <= fpga_spi1_dac_ss_vector(0);
       FPGA_SPI1_MOSI   <= fpga_spi1_mosi_sig;
-      FPGA_SPI1_SCLK   <= fpga_spi1_sclk_sig;
-
-      FPGA_GPIO(0) <= fpga_spi1_dac_ss_vector(0);    
-      FPGA_GPIO(1) <= fpga_spi1_mosi_sig;            
-      FPGA_GPIO(2) <= fpga_spi1_sclk_sig;            
+      FPGA_SPI1_SCLK   <= fpga_spi1_sclk_sig;    
 
 
 end architecture Structural;
