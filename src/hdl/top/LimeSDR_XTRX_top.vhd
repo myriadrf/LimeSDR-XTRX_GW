@@ -77,7 +77,7 @@ entity LimeSDR_XTRX_top is
    LMS_RESET        : out  std_logic;
    LMS_RXEN         : out  std_logic;
    LMS_TXEN         : out  std_logic;
-   LMS_CORE_LDO_EN  : out  std_logic;
+   LMS_CORE_LDO_EN  : out  std_logic; -- Called RF_SW_TX on ca23 v1.2 board
    --LMS port1 - TX
    LMS_TXNRX1       : out   std_logic;
    LMS_MCLK1        : in    std_logic;
@@ -107,7 +107,7 @@ entity LimeSDR_XTRX_top is
    FPGA_I2C_SDA     : inout std_logic;
    FPGA_I2C_SCL     : inout std_logic;
    --TX/RX SWITCH
-   FPGA_RF_SW_TDD   : out   std_logic;
+   FPGA_RF_SW_TDD   : out   std_logic; -- Called RF_SW_TDD on ca23 v1.2 board
    --M2 signals
    M2_DEVSLP        : out   std_logic;
    M2_COEX1         : inout std_logic;
