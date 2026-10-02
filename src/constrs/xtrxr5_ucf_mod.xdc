@@ -116,6 +116,12 @@ set_property IOSTANDARD LVCMOS33 [get_ports FPGA_GPIO[2]]
 set_property IOSTANDARD LVCMOS33 [get_ports FPGA_GPIO[3]]
 set_property IOSTANDARD LVCMOS33 [get_ports FPGA_DSW_BIT2]
 
+set_property PULLUP true [get_ports HW_VER[0]]
+set_property PULLUP true [get_ports HW_VER[1]]
+set_property PULLUP true [get_ports HW_VER[2]]
+set_property PULLUP true [get_ports HW_VER[3]]
+
+
 ##########################################################
 # XO DAC SPI
 ##########################################################
@@ -251,7 +257,7 @@ set_property PACKAGE_PIN W16 [get_ports FPGA_SPI_MOSI]
 set_property PACKAGE_PIN W15 [get_ports FPGA_SPI_MISO]
 set_property PACKAGE_PIN W14 [get_ports FPGA_SPI_SCLK]
 set_property PACKAGE_PIN U19 [get_ports LMS_RESET]
-set_property PACKAGE_PIN W17 [get_ports LMS_CORE_LDO_EN]
+set_property PACKAGE_PIN W17 [get_ports LMS_CORE_LDO_EN_or_RF_SW_TX]
 set_property PACKAGE_PIN W18 [get_ports LMS_RXEN]
 set_property PACKAGE_PIN W19 [get_ports LMS_TXEN]
 #
@@ -354,7 +360,7 @@ set_property IOSTANDARD LVCMOS33 [get_ports FPGA_SPI_MOSI]
 set_property IOSTANDARD LVCMOS33 [get_ports FPGA_SPI_MISO]
 set_property IOSTANDARD LVCMOS33 [get_ports FPGA_SPI_SCLK]
 set_property IOSTANDARD LVCMOS33 [get_ports LMS_RESET]
-set_property IOSTANDARD LVCMOS33 [get_ports LMS_CORE_LDO_EN]
+set_property IOSTANDARD LVCMOS33 [get_ports LMS_CORE_LDO_EN_or_RF_SW_TX]
 set_property IOSTANDARD LVCMOS33 [get_ports LMS_RXEN]
 set_property IOSTANDARD LVCMOS33 [get_ports LMS_TXEN]
 set_property PULLDOWN true [get_ports FPGA_SPI_MOSI]

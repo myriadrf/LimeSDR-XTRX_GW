@@ -77,7 +77,7 @@ entity LimeSDR_XTRX_top is
    LMS_RESET        : out  std_logic;
    LMS_RXEN         : out  std_logic;
    LMS_TXEN         : out  std_logic;
-   LMS_CORE_LDO_EN  : out  std_logic; -- Called RF_SW_TX on ca23 v1.2 board
+   LMS_CORE_LDO_EN_or_RF_SW_TX  : out  std_logic; -- Called RF_SW_TX on ca23 v1.2 board
    --LMS port1 - TX
    LMS_TXNRX1       : out   std_logic;
    LMS_MCLK1        : in    std_logic;
@@ -343,6 +343,8 @@ signal vtcxo_data_stream_out_stb : std_logic;
 signal vtcxo_data_stream_out_ack : std_logic;
 
 signal tst_top_GNSS_UART_TX      : std_logic;
+
+signal rf_sw_tdd_internal        : std_logic;
 
 
 begin
@@ -710,7 +712,18 @@ begin
    -- en_tcxo    <= inst1_from_fpgacfg.TCXO_EN;--'1'; --tcxo enabled
    -- ext_clk    <= inst1_from_fpgacfg.EXT_CLK;--'0'; --internal clock used
 
-   LMS_CORE_LDO_EN <= inst1_from_fpgacfg.CORE_LDO_EN;
+   
+   -- W17 was LMS_CORE_LDO_EN in previous PCB versions. In version >= 1.2,
+   -- it is RF_SW_TX and should be controlled the same way as the FPGA_RF_SW_TDD pin.
+   process(all)
+   begin 
+    if unsigned(HW_VER) < 2 then 
+        LMS_CORE_LDO_EN_or_RF_SW_TX <= inst1_from_fpgacfg.CORE_LDO_EN;
+    else 
+        LMS_CORE_LDO_EN_or_RF_SW_TX <= rf_sw_tdd_internal;
+    end if;
+   end process;
+
    
 ----------------------------------------------------------------------------
 --tdd_control instance.
@@ -727,10 +740,12 @@ begin
                 TX_RF_SW_IN        => inst1_from_fpgacfg.tx_rf_sw,
                 RF_SW_AUTO_ENANBLE => inst1_from_fpgacfg.rf_sw_auto_en,
                 --
-                TDD_OUT            => FPGA_RF_SW_TDD,
+                TDD_OUT            => rf_sw_tdd_internal,
                 RX_RF_SW_OUT       => open,
                 TX_RF_SW_OUT       => open
    );
+   
+   FPGA_RF_SW_TDD <= rf_sw_tdd_internal;
 
 --    RX_SW3       <= rx_switches(0);
 --    RX_SW2       <= rx_switches(1);
